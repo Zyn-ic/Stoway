@@ -25,7 +25,7 @@ Settings.HotbarSettings.MaxSlots = 10
 Settings.BackpackSettings.CarryingType = CarryingTypes.Backpack
 
 --lets you set a limit for the backpack 0 means inf
-Settings.BackpackSettings.Limit = 12
+Settings.BackpackSettings.Limit = 21
 Settings.BackpackSettings.Sorting = false
 
 --// settings section

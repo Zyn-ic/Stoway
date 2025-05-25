@@ -1,1 +1,1 @@
-local stowayserver = require(script.StowayServer.stowayserver)
+require(script.StowayServer.stowayserver)
