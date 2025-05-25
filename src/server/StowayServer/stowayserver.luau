@@ -11,9 +11,10 @@ local Types = require(ReplicatedStorage:WaitForChild("Shared").Types)
 local TemplateSettings = require(script.Parent.Settings) -- Assuming Settings.lua is in the same folder
 local Janitor = require(ReplicatedStorage.Packages.janitor) -- Verify path
 
+local Global_Janitor = Janitor.new() -- for playeradd and playerremoving
 
 --//StartUP\\--
-function StowayServer.Init(Player:Player) 
+function StowayServer.new(Player:Player) 
     local self = setmetatable(StowayServer, {})
 
     self.PrivateJanitor = Janitor.new()
@@ -34,8 +35,27 @@ function StowayServer.Init(Player:Player)
     self.BackpackFolder.Name = self.BackpackName
     self.BackpackFolder.Parent = self.InventoryFolder
 
+    for i=1, self.Settings.HotbarSettings.MaxSlots do
+        local hotbarvalue = Instance.new("ObjectValue")
+        hotbarvalue.Name = i
+        hotbarvalue.Parent = self.HotBarFolder
+    end
+
     self.InventoryFolder.Parent = Player
 
-    self.PrivateJanitor:Add(self)
+    self.PrivateJanitor:Add(self.InventoryFolder)
     return self
 end
+
+function StowayServer:Clean(Player:Player)
+    print(self.BackpackFolder.Name)
+    self["PrivateJanitor"]:Destroy()
+    self.PrivateJanitor = nil
+
+    Global_Janitor:Destroy()
+    Global_Janitor = nil
+end
+
+Global_Janitor:Add(Players.PlayerAdded:Connect(StowayServer.new))
+Global_Janitor:Add(Players.PlayerRemoving:Connect(function(plr) StowayServer:Clean(plr) end))
+return StowayServer
