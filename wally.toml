@@ -6,3 +6,4 @@ realm = "shared"
 
 [dependencies]
 Janitor = "howmanysmall/janitor@1.18.3"
+fusion = "acecateer/fusion@0.3.1"

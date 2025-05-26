@@ -12,6 +12,14 @@ local Types = require(ReplicatedStorage:WaitForChild("Shared").Types)
 local TemplateSettings = require(script.Parent.Settings) -- Assuming Settings.lua is in the same folder
 local Janitor = require(ReplicatedStorage.Packages.janitor) -- Verify path
 
+-- Remotes
+local dropTool = ReplicatedStorage:WaitForChild("Remotes").DropTool :: RemoteEvent
+local equipTool = ReplicatedStorage:WaitForChild("Remotes").EquipTool :: RemoteEvent
+local unequipTool = ReplicatedStorage:WaitForChild("Remotes").UnEquipTool :: RemoteEvent
+local swapSlots = ReplicatedStorage:WaitForChild("Remotes").SwapSlots :: RemoteEvent
+local movetoendofback = ReplicatedStorage:WaitForChild("Remotes").MoveToEndofBackpack :: RemoteEvent
+
+
 local Global_Janitor = Janitor.new() -- for playeradd and playerremoving
 
 --//StartUP\\--
@@ -40,7 +48,6 @@ end
 
 function IsWeightAtMax(Folder: {ObjectValue}, MaxWeight: number) : boolean
     if #Folder < 0 then return false end
-    print(Folder)
     local weight = 0
 
     for _, v in Folder do
@@ -88,6 +95,18 @@ function Clear(HotBarFolder: {ObjectValue}, BackpackFolder: {ObjectValue})
     for _,v in BackpackFolder do 
         v:Destroy()
     end
+end
+
+function ValidateTool(Player:Player, Tool:Tool) : boolean
+    if typeof(Tool) ~= "Instance" or not Tool:IsA("Tool") then return false end
+    if Tool.Parent ~= Player.Backpack and Tool.Parent ~= Player.Character then return false end
+    return true
+end
+
+function ValidateSlot(Slot:ObjectValue, self:any) : boolean
+    if typeof(Slot) ~= "Instance" or not Slot:IsA("ObjectValue") then return false end
+
+    return Slot.Parent == self.HotBarFolder or Slot.Parent == self.BackpackFolder
 end
 
 --//Setup Function\\--
@@ -214,7 +233,6 @@ function StowayServer:UpdatePlayerTools(Player:Player)
                 if freehotbarslot.Value ~= nil then 
                     local combindedweight = freehotbarslot.Value:GetAttribute("Weight") + tool:GetAttribute("Weight")
                     freehotbarslot.Value:SetAttribute("Weight", combindedweight)
-                    print(tool, freehotbarslot.Value) 
                     tool:Destroy()
                     continue
                 end
@@ -226,6 +244,7 @@ function StowayServer:UpdatePlayerTools(Player:Player)
     end
 end
 
+--//Connections Setup Functions\\--
 function StowayServer:TrackPlayerTools(Player:Player)
 
     self.PrivateJanitor:Add(Player.CharacterAdded:Connect(function(char:Model)
@@ -240,6 +259,66 @@ function StowayServer:TrackPlayerTools(Player:Player)
     end))
 end
 
+function StowayServer.UnEquip(Player:Player)
+    local character = Player.Character or Player.CharacterAdded:Wait()
+    if not character then return end
+
+    local tool = character:FindFirstChildWhichIsA("Tool")
+    if not tool then return end
+
+    tool.Parent = Player.Backpack
+end
+
+function StowayServer.EquipTool(Player:Player, Tool:Tool)
+    local character = Player.Character or Player.CharacterAdded:Wait()
+    if not character then return end
+    if not Tool then return end
+
+    StowayServer.UnEquip(Player)
+    if not ValidateTool(Player, Tool) then return end
+    Tool.Parent = Player.Character
+end
+
+function StowayServer:DropTool(Player:Player, Tool:Tool)
+    if not ValidateTool(Player, Tool) then return end
+    local slot = self:FindValueFromTool(Tool)
+    if not slot then return end
+
+    local character = Player.Character or Player.CharacterAdded:Wait()
+    local root = character.PrimaryPart; local rootCframe = root.CFrame;
+    local positionOffset = (rootCframe.LookVector * Vector3.new(1,0,1)) * self.Settings.DropToolDistance
+    local ToolCframe = rootCframe + positionOffset
+    local handle = Tool:FindFirstChild("Handle") or Tool.PrimaryPart
+    if handle then handle.CFrame = ToolCframe end
+    Tool.Parent = workspace
+end
+
+function StowayServer:SwapSlots(Slot1:ObjectValue, Slot2:ObjectValue)
+    if not ValidateSlot(Slot1, self) or not ValidateSlot(Slot2, self) then return end
+    if Slot1 == Slot2 then return end
+
+    --swapping slots
+    local oldslot1 = Slot1.Value
+    Slot1.Value = Slot2.Value
+    Slot2.Value = oldslot1
+
+    if Slot1.Parent == self.BackpackFolder and not Slot1.Value then
+        self:ShiftBackpackValuesDown(Slot1)
+    elseif Slot2.Parent == self.BackpackFolder and not Slot2.Value then
+        self:ShiftBackpackValuesDown(Slot2)
+    end
+end
+
+function StowayServer:MoveToEndofBackpack(Slot:ObjectValue)
+    if not ValidateSlot(Slot, self) then return end
+    if not Slot.Value then return end
+    self:AddNewBackpackValue(Slot.Value)
+    Slot.Value = nil
+
+    if Slot.Parent == self.BackpackFolder then
+        self:ShiftBackpackValuesDown(Slot)
+    end
+end
 --//Clean Function\\--
 function StowayServer:Clean()
     self["PrivateJanitor"]:Destroy()
@@ -249,6 +328,12 @@ function StowayServer:Clean()
     Global_Janitor = nil
 end
 
+--//Connections\\--
 Global_Janitor:Add(Players.PlayerAdded:Connect(StowayServer.new))
 Global_Janitor:Add(Players.PlayerRemoving:Connect(function() StowayServer:Clean() end))
+Global_Janitor:Add(equipTool.OnServerEvent:Connect(StowayServer.EquipTool))
+Global_Janitor:Add(unequipTool.OnServerEvent:Connect(StowayServer.UnEquip))
+Global_Janitor:Add(dropTool.OnServerEvent:Connect(function(Player, Tool) StowayServer:DropTool(Player, Tool) end))
+Global_Janitor:Add(swapSlots.OnServerEvent:Connect(function(plr, slot1, slot2) StowayServer:SwapSlots(slot1, slot2) end))
+Global_Janitor:Add(movetoendofback.OnServerEvent:Connect(function(plr, slot) StowayServer:MoveToEndofBackpack(slot) end))
 return StowayServer

@@ -15,7 +15,7 @@ Settings.BackpackSettings = {}
 Settings.HotbarSettings.HotbarType = HotbarTypes.static
 
 -- the maximum amount of slots you can have on your hotbar
-Settings.HotbarSettings.MaxSlots = 10
+Settings.HotbarSettings.MaxSlots = 3
 
 --// Backpack section
 
@@ -56,4 +56,6 @@ Settings.Droppable = true
 --it will also save all items in your backpack or if you had a sword in your backpack if you die/rejoin sword will be in your backpack
 -- will also work if you only have your hotbar like say you set CarryingType to inventory or hotback it will save the items in your hotbar
 Settings.SaveBackpackandSlotInfo = false
+
+Settings.DropToolDistance = 5
 return Settings
