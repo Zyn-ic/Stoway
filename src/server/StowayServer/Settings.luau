@@ -12,10 +12,10 @@ Settings.BackpackSettings = {}
 
 -- static means the hotbar will not change and will have 9 slost visible
 -- dynamic means slots will only be visible when the slots arent empty
-Settings.HotbarSettings.HotbarType = HotbarTypes.static
+Settings.HotbarSettings.HotbarType = HotbarTypes.Static
 
 -- the maximum amount of slots you can have on your hotbar
-Settings.HotbarSettings.MaxSlots = 3
+Settings.HotbarSettings.MaxSlots = 10
 
 --// Backpack section
 

@@ -9,7 +9,6 @@ export type ItemData = {
 	Description: string,
 	Image: string,
 	Amount: number, -- Current stack size of this specific tool instance/group
-	MaxStack: number, -- Max stack allowed for this item type (could be from Settings or item-specific)
 	IsGamepass: boolean,
 	Rarity: string?,
 	Droppable: boolean?,
@@ -28,6 +27,24 @@ export type PlayerSchema = {
 	Backpack_Data: { SlotContents? }?, -- Our data array for backpack items (if CarryingType is Backpack)
 	Inventory_Data: { SlotContents? }?, -- Our data array for inventory items (if CarryingType is Inventory)
 	-- Note: For "Inventory" type, ToolRef might point to ServerStorage initially
+}
+
+export type Settings = {
+	HotbarSettings : {HotbarType:string, MaxSlots:number},
+	BackpackSettings : {CarryingType:string, Limit:number, Sorting:boolean},
+	CanStack:boolean,
+	MaxStackCount:number,
+	RarityCheck:boolean,
+	Droppable:boolean
+}
+
+export type Stoway = {
+	PrivateJanitor: any,
+	Settings: Settings,
+
+    InventoryFolder : Folder,
+    HotBarFolder :Folder,
+    BackpackFolder : Folder
 }
 
 return Types

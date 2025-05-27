@@ -5,8 +5,6 @@ StowayServer.__index = StowayServer
 -- Services & Modules
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local HttpService = game:GetService("HttpService")
-local StarterPack = game:GetService("StarterPack")
 
 local Types = require(ReplicatedStorage:WaitForChild("Shared").Types)
 local TemplateSettings = require(script.Parent.Settings) -- Assuming Settings.lua is in the same folder
@@ -19,10 +17,11 @@ local unequipTool = ReplicatedStorage:WaitForChild("Remotes").UnEquipTool :: Rem
 local swapSlots = ReplicatedStorage:WaitForChild("Remotes").SwapSlots :: RemoteEvent
 local movetoendofback = ReplicatedStorage:WaitForChild("Remotes").MoveToEndofBackpack :: RemoteEvent
 
+local SendStowayToClient = ReplicatedStorage:WaitForChild("Remotes").AskForStoway :: RemoteFunction
+
 
 local Global_Janitor = Janitor.new() -- for playeradd and playerremoving
 
---//StartUP\\--
 
 --//HelperFuncs\\--
 function CreateHotbarValues(self)
@@ -107,6 +106,19 @@ function ValidateSlot(Slot:ObjectValue, self:any) : boolean
     if typeof(Slot) ~= "Instance" or not Slot:IsA("ObjectValue") then return false end
 
     return Slot.Parent == self.HotBarFolder or Slot.Parent == self.BackpackFolder
+end
+
+function SendStowayorSettings(player:Player, arg:string) : Types.Stoway | Types.Settings | nil
+    if player.Parent == nil or not player then return end
+    if typeof(arg) ~= "string" then return nil end
+
+    if arg == "stoway" then
+        return StowayServer:GetStoway()
+    elseif arg == "settings" then
+        return StowayServer:GetSettings()
+    end
+
+    return nil
 end
 
 --//Setup Function\\--
@@ -244,6 +256,38 @@ function StowayServer:UpdatePlayerTools(Player:Player)
     end
 end
 
+function StowayServer:GetSettings() : Types.Settings
+    local settings = {} :: Types.Settings
+    settings.BackpackSettings = {}
+    settings.HotbarSettings = {}
+
+    settings.BackpackSettings.CarryingType = self.Settings.BackpackSettings.CarryingType
+    settings.BackpackSettings.Limit = self.Settings.BackpackSettings.Limit
+    settings.BackpackSettings.Sorting = self.Settings.BackpackSettings.Sorting
+
+    settings.HotbarSettings.HotbarType = self.Settings.HotbarSettings.HotbarType
+    settings.HotbarSettings.MaxSlots = self.Settings.HotbarSettings.MaxSlots
+
+    settings.CanStack = self.Settings.CanStack
+    settings.Droppable = self.Settings.Droppable
+    settings.MaxStackCount = self.Settings.MaxStackCount
+    settings.RarityCheck = self.Settings.RarityCheck
+
+    return settings 
+end
+
+function StowayServer:GetStoway() : Types.Stoway
+    local Stoway = {} :: Types.Stoway
+
+    Stoway.BackpackFolder = self.BackpackFolder
+    Stoway.HotBarFolder = self.HotBarFolder
+    Stoway.InventoryFolder = self.InventoryFolder
+    Stoway.PrivateJanitor = nil
+    Stoway.Settings = self:GetSettings()
+
+    return Stoway
+end
+
 --//Connections Setup Functions\\--
 function StowayServer:TrackPlayerTools(Player:Player)
 
@@ -319,16 +363,20 @@ function StowayServer:MoveToEndofBackpack(Slot:ObjectValue)
         self:ShiftBackpackValuesDown(Slot)
     end
 end
+
+
+
 --//Clean Function\\--
 function StowayServer:Clean()
     self["PrivateJanitor"]:Destroy()
     self.PrivateJanitor = nil
-
-    Global_Janitor:Destroy()
-    Global_Janitor = nil
+    self = nil
 end
 
 --//Connections\\--
+
+SendStowayToClient.OnServerInvoke = SendStowayorSettings
+
 Global_Janitor:Add(Players.PlayerAdded:Connect(StowayServer.new))
 Global_Janitor:Add(Players.PlayerRemoving:Connect(function() StowayServer:Clean() end))
 Global_Janitor:Add(equipTool.OnServerEvent:Connect(StowayServer.EquipTool))
@@ -336,4 +384,12 @@ Global_Janitor:Add(unequipTool.OnServerEvent:Connect(StowayServer.UnEquip))
 Global_Janitor:Add(dropTool.OnServerEvent:Connect(function(Player, Tool) StowayServer:DropTool(Player, Tool) end))
 Global_Janitor:Add(swapSlots.OnServerEvent:Connect(function(plr, slot1, slot2) StowayServer:SwapSlots(slot1, slot2) end))
 Global_Janitor:Add(movetoendofback.OnServerEvent:Connect(function(plr, slot) StowayServer:MoveToEndofBackpack(slot) end))
+
+Global_Janitor:Add(function()
+    if SendStowayToClient then
+        SendStowayToClient.OnServerInvoke = nil
+    end
+end)
+
+game:BindToClose(function() Global_Janitor:Destroy(); Global_Janitor = nil; end)
 return StowayServer
