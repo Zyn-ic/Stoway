@@ -1,1 +1,1 @@
-print("Hello world, from client!")
+require(script.StowayClient.stowayclient)

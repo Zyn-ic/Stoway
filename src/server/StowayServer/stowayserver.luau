@@ -10,7 +10,7 @@ local StarterPack = game:GetService("StarterPack")
 
 local Types = require(ReplicatedStorage:WaitForChild("Shared").Types)
 local TemplateSettings = require(script.Parent.Settings) -- Assuming Settings.lua is in the same folder
-local Janitor = require(ReplicatedStorage.Packages.janitor) -- Verify path
+local Janitor = require(ReplicatedStorage.Packages.Janitor) -- Verify pathit
 
 -- Remotes
 local dropTool = ReplicatedStorage:WaitForChild("Remotes").DropTool :: RemoteEvent
