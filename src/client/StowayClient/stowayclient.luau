@@ -2,7 +2,6 @@ local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local ServerScriptService = game:GetService("ServerScriptService")
 local StarterGui = game:GetService("StarterGui")
 local UserInputService = game:GetService("UserInputService")
 
@@ -36,15 +35,18 @@ local HotbarFolder : Folder
 
 local Settings : Types.Settings
 
-local InventoryGui = Player.PlayerGui:FindFirstChild("Stoway") :: ScreenGui
+local InventoryGui = Player.PlayerGui:FindFirstChild("StowayGui").Stoway :: ScreenGui
+local DraggingGui = Player.PlayerGui:FindFirstChild("StowayGui").DraggingGui :: ScreenGui
 local BackpackFrame = InventoryGui.Backpack :: Frame
 local HotbarFrame = InventoryGui.Hotbar :: Frame
 local ScrollingBackpack = BackpackFrame.ScrollingFrame :: ScrollingFrame
 
+local currentlyEquippedFrame = nil
+local currentlyEquippedSlot = nil
 
 local stowayclient = {}
 
-
+--//Fusion Sections\\--
 local scoped = fusion.scoped 
 local peek = fusion.peek
 
@@ -79,6 +81,53 @@ function stowayclient.GetToolData(toolInstance: Tool): Types.ItemData?
     return itemData
 end
 
+function stowayclient.SetSlotFrameUnequipped(slotframe)
+    slotframe.selecticon.Visible = false
+end
+
+function stowayclient.SetSlotFrameEquipped(slotframe)
+    slotframe.selecticon.Visible = true
+end
+
+function stowayclient.findSlotfromTool(Tool:Tool)
+    for _, ObjectValue in HotbarFolder:GetChildren() do
+        if ObjectValue.Value == Tool then return ObjectValue end
+    end
+
+    for _, ObjectValue in BackpackFolder:GetChildren() do
+        if ObjectValue.Value == Tool then return ObjectValue end
+    end
+
+    return nil
+end
+
+function stowayclient.updateEquippedTool()
+    local tool = Character:FindFirstChildWhichIsA("Tool")
+
+    if not tool then stowayclient.SetUnequipped(); return end
+    local toolslot = stowayclient.findSlotfromTool(tool)
+    
+    if currentlyEquippedSlot == toolslot then
+        stowayclient.SetEquipped(toolslot)
+    end
+end
+
+function stowayclient.BindKeyBinds(actionNamePrefix, slotfolder)
+    for slotnumber, slotkeybinds in pairs(Binds.KeyBinds) do
+
+        local function EquipThisSlot(actionName, inputState, inputObject)
+            if inputState and inputState ~= Enum.UserInputState.Begin then return end
+            local slotvalue = slotfolder:FindFirstChild(slotnumber)
+            if not slotvalue or not slotvalue.Value then
+                unequipTool:FireServer()
+                return
+            end
+            stowayclient.EquipUnequipTool(slotvalue)
+        end
+        local actionName = actionNamePrefix .. tostring(slotnumber)
+        ContextActionService:BindAction(actionName, EquipThisSlot, false, unpack(slotkeybinds))
+    end
+end
 
 --//Setup Function\\--
 function stowayclient.new()
@@ -95,6 +144,8 @@ function stowayclient.new()
     end
 
     stowayclient.CreateHotBarFrames()
+    stowayclient.CreateBackpackFrames()
+    stowayclient.BindKeyBinds("Equip_Hotbar_Slot_", HotbarFolder)
 end
 
 --//Core Helper Functions\\--
@@ -115,10 +166,11 @@ end
 
 function stowayclient.UpdateSlotFrame(slotframe, tool:Tool) : any
     if not tool then return stowayclient.SetSlotFrameHidden(slotframe) end
+    if not slotframe then return end
     local data = stowayclient.GetToolData(tool)
     print(data.Rarity, data.Amount)
 
-    slotframe.stackcount.Text = tonumber(data.Amount) > 1 and data.Amount .. "x" or data.Amount -- 1 stack count doesnt end wit "x"
+    slotframe.stackcount.Text = tonumber(data.Amount) > 1 and data.Amount .. "x" or "" -- 1 stack count doesnt end wit "x"
     slotframe.slotbutton.Image = data.Image
     
     if Settings.RarityCheck then slotframe.rarityframe.Visible = true; slotframe.rarityframe.BackgroundColor3 = RarityValues[data.Rarity] end
@@ -188,10 +240,13 @@ function stowayclient.CreateSlotFrame(slotvalue:ObjectValue)
         newslotframe.slotnumber.Visible = false
     end
 
+    stowayclient.SetSlotFrameUnequipped(newslotframe)
     stowayclient.UpdateSlotFrame(newslotframe, tool)
+
     slotvalue.Destroying:Connect(function()
         newslotframe:Destroy()
     end)
+
     slotvalue:GetPropertyChangedSignal("Value"):Connect(function()
         local newtool = slotvalue.Value  
         if slotvalue.Parent == BackpackFolder and not newtool then
@@ -199,6 +254,10 @@ function stowayclient.CreateSlotFrame(slotvalue:ObjectValue)
             return
         end
         stowayclient.UpdateSlotFrame(newslotframe, newtool)
+    end)
+
+    newslotframe.slotbutton.MouseButton1Click:Connect(function()
+        stowayclient.EquipUnequipTool(slotvalue)
     end)
 
     return newslotframe
@@ -212,7 +271,53 @@ function stowayclient.CreateHotBarFrames()
     end 
 end
 
+function stowayclient.CreateBackpackFrames()
+    for _, backpackvalue in BackpackFolder:GetChildren() do
+        local backpackframename = stowayclient.CreateSlotFrameName(backpackvalue.Name)
+        if not ScrollingBackpack:FindFirstChild(backpackframename) then
+            local slotframe = stowayclient.CreateSlotFrame(backpackvalue)
+            slotframe.Parent = ScrollingBackpack
+        end
+    end
+end
+
+function stowayclient.SetUnequipped()
+    if not currentlyEquippedFrame then return end
+    stowayclient.SetSlotFrameUnequipped(currentlyEquippedFrame)
+    currentlyEquippedSlot = nil
+    currentlyEquippedFrame = nil
+end
+
+function stowayclient.SetEquipped(slot:ObjectValue)
+    stowayclient.SetUnequipped()
+    currentlyEquippedSlot = slot
+    local slotnumber = tonumber(slot.Name)
+    local slotframename = stowayclient.CreateSlotFrameName(slotnumber)
+
+    if slot.Parent == BackpackFolder then
+        currentlyEquippedFrame = ScrollingBackpack:WaitForChild(slotframename)
+    elseif slot.Parent == HotbarFolder then
+        currentlyEquippedFrame = HotbarFrame:FindFirstChild(slotframename)
+    end
+    stowayclient.SetSlotFrameEquipped(currentlyEquippedFrame)
+end
+
+function stowayclient.EquipUnequipTool(slotvalue:ObjectValue)
+    if currentlyEquippedSlot == slotvalue then
+        stowayclient.SetUnequipped()
+        unequipTool:FireServer()
+    elseif slotvalue.Value then
+        stowayclient.SetEquipped(slotvalue)
+        equipTool:FireServer(slotvalue.Value)
+    end
+end
+
+
+
 stowayclient.new()
 ContextActionService:BindAction("toggle_backpack", stowayclient.ToggleBackpack, false, unpack(Binds.BackpackBinds))
+BackpackFolder.ChildAdded:Connect(stowayclient.CreateBackpackFrames)
+Character.ChildAdded:Connect(stowayclient.updateEquippedTool)
+Character.ChildRemoved:Connect(stowayclient.updateEquippedTool)
 
 return stowayclient
