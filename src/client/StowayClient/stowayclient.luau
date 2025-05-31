@@ -1,8 +1,10 @@
 local ContextActionService = game:GetService("ContextActionService")
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
+local StopWatchReporter = game:GetService("StopWatchReporter")
 local UserInputService = game:GetService("UserInputService")
 
 --Modules
@@ -43,6 +45,12 @@ local ScrollingBackpack = BackpackFrame.ScrollingFrame :: ScrollingFrame
 
 local currentlyEquippedFrame = nil
 local currentlyEquippedSlot = nil
+
+local DragginOrigianlFrame = nil 
+local DragginFakeFrame = nil
+local DragginSlot = nil
+local DragginConnection = nil
+local DragginThresholdDistance = 5
 
 local stowayclient = {}
 
@@ -107,9 +115,8 @@ function stowayclient.updateEquippedTool()
     if not tool then stowayclient.SetUnequipped(); return end
     local toolslot = stowayclient.findSlotfromTool(tool)
     
-    if currentlyEquippedSlot == toolslot then
-        stowayclient.SetEquipped(toolslot)
-    end
+    if currentlyEquippedSlot == toolslot then return end
+    stowayclient.SetEquipped(toolslot)
 end
 
 function stowayclient.BindKeyBinds(actionNamePrefix, slotfolder)
@@ -129,11 +136,78 @@ function stowayclient.BindKeyBinds(actionNamePrefix, slotfolder)
     end
 end
 
+function stowayclient.ResetDragginValues()
+    DragginOrigianlFrame = nil 
+    DragginFakeFrame = nil
+    DragginSlot = nil
+    DragginConnection = nil
+end
+
+function stowayclient.Release(inputObject, gameProcessedEvent)
+    local inputtype = inputObject.UserInputType
+
+    if inputtype == Enum.UserInputType.MouseButton1 or inputtype == Enum.UserInputType.Touch then
+        if not DragginFakeFrame then return end
+        if not DragginConnection then return end
+
+        DragginConnection:Disconnect()
+        stowayclient.SetSlotFrameHidden(DragginFakeFrame)
+
+        local guiInset = GuiService:GetGuiInset()
+        local mousePosition = UserInputService:GetMouseLocation() - guiInset
+
+        if BackpackFrame.Visible and stowayclient.IsMouseInside(ScrollingBackpack, DragginFakeFrame) then
+            local backpackslot, value = stowayclient.GetBackpackSlot()
+
+            if backpackslot then
+                if DragginSlot == value then
+                    print(Player.Name .. "same backpack slot", DragginSlot.Name)
+                    stowayclient.SetSlotFrameVisible(DragginOrigianlFrame)
+                    if value == currentlyEquippedSlot then stowayclient.SetEquipped(value) end
+                else
+                    print(Player.Name .. "swapping in backpack", DragginSlot.Name)
+                    stowayclient.SwapSlots(DragginSlot, value)
+                end
+            else
+                print(Player.Name .. "moving to the end of backpack", DragginSlot.Name)
+                stowayclient.MoveToEndofBackpack(DragginSlot)
+            end
+
+        elseif stowayclient.IsMouseInside(HotbarFrame, DragginFakeFrame) then
+            local hotbarslot, number = stowayclient.GetHotBarSlot()
+
+            if hotbarslot then
+                local slotvalue = HotbarFolder[tostring(number)]
+
+                if DragginSlot == slotvalue then
+                    print(Player.Name .. "same slot in hotbar", DragginSlot.Name)
+                    stowayclient.SetSlotFrameVisible(DragginOrigianlFrame)
+                    if slotvalue == currentlyEquippedSlot then stowayclient.SetEquipped(slotvalue) end
+                else
+                    stowayclient.SwapSlots(DragginSlot, slotvalue)
+                    print(Player.Name .. "swapping in hotbar", DragginSlot.Name, slotvalue)
+                end
+            end
+
+        else
+            stowayclient.DropTool(DragginSlot)
+            print(Player.Name .. "dropping", DragginSlot.Name)
+        end
+
+        DragginFakeFrame:Destroy()
+        stowayclient.ResetDragginValues()
+    end
+end
+
 --//Setup Function\\--
 function stowayclient.new()
     StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
     StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
     BackpackFrame.Visible = false
+    
+    if UserInputService.TouchEnabled or UserInputService.GamepadEnabled then
+        InventoryGui.BackpackStuff.Visible = true
+    end
 
     local stowayresult = GetStowayFromServer:InvokeServer("stoway") :: Types.Stoway
     if stowayresult then
@@ -162,15 +236,15 @@ function stowayclient.SetSlotFrameVisible(SlotFrame)
 
     SlotFrame.slotbutton.Visible = true
     SlotFrame.stackcount.Visible = true
+    SlotFrame.rarityframe.Visible = true
 end
 
 function stowayclient.UpdateSlotFrame(slotframe, tool:Tool) : any
-    if not tool then return stowayclient.SetSlotFrameHidden(slotframe) end
+    if not tool then print("hidden at line 243"); return stowayclient.SetSlotFrameHidden(slotframe) end 
     if not slotframe then return end
     local data = stowayclient.GetToolData(tool)
-    print(data.Rarity, data.Amount)
 
-    slotframe.stackcount.Text = tonumber(data.Amount) > 1 and data.Amount .. "x" or "" -- 1 stack count doesnt end wit "x"
+    slotframe.stackcount.Text = tonumber(data.Amount) > 1 and data.Amount .. "x" or "" --1 stack count doesnt end wit "x"
     slotframe.slotbutton.Image = data.Image
     
     if Settings.RarityCheck then slotframe.rarityframe.Visible = true; slotframe.rarityframe.BackgroundColor3 = RarityValues[data.Rarity] end
@@ -256,7 +330,68 @@ function stowayclient.CreateSlotFrame(slotvalue:ObjectValue)
         stowayclient.UpdateSlotFrame(newslotframe, newtool)
     end)
 
+    newslotframe.slotbutton.MouseButton1Down:Connect(function()
+        if not slotvalue.Value then return end
+
+        DragginOrigianlFrame = newslotframe
+        DragginSlot = slotvalue
+
+        local InitialMousePosition = UserInputService:GetMouseLocation()
+        while true do
+            RunService.Heartbeat:Wait()
+
+            local currentMousePosition = UserInputService:GetMouseLocation()
+            local mousedistance = (currentMousePosition - InitialMousePosition).Magnitude
+
+            if not DragginOrigianlFrame then return end
+            if mousedistance >= DragginThresholdDistance then
+                break
+            end
+        end
+        DragginFakeFrame = DragginOrigianlFrame:Clone()
+        DragginFakeFrame.slotnumber.Visible = false
+
+        local screenx = DraggingGui.AbsoluteSize.X
+        local screeny = DraggingGui.AbsoluteSize.Y
+        local absolutebuttonsize = HotbarFrame["1"].AbsoluteSize
+        local absolutemouseoffset = UserInputService:GetMouseLocation() - DragginOrigianlFrame.AbsolutePosition
+        local scalemouseoffsetx = absolutemouseoffset.X / screenx - 0.02
+        local scalemouseoffsety = absolutemouseoffset.Y / screeny - 0.098
+
+        local function SetFrameSize()
+            local sizeX = absolutebuttonsize.X / screenx
+            local sizeY = absolutebuttonsize.Y / screeny
+            DragginFakeFrame.Size = UDim2.new(sizeX, 0, sizeY, 0)
+        end
+
+        local function SetFramePos()
+            local mousePosition = UserInputService:GetMouseLocation()
+            DragginFakeFrame.Position = UDim2.new(
+                mousePosition.X / screenx - scalemouseoffsetx, 0,
+                mousePosition.Y / screeny - scalemouseoffsety, 0
+            )
+        end
+        SetFrameSize()
+        SetFramePos()
+
+        DragginFakeFrame.Parent = DraggingGui
+        print("hidden at line 378")
+        stowayclient.SetSlotFrameHidden(DragginOrigianlFrame)
+        stowayclient.SetSlotFrameUnequipped(DragginOrigianlFrame)
+
+        DragginConnection = RunService.Heartbeat:Connect(function()
+            if not DragginFakeFrame or DragginFakeFrame.Parent ~= DraggingGui then stowayclient.ResetDragginValues(); return; end
+
+            screenx = DraggingGui.AbsoluteSize.X
+            screeny = DraggingGui.AbsoluteSize.Y
+            absolutebuttonsize = HotbarFrame["1"].AbsoluteSize
+            SetFrameSize()
+            SetFramePos()
+        end)
+    end)
+
     newslotframe.slotbutton.MouseButton1Click:Connect(function()
+        stowayclient.ResetDragginValues()
         stowayclient.EquipUnequipTool(slotvalue)
     end)
 
@@ -312,6 +447,92 @@ function stowayclient.EquipUnequipTool(slotvalue:ObjectValue)
     end
 end
 
+function stowayclient.IsMouseInside(gui1, gui2)
+    local gui1_topLeft,gui1_bottomRight = gui1.AbsolutePosition, gui1.AbsolutePosition + gui1.AbsoluteSize
+	local gui2_topLeft,gui2_bottomRight = gui2.AbsolutePosition, gui2.AbsolutePosition + gui2.AbsoluteSize
+	return ((gui1_topLeft.x < gui2_bottomRight.x and gui1_bottomRight.x > gui2_topLeft.x) and (gui1_topLeft.y < gui2_bottomRight.y and gui1_bottomRight.y > gui2_topLeft.y))
+end
+
+function stowayclient.GetHotBarSlot()
+
+    for i=1, Settings.HotbarSettings.MaxSlots do
+        local hotbarslot = HotbarFrame[stowayclient.CreateSlotFrameName(i)]
+        if stowayclient.IsMouseInside(hotbarslot, DragginFakeFrame) then
+            return hotbarslot, i 
+        end
+    end
+
+    return
+end
+
+function stowayclient.GetBackpackSlot()
+
+    for _, slotvalue in BackpackFolder:GetChildren() do
+        local backpackslot = ScrollingBackpack[stowayclient.CreateSlotFrameName(slotvalue.Name)]
+        if stowayclient.IsMouseInside(backpackslot, DragginFakeFrame) then
+            return backpackslot, slotvalue
+        end
+    end
+
+    return
+end
+
+function stowayclient.ShiftEquippedSlot(slot)
+    if not currentlyEquippedSlot then return end
+
+    if currentlyEquippedSlot.Parent == BackpackFolder and slot.Parent == BackpackFolder then
+        if tonumber(currentlyEquippedSlot.Name) > tonumber(slot.Name) then
+            local digit = tonumber(currentlyEquippedSlot.Name)
+            local foundslot = BackpackFolder[digit - 1] 
+            stowayclient.SetEquipped(foundslot)
+        end
+    end
+end
+
+function stowayclient.SwapSlots(slot1, slot2)
+    swapSlots:FireServer(slot1, slot2)
+
+    local slot1value = slot1.Value
+    local slot2value = slot2.Value
+
+    if slot1value and slot1value.Parent == Character then
+        stowayclient.SetEquipped(slot2)
+    elseif slot2value and slot2value.Parent == Character then
+        stowayclient.SetEquipped(slot1)
+    end
+
+    if slot1.Parent == BackpackFolder and not slot2value then
+        stowayclient.ShiftEquippedSlot(slot1)
+    elseif slot2.Parent == BackpackFolder and not slot1value then
+        stowayclient.ShiftEquippedSlot(slot2)
+    end
+end
+
+function stowayclient.MoveToEndofBackpack(slot)
+    local numofbackpackslots = #BackpackFolder:GetChildren() + #HotbarFolder:GetChildren()
+    movetoendofback:FireServer(slot)
+    local slototequip = BackpackFolder:WaitForChild(numofbackpackslots + 1)
+    
+
+    if slototequip.Value.Parent == Character then
+        if slot.Parent == HotbarFolder then
+            stowayclient.SetEquipped(slototequip)
+        else
+            slototequip = BackpackFolder[numofbackpackslots]
+            stowayclient.SetEquipped(slototequip)
+        end
+    elseif currentlyEquippedSlot then
+        stowayclient.ShiftEquippedSlot(slot)
+    end
+end
+
+function stowayclient.DropTool(slot)
+    local tool = slot.Value
+    dropTool:FireServer(tool)
+
+    if not currentlyEquippedSlot then return end
+    stowayclient.ShiftEquippedSlot(slot)
+end
 
 
 stowayclient.new()
@@ -319,5 +540,8 @@ ContextActionService:BindAction("toggle_backpack", stowayclient.ToggleBackpack, 
 BackpackFolder.ChildAdded:Connect(stowayclient.CreateBackpackFrames)
 Character.ChildAdded:Connect(stowayclient.updateEquippedTool)
 Character.ChildRemoved:Connect(stowayclient.updateEquippedTool)
+UserInputService.InputEnded:Connect(stowayclient.Release)
+
+if InventoryGui.BackpackStuff.Visible then InventoryGui.BackpackStuff.MouseButton1Click:Connect(function() BackpackFrame.Visible = not BackpackFrame.Visible end) end
 
 return stowayclient

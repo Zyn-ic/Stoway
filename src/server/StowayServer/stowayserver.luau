@@ -103,8 +103,10 @@ function ValidateTool(Player:Player, Tool:Tool) : boolean
 end
 
 function ValidateSlot(Slot:ObjectValue, self:any) : boolean
+    print(Slot:IsA("ObjectValue"), Slot.Name, Slot.Parent)
     if typeof(Slot) ~= "Instance" or not Slot:IsA("ObjectValue") then return false end
 
+    print(self.HotBarFolder, self.BackpackFolder)
     return Slot.Parent == self.HotBarFolder or Slot.Parent == self.BackpackFolder
 end
 
@@ -338,8 +340,10 @@ function StowayServer:DropTool(Player:Player, Tool:Tool)
 end
 
 function StowayServer:SwapSlots(Slot1:ObjectValue, Slot2:ObjectValue)
-    if not ValidateSlot(Slot1, self) or not ValidateSlot(Slot2, self) then return end
-    if Slot1 == Slot2 then return end
+    if not ValidateSlot(Slot1, self) or not ValidateSlot(Slot2, self) then print(typeof(Slot1), typeof(Slot2)) return end
+    if Slot1 == Slot2 then print("same item") return end
+
+    print(Slot1.Name, Slot2.Name)
 
     --swapping slots
     local oldslot1 = Slot1.Value

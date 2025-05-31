@@ -13,6 +13,6 @@ Binds.KeyBinds = {
 	["0"] = {Enum.KeyCode.Zero},
 }
 
-Binds.BackpackBinds = {Enum.KeyCode.Tab, Enum.KeyCode.Y}
+Binds.BackpackBinds = {Enum.KeyCode.Tab, Enum.KeyCode.ButtonY}
 
 return Binds
