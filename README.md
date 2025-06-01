@@ -2,7 +2,7 @@
 <img src="pics/Logo.png" alt="Stoway Logo" width="120" align = "left" style="margin-right:15px"/> 
 
 <div style="display: flex; flex-direction: column; gap: 2px;">
-<p> <strong>Stoway</strong> is a flexible and feature-rich inventory and hotbar system designed for Roblox experiences. It provides developers with a robust framework to manage player items, offering deep customization for various gameplay needs, from simple backpacks to complex, data-driven inventories.</p>
+<p> <strong>Stoway</strong> is a flexible and feature-rich inventory and hotbar system designed for Roblox experiences. It provides developers with a robust framework to manage player items, offering deep customization for various gameplay needs, from simple backpacks to complex, data-driven inventories. Please consider going to the <a href="https://github.com/Zyn-ic/Stoway/releases">latest release</a> and downloading it there if you want a view at a basic set up.</p>
 </div>
 
 <br>
@@ -80,7 +80,7 @@ Enhance player interaction and item management with these powerful extras.
 
 Setting up Stoway in your Roblox game is straightforward:
 
-1.  📥 **Download:** Grab the latest release from the [Releases](../../releases) page (or clone the repository).
+1.  📥 **Download:** Grab the latest release from the [Releases](https://github.com/Zyn-ic/Stoway/releases) page (or clone the repository).
 2.  📦 **Import:** Import the `.rbxm` model file into Roblox Studio.
 3.  📁 **Placement:**
     * Place the `StowayServer` ModuleScript (and its children like `Settings`) into `ServerScriptService` (e.g., `ServerScriptService.Stoway.StowayServer`).
