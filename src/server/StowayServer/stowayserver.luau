@@ -1,6 +1,5 @@
 -- ServerScriptService/Stoway/StowayServer.lua
 local StowayServer = {}
-StowayServer.__index = StowayServer
 
 -- Services & Modules
 local Players = game:GetService("Players")
@@ -22,9 +21,11 @@ local SendStowayToClient = ReplicatedStorage:WaitForChild("Remotes").AskForStowa
 
 local Global_Janitor = Janitor.new() -- for playeradd and playerremoving
 
+local PlayerStoways = {} :: {Player: Types.Stoway}
+
 
 --//HelperFuncs\\--
-function CreateHotbarValues(self)
+function CreateHotbarValues(self: Types.Stoway)
     for i=1, self.Settings.HotbarSettings.MaxSlots do
         local hotbarvalue = Instance.new("ObjectValue")
         hotbarvalue.Name = i
@@ -41,7 +42,6 @@ function CheckInventoryWeight(Folder: {ObjectValue}) : number
         weight += v.Value:GetAttribute("Weight") 
     end
 
-    print(weight)
     return weight
 end
 
@@ -103,10 +103,8 @@ function ValidateTool(Player:Player, Tool:Tool) : boolean
 end
 
 function ValidateSlot(Slot:ObjectValue, self:any) : boolean
-    print(Slot:IsA("ObjectValue"), Slot.Name, Slot.Parent)
     if typeof(Slot) ~= "Instance" or not Slot:IsA("ObjectValue") then return false end
 
-    print(self.HotBarFolder, self.BackpackFolder)
     return Slot.Parent == self.HotBarFolder or Slot.Parent == self.BackpackFolder
 end
 
@@ -115,9 +113,9 @@ function SendStowayorSettings(player:Player, arg:string) : Types.Stoway | Types.
     if typeof(arg) ~= "string" then return nil end
 
     if arg == "stoway" then
-        return StowayServer:GetStoway()
+        return StowayServer:GetStoway(player)
     elseif arg == "settings" then
-        return StowayServer:GetSettings()
+        return StowayServer:GetSettings(player)
     end
 
     return nil
@@ -125,37 +123,40 @@ end
 
 --//Setup Function\\--
 function StowayServer.new(Player:Player) 
-    local self = setmetatable(StowayServer, {})
+    local self = {} :: Types.Stoway
+
+    local HotbarName = "Hotbar"
+    local BackpackName = "Backpack"
+    local InventoryName = "Inventory"
 
     self.PrivateJanitor = Janitor.new()
 
     self.Settings = TemplateSettings
-    self.HotbarName = "Hotbar"
-    self.BackpackName = "Backpack"
-    self.InventoryName = "Inventory"
-
+    
     self.InventoryFolder = Instance.new("Folder")
-    self.InventoryFolder.Name = self.InventoryName
+    self.InventoryFolder.Name = InventoryName
 
     self.HotBarFolder = Instance.new("Folder")
-    self.HotBarFolder.Name = self.HotbarName
+    self.HotBarFolder.Name = HotbarName
     self.HotBarFolder.Parent = self.InventoryFolder
 
     self.BackpackFolder = Instance.new("Folder")
-    self.BackpackFolder.Name = self.BackpackName
+    self.BackpackFolder.Name = BackpackName
     self.BackpackFolder.Parent = self.InventoryFolder
 
     CreateHotbarValues(self)
     self.InventoryFolder.Parent = Player
     self.PrivateJanitor:Add(self.InventoryFolder)
+    self.PrivateJanitor:Add(function() PlayerStoways[Player] = nil; end)
+    PlayerStoways[Player] = self
+    
 
     --TODO: other stuff
-    self:TrackPlayerTools(Player)
-    return self
+    StowayServer:TrackPlayerTools(Player)
 end
 
 --//Core Helper Functions\\--
-function StowayServer:getTools(Backpack:Backpack ,character:Model) : {Tool}
+function StowayServer:getTools(Backpack:Backpack, character:Model) : {Tool}
     local tools = Backpack:GetChildren()
 
     if character then 
@@ -166,67 +167,73 @@ function StowayServer:getTools(Backpack:Backpack ,character:Model) : {Tool}
     return tools
 end
 
-function StowayServer:FindValueFromTool(Tool:Tool) : ObjectValue?
-    for _, ObjectValue:ObjectValue in self.HotBarFolder:GetChildren() do
+function StowayServer:FindValueFromTool(Tool:Tool, Player:Player) : ObjectValue?
+    local PlayerStowy = PlayerStoways[Player]
+    for _, ObjectValue:ObjectValue in PlayerStowy.HotBarFolder:GetChildren() do
         if ObjectValue.Value == Tool then return ObjectValue end
     end
 
-    for _, ObjectValue:ObjectValue in self.BackpackFolder:GetChildren() do
+    for _, ObjectValue:ObjectValue in PlayerStowy.BackpackFolder:GetChildren() do
         if ObjectValue.Value == Tool then return ObjectValue end
     end
 
     return nil
 end
 
-function StowayServer:AddNewBackpackValue(Tool:Tool)
-    local folder = self.HotBarFolder:GetChildren()
+function StowayServer:AddNewBackpackValue(Tool:Tool, Player:Player)
+    local PlayerStowy = PlayerStoways[Player]
+    local folder = PlayerStowy.HotBarFolder:GetChildren()
 
-    for _,v in self.BackpackFolder:GetChildren() do
+    for _,v in PlayerStowy.BackpackFolder:GetChildren() do
         table.insert(folder, v) 
     end
 
-    if IsWeightAtMax(folder, self.Settings.BackpackSettings.Limit) then Tool:Destroy(); return --[[TODO DROP SYSTEM ]] end
+    if IsWeightAtMax(folder, PlayerStowy.Settings.BackpackSettings.Limit) then Tool:Destroy(); return --[[TODO DROP SYSTEM ]] end
 
     local newbackpackValue = Instance.new("ObjectValue")
     newbackpackValue.Name = #folder + 1
     newbackpackValue.Value = Tool
-    newbackpackValue.Parent = self.BackpackFolder
+    newbackpackValue.Parent = PlayerStowy.BackpackFolder
 end
 
-function  StowayServer:FindSuitableHotbarSlot(Tool:Tool?) : ObjectValue?
+function  StowayServer:FindSuitableHotbarSlot(Tool:Tool?, Player:Player) : ObjectValue?
     -- check if there is a slot with the same type AND IS NOT MAX
+    local PlayerStowy = PlayerStoways[Player]
     if Tool then
-        if self.Settings.CanStack then
+        if PlayerStowy.Settings.CanStack then
 
-            local result = FindSameSlotType(self.HotBarFolder:GetChildren(), Tool)
-            if result and ((Tool:GetAttribute("Weight") + result.Value:GetAttribute("Weight")) <= self.Settings.MaxStackCount)  then 
+            local result = FindSameSlotType(PlayerStowy.HotBarFolder:GetChildren(), Tool)
+            if result and ((Tool:GetAttribute("Weight") + result.Value:GetAttribute("Weight")) <= PlayerStowy.Settings.MaxStackCount)  then 
                 return result 
             end
             
         end
     end
 
-    return FindEmptySlot(self.HotBarFolder:GetChildren(), self.Settings.HotbarSettings.MaxSlots)
+    return FindEmptySlot(PlayerStowy.HotBarFolder:GetChildren(), PlayerStowy.Settings.HotbarSettings.MaxSlots)
 end
 
-function StowayServer:ShiftBackpackValuesDown(StartingInventoryValue:ObjectValue)
+function StowayServer:ShiftBackpackValuesDown(StartingInventoryValue:ObjectValue, Player:Player)
+    local PlayerStowy = PlayerStoways[Player]
     local currerntInventoryNum = tonumber(StartingInventoryValue.Name)
     if currerntInventoryNum then currerntInventoryNum += 1 end
 
-    while self.BackpackFolder:FindFirstChild(currerntInventoryNum) do
-        self.BackpackFolder[currerntInventoryNum-1].Value = self.BackpackFolder[currerntInventoryNum].Value
+    while PlayerStowy.BackpackFolder:FindFirstChild(currerntInventoryNum) do
+        PlayerStowy.BackpackFolder[currerntInventoryNum-1].Value = PlayerStowy.BackpackFolder[currerntInventoryNum].Value
         currerntInventoryNum += 1
     end
 
-    self.BackpackFolder[currerntInventoryNum-1]:Destroy()
+    PlayerStowy.BackpackFolder[currerntInventoryNum-1]:Destroy()
 end
 
 function StowayServer:UpdatePlayerTools(Player:Player)
-    local playerTools = self:getTools(Player.Backpack, Player.Character)
+    local PlayerStowy = PlayerStoways[Player]
+    local char = Player.Character
+    local playerTools = StowayServer:getTools(Player.Backpack, char)
 
-    local inventoryvalues = self.BackpackFolder:GetChildren()
+    local inventoryvalues = PlayerStowy.BackpackFolder:GetChildren()
 
-    for _, v in self.HotBarFolder:GetChildren() do
+    for _, v in PlayerStowy.HotBarFolder:GetChildren() do
         table.insert(inventoryvalues, v)
     end
 
@@ -234,14 +241,14 @@ function StowayServer:UpdatePlayerTools(Player:Player)
         local tool = value.Value 
         if not table.find(playerTools, tool) then
             value.Value = nil
-            if value.Parent == self.BackpackFolder then self:ShiftBackpackValuesDown(value) end
+            if value.Parent == PlayerStowy.BackpackFolder then StowayServer:ShiftBackpackValuesDown(value, Player) end
         end
     end
 
     for _, tool:Tool in playerTools do
-        if not self:FindValueFromTool(tool) then
+        if not StowayServer:FindValueFromTool(tool, Player) then
 
-            local freehotbarslot = self:FindSuitableHotbarSlot(tool)
+            local freehotbarslot = StowayServer:FindSuitableHotbarSlot(tool, Player)
             if freehotbarslot then
 
                 if freehotbarslot.Value ~= nil then 
@@ -252,59 +259,62 @@ function StowayServer:UpdatePlayerTools(Player:Player)
                 end
                 freehotbarslot.Value = tool
             else
-                self:AddNewBackpackValue(tool)
+                StowayServer:AddNewBackpackValue(tool, Player)
             end
         end
     end
 end
 
-function StowayServer:GetSettings() : Types.Settings
+function StowayServer:GetSettings(Player:Player) : Types.Settings
+    local PlayerStowy = PlayerStoways[Player]
     local settings = {} :: Types.Settings
     settings.BackpackSettings = {}
     settings.HotbarSettings = {}
 
-    settings.BackpackSettings.CarryingType = self.Settings.BackpackSettings.CarryingType
-    settings.BackpackSettings.Limit = self.Settings.BackpackSettings.Limit
-    settings.BackpackSettings.Sorting = self.Settings.BackpackSettings.Sorting
+    settings.BackpackSettings.CarryingType = PlayerStowy.Settings.BackpackSettings.CarryingType
+    settings.BackpackSettings.Limit = PlayerStowy.Settings.BackpackSettings.Limit
+    settings.BackpackSettings.Sorting = PlayerStowy.Settings.BackpackSettings.Sorting
 
-    settings.HotbarSettings.HotbarType = self.Settings.HotbarSettings.HotbarType
-    settings.HotbarSettings.MaxSlots = self.Settings.HotbarSettings.MaxSlots
+    settings.HotbarSettings.HotbarType = PlayerStowy.Settings.HotbarSettings.HotbarType
+    settings.HotbarSettings.MaxSlots = PlayerStowy.Settings.HotbarSettings.MaxSlots
 
-    settings.CanStack = self.Settings.CanStack
-    settings.Droppable = self.Settings.Droppable
-    settings.MaxStackCount = self.Settings.MaxStackCount
-    settings.RarityCheck = self.Settings.RarityCheck
+    settings.CanStack = PlayerStowy.Settings.CanStack
+    settings.Droppable = PlayerStowy.Settings.Droppable
+    settings.MaxStackCount = PlayerStowy.Settings.MaxStackCount
+    settings.RarityCheck = PlayerStowy.Settings.RarityCheck
 
     return settings 
 end
 
-function StowayServer:GetStoway() : Types.Stoway
+function StowayServer:GetStoway(Player:Player) : Types.Stoway
+    local PlayerStowy = PlayerStoways[Player]
     local Stoway = {} :: Types.Stoway
 
-    Stoway.BackpackFolder = self.BackpackFolder
-    Stoway.HotBarFolder = self.HotBarFolder
-    Stoway.InventoryFolder = self.InventoryFolder
+    Stoway.BackpackFolder = PlayerStowy.BackpackFolder
+    Stoway.HotBarFolder = PlayerStowy.HotBarFolder
+    Stoway.InventoryFolder = PlayerStowy.InventoryFolder
     Stoway.PrivateJanitor = nil
-    Stoway.Settings = self:GetSettings()
+    Stoway.Settings = StowayServer:GetSettings(Player)
 
     return Stoway
 end
 
---//Connections Setup Functions\\--
 function StowayServer:TrackPlayerTools(Player:Player)
+    local PlayerStowy = PlayerStoways[Player]
 
-    self.PrivateJanitor:Add(Player.CharacterAdded:Connect(function(char:Model)
-        Clear(self.HotBarFolder:GetChildren(), self.BackpackFolder:GetChildren())
-        self:UpdatePlayerTools(Player)
+    PlayerStowy.PrivateJanitor:Add(Player.CharacterAdded:Connect(function(char:Model)
+        Clear(PlayerStowy.HotBarFolder:GetChildren(), PlayerStowy.BackpackFolder:GetChildren())
+        StowayServer:UpdatePlayerTools(Player)
 
-        self.PrivateJanitor:Add(Player.Backpack.ChildAdded:Connect(function() self:UpdatePlayerTools(Player) end))
-        self.PrivateJanitor:Add(Player.Backpack.ChildRemoved:Connect(function() self:UpdatePlayerTools(Player) end))
+        PlayerStowy.PrivateJanitor:Add(Player.Backpack.ChildAdded:Connect(function() StowayServer:UpdatePlayerTools(Player) end))
+        PlayerStowy.PrivateJanitor:Add(Player.Backpack.ChildRemoved:Connect(function() StowayServer:UpdatePlayerTools(Player) end))
 
-        self.PrivateJanitor:Add(char.ChildAdded:Connect(function() self:UpdatePlayerTools(Player) end))
-        self.PrivateJanitor:Add(char.ChildRemoved:Connect(function() self:UpdatePlayerTools(Player) end))
+        PlayerStowy.PrivateJanitor:Add(char.ChildAdded:Connect(function() StowayServer:UpdatePlayerTools(Player) end))
+        PlayerStowy.PrivateJanitor:Add(char.ChildRemoved:Connect(function() StowayServer:UpdatePlayerTools(Player) end))
     end))
 end
 
+--//Connections Setup Functions\\--
 function StowayServer.UnEquip(Player:Player)
     local character = Player.Character or Player.CharacterAdded:Wait()
     if not character then return end
@@ -327,44 +337,48 @@ end
 
 function StowayServer:DropTool(Player:Player, Tool:Tool)
     if not ValidateTool(Player, Tool) then return end
-    local slot = self:FindValueFromTool(Tool)
+    local slot = StowayServer:FindValueFromTool(Tool, Player)
     if not slot then return end
 
+    local PlayerStowy = PlayerStoways[Player]
     local character = Player.Character or Player.CharacterAdded:Wait()
     local root = character.PrimaryPart; local rootCframe = root.CFrame;
-    local positionOffset = (rootCframe.LookVector * Vector3.new(1,0,1)) * self.Settings.DropToolDistance
+    local positionOffset = (rootCframe.LookVector * Vector3.new(1,0,1)) * PlayerStowy.Settings.DropToolDistance
     local ToolCframe = rootCframe + positionOffset
     local handle = Tool:FindFirstChild("Handle") or Tool.PrimaryPart
     if handle then handle.CFrame = ToolCframe end
     Tool.Parent = workspace
 end
 
-function StowayServer:SwapSlots(Slot1:ObjectValue, Slot2:ObjectValue)
-    if not ValidateSlot(Slot1, self) or not ValidateSlot(Slot2, self) then print(typeof(Slot1), typeof(Slot2)) return end
-    if Slot1 == Slot2 then print("same item") return end
+function StowayServer:SwapSlots(Player:Player, Slot1:ObjectValue, Slot2:ObjectValue)
+    local PlayerStowy = PlayerStoways[Player]
+    if not ValidateSlot(Slot1, PlayerStowy) or not ValidateSlot(Slot2, PlayerStowy) then return end
+    if Slot1 == Slot2 then return end
 
-    print(Slot1.Name, Slot2.Name)
 
     --swapping slots
     local oldslot1 = Slot1.Value
     Slot1.Value = Slot2.Value
     Slot2.Value = oldslot1
 
-    if Slot1.Parent == self.BackpackFolder and not Slot1.Value then
-        self:ShiftBackpackValuesDown(Slot1)
-    elseif Slot2.Parent == self.BackpackFolder and not Slot2.Value then
-        self:ShiftBackpackValuesDown(Slot2)
+    if Slot1.Parent == PlayerStowy.BackpackFolder and not Slot1.Value then
+        StowayServer:ShiftBackpackValuesDown(Slot1, Player)
+    elseif Slot2.Parent ==PlayerStowy.BackpackFolder and not Slot2.Value then
+        StowayServer:ShiftBackpackValuesDown(Slot2, Player)
     end
 end
 
-function StowayServer:MoveToEndofBackpack(Slot:ObjectValue)
-    if not ValidateSlot(Slot, self) then return end
+function StowayServer:MoveToEndofBackpack(Slot:ObjectValue, Player:Player)
+    local PlayerStowy = PlayerStoways[Player]
+    if not ValidateSlot(Slot, PlayerStowy) then return end
     if not Slot.Value then return end
-    self:AddNewBackpackValue(Slot.Value)
+
+    local tool = Slot.Value
+    StowayServer:AddNewBackpackValue(tool, Player)
     Slot.Value = nil
 
-    if Slot.Parent == self.BackpackFolder then
-        self:ShiftBackpackValuesDown(Slot)
+    if Slot.Parent == PlayerStowy.BackpackFolder then
+        StowayServer:ShiftBackpackValuesDown(Slot, Player)
     end
 end
 
@@ -372,9 +386,13 @@ end
 
 --//Clean Function\\--
 function StowayServer:Clean()
-    self["PrivateJanitor"]:Destroy()
-    self.PrivateJanitor = nil
-    self = nil
+    for _,v in PlayerStoways do
+        v.PrivateJanitor:Destroy()
+    end
+
+    PlayerStoways = nil
+    Global_Janitor:Destroy()
+    Global_Janitor = nil
 end
 
 --//Connections\\--
@@ -382,12 +400,12 @@ end
 SendStowayToClient.OnServerInvoke = SendStowayorSettings
 
 Global_Janitor:Add(Players.PlayerAdded:Connect(StowayServer.new))
-Global_Janitor:Add(Players.PlayerRemoving:Connect(function() StowayServer:Clean() end))
+Global_Janitor:Add(Players.PlayerRemoving:Connect(function(Player) PlayerStoways[Player].PrivateJanitor:Destroy() end))
 Global_Janitor:Add(equipTool.OnServerEvent:Connect(StowayServer.EquipTool))
 Global_Janitor:Add(unequipTool.OnServerEvent:Connect(StowayServer.UnEquip))
 Global_Janitor:Add(dropTool.OnServerEvent:Connect(function(Player, Tool) StowayServer:DropTool(Player, Tool) end))
-Global_Janitor:Add(swapSlots.OnServerEvent:Connect(function(plr, slot1, slot2) StowayServer:SwapSlots(slot1, slot2) end))
-Global_Janitor:Add(movetoendofback.OnServerEvent:Connect(function(plr, slot) StowayServer:MoveToEndofBackpack(slot) end))
+Global_Janitor:Add(swapSlots.OnServerEvent:Connect(function(plr, slot1, slot2) StowayServer:SwapSlots(plr, slot1, slot2) end))
+Global_Janitor:Add(movetoendofback.OnServerEvent:Connect(function(plr, slot) StowayServer:MoveToEndofBackpack(slot, plr) end))
 
 Global_Janitor:Add(function()
     if SendStowayToClient then
@@ -395,5 +413,5 @@ Global_Janitor:Add(function()
     end
 end)
 
-game:BindToClose(function() Global_Janitor:Destroy(); Global_Janitor = nil; end)
+game:BindToClose(function() StowayServer:Clean() end)
 return StowayServer
