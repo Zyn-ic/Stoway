@@ -18,7 +18,7 @@
   - [🚀 Getting Started ](#-getting-started-)
   - [🛠️ Configuration ](#️-configuration-)
 
----
+<br>
 
 ## 🌟 Core Features <a name="core-features"></a>
 
@@ -38,6 +38,8 @@ The hotbar is designed for quick access and intuitive item management.
     * **Static:** A fixed number of hotbar slots are always visible.
     * **Dynamic:** The hotbar can visually expand or shrink to only show slots that contain items.
 
+---
+
 ### 🎒 Backpack / Inventory <a name="backpack-inventory"></a>
 
 The backpack serves as the main storage, with flexible operational modes.
@@ -49,6 +51,8 @@ The backpack serves as the main storage, with flexible operational modes.
 * **🖐️ Drag & Drop UI:** Intuitive drag and drop functionality within the backpack interface.
 * **🔄 Hotbar <-> Backpack Swapping:** Drag an item from the hotbar to a backpack slot (or vice-versa) will swap positions.
 * **📊 Sorting:** Option to implement sorting functionality for the backpack based on specific categories (e.g., item type, rarity, name).
+
+---
 
 ### ⚙️ Extra Functionalities <a name="extra-functionalities"></a>
 
@@ -70,7 +74,7 @@ Enhance player interaction and item management with these powerful extras.
     * If enabled, Stoway can check for a "Rarity" attribute on tools.
     * Apply a corresponding color or visual indicator to a designated "rarity frame" or element within the item's UI display.
 
----
+<br>
 
 ## 🚀 Getting Started <a name="getting-started"></a>
 
