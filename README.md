@@ -5,6 +5,7 @@
 <p> <strong>Stoway</strong> is a flexible and feature-rich inventory and hotbar system designed for Roblox experiences. It provides developers with a robust framework to manage player items, offering deep customization for various gameplay needs, from simple backpacks to complex, data-driven inventories.</p>
 </div>
 
+<br>
 
 ## 📖 Table of Contents
 
