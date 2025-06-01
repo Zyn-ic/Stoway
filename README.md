@@ -143,6 +143,7 @@ end
 
 return Settings
 ```
+<br>
 
 # Credits
 
