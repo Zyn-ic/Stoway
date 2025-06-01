@@ -101,8 +101,8 @@ Setting up Stoway in your Roblox game is straightforward:
 
 Stoway's behavior is heavily controlled by the `Settings.lua` module. This allows you to easily tweak functionality without digging deep into the core scripts.
 
-```
-lua
+```lua
+
 -- Example snippet from Settings.lua
 
 local Settings = {}
