@@ -25,7 +25,7 @@ Settings.HotbarSettings.MaxSlots = 10
 Settings.BackpackSettings.CarryingType = CarryingTypes.Backpack
 
 --lets you set a limit for the backpack 0 means inf
-Settings.BackpackSettings.Limit = 21
+Settings.BackpackSettings.Limit = 15
 Settings.BackpackSettings.Sorting = false
 
 --// settings section
@@ -47,7 +47,7 @@ Settings.CanStack = true
 Settings.MaxStackCount = 5
 
 -- this setting will allow the code to check for rarity attribute on a tool
-Settings.RarityCheck = true
+Settings.RarityCheck = false
 
 -- this setting will allow the code to drop an item if it is in a drop frame
 Settings.Droppable = true

@@ -41,6 +41,7 @@ local DraggingGui = Player.PlayerGui:FindFirstChild("StowayGui").DraggingGui :: 
 local BackpackFrame = InventoryGui.Backpack :: Frame
 local HotbarFrame = InventoryGui.Hotbar :: Frame
 local ScrollingBackpack = BackpackFrame.ScrollingFrame :: ScrollingFrame
+local WeightLabel = BackpackFrame.Weight :: TextLabel
 
 local currentlyEquippedFrame = nil
 local currentlyEquippedSlot = nil
@@ -198,6 +199,37 @@ function stowayclient.Release(inputObject, gameProcessedEvent)
     end
 end
 
+function stowayclient.UpdateWeightValues()
+    local value = inventoryFolder:GetAttribute("TotalWeight")
+    WeightLabel.Text = tostring(value) .. "/" .. Settings.BackpackSettings.Limit
+
+    local AllSlots = {}
+
+    for _,v in HotbarFrame:GetChildren() do
+        if not v:IsA("Frame") then continue end
+        table.insert(AllSlots, v)
+    end
+
+    for _,v in ScrollingBackpack:GetChildren() do
+        if not v:IsA("Frame") then continue end
+        table.insert(AllSlots, v)
+    end
+
+
+    for _,v in AllSlots do
+        local name = v.Name:gsub("_", "")
+        local hotbarslot = HotbarFolder:FindFirstChild(name)
+        local backpackslot = BackpackFolder:FindFirstChild(name)
+        if hotbarslot then
+            stowayclient.UpdateSlotFrame(v, hotbarslot.Value)
+        end
+
+        if backpackslot then
+            stowayclient.UpdateSlotFrame(v, backpackslot.Value)
+        end
+    end
+end
+
 --//Setup Function\\--
 function stowayclient.new()
     StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
@@ -215,6 +247,9 @@ function stowayclient.new()
         HotbarFolder = stowayresult.HotBarFolder
         if stowayresult.Settings then Settings = stowayresult.Settings end
     end
+
+    local weight = inventoryFolder:GetAttribute("TotalWeight")
+    WeightLabel.Text = weight .. "/" .. Settings.BackpackSettings.Limit
 
     stowayclient.CreateHotBarFrames()
     stowayclient.CreateBackpackFrames()
@@ -489,7 +524,28 @@ function stowayclient.ShiftEquippedSlot(slot)
 end
 
 function stowayclient.SwapSlots(slot1, slot2)
-    swapSlots:FireServer(slot1, slot2)
+
+    if slot1.Value and slot2.Value and slot1.Value:GetAttribute("Rarity") == slot2.Value:GetAttribute("Rarity") and slot1.Value:GetAttribute("ItemType") == slot2.Value:GetAttribute("ItemType") and slot1.Value.Name == slot2.Value.Name then
+        swapSlots:FireServer(slot1, slot2, true)
+
+        local slotframe1 = stowayclient.CreateSlotFrameName(slot1.Name)
+        slotframe1 = HotbarFrame:FindFirstChild(slotframe1) or ScrollingBackpack:FindFirstChild(slotframe1)
+
+        local slotframe2 = stowayclient.CreateSlotFrameName(slot2.Name)
+        slotframe2 = HotbarFrame:FindFirstChild(slotframe2) or ScrollingBackpack:FindFirstChild(slotframe2)
+
+        print(slotframe1, slotframe2, slot2.Value)
+
+        --I dont like this either but I need a better way to track weight
+        task.delay(0.1, function() 
+            stowayclient.UpdateSlotFrame(slotframe1, slot1.Value)
+            stowayclient.UpdateSlotFrame(slotframe2, slot2.Value) 
+        end)
+
+    else
+        swapSlots:FireServer(slot1, slot2, false)
+    end
+    
 
     local slot1value = slot1.Value
     local slot2value = slot2.Value
@@ -540,6 +596,7 @@ BackpackFolder.ChildAdded:Connect(stowayclient.CreateBackpackFrames)
 Character.ChildAdded:Connect(stowayclient.updateEquippedTool)
 Character.ChildRemoved:Connect(stowayclient.updateEquippedTool)
 UserInputService.InputEnded:Connect(stowayclient.Release)
+inventoryFolder:GetAttributeChangedSignal("TotalWeight"):Connect(stowayclient.UpdateWeightValues)
 
 if InventoryGui.BackpackStuff.Visible then InventoryGui.BackpackStuff.MouseButton1Click:Connect(function() BackpackFrame.Visible = not BackpackFrame.Visible end) end
 
