@@ -120,20 +120,34 @@ function stowayclient.updateEquippedTool()
 end
 
 function stowayclient.BindKeyBinds(actionNamePrefix, slotfolder)
-    for slotnumber, slotkeybinds in pairs(Binds.KeyBinds) do
+	-- Loop from 1 up to the max number of slots defined in settings.
+	for i = 1, Settings.HotbarSettings.MaxSlots do
+		-- Get the bind data for the current slot index from our ordered array.
+		local bindData = Binds.KeyBinds[i]
+		
+		-- If we have more slots than defined keybinds, stop.
+		if not bindData then
+			break
+		end
 
-        local function EquipThisSlot(actionName, inputState, inputObject)
-            if inputState and inputState ~= Enum.UserInputState.Begin then return end
-            local slotvalue = slotfolder:FindFirstChild(slotnumber)
-            if not slotvalue or not slotvalue.Value then
-                unequipTool:FireServer()
-                return
-            end
-            stowayclient.EquipUnequipTool(slotvalue)
-        end
-        local actionName = actionNamePrefix .. tostring(slotnumber)
-        ContextActionService:BindAction(actionName, EquipThisSlot, false, unpack(slotkeybinds))
-    end
+		-- The slot in the HotbarFolder is now directly referenced by the loop index 'i'.
+		local slotNumberString = tostring(i)
+
+		local function EquipThisSlot(actionName, inputState, inputObject)
+			if inputState ~= Enum.UserInputState.Begin then return end
+
+			local slotValue = slotfolder:FindFirstChild(slotNumberString)
+			if not slotValue or not slotValue.Value then
+				unequipTool:FireServer()
+				return
+			end
+			stowayclient.EquipUnequipTool(slotValue)
+		end
+
+		-- Create a unique action name for each slot.
+		local actionName = actionNamePrefix .. slotNumberString
+		ContextActionService:BindAction(actionName, EquipThisSlot, false, unpack(bindData.Keys))
+	end
 end
 
 function stowayclient.ResetDragginValues()
@@ -152,9 +166,7 @@ function stowayclient.Release(inputObject, gameProcessedEvent)
 
         DragginConnection:Disconnect()
         stowayclient.SetSlotFrameHidden(DragginFakeFrame)
-
-        local guiInset = GuiService:GetGuiInset()
-        local mousePosition = UserInputService:GetMouseLocation() - guiInset
+        
 
         if BackpackFrame.Visible and stowayclient.IsMouseInside(ScrollingBackpack, DragginFakeFrame) then
             local backpackslot, value = stowayclient.GetBackpackSlot()
@@ -201,7 +213,7 @@ end
 
 function stowayclient.UpdateWeightValues()
     local value = inventoryFolder:GetAttribute("TotalWeight")
-    WeightLabel.Text = tostring(value) .. "/" .. Settings.BackpackSettings.Limit
+    WeightLabel.Text = Settings.BackpackSettings.Limit > 0 and tostring(value) .. "/" .. Settings.BackpackSettings.Limit or tostring(value) .. "/" .. "inf"
 
     local AllSlots = {}
 
@@ -249,7 +261,7 @@ function stowayclient.new()
     end
 
     local weight = inventoryFolder:GetAttribute("TotalWeight")
-    WeightLabel.Text = weight .. "/" .. Settings.BackpackSettings.Limit
+    WeightLabel.Text = Settings.BackpackSettings.Limit > 0 and weight .. "/" .. Settings.BackpackSettings.Limit or weight .. "/" .. "inf"
 
     stowayclient.CreateHotBarFrames()
     stowayclient.CreateBackpackFrames()
@@ -259,6 +271,7 @@ end
 --//Core Helper Functions\\--
 function stowayclient.SetSlotFrameHidden(SlotFrame)
     if not SlotFrame then return end
+    if SlotFrame.Parent == ScrollingBackpack then SlotFrame.BackgroundTransparency = 1 end
 
     SlotFrame.slotbutton.Visible = false
     SlotFrame.stackcount.Visible = false
@@ -267,6 +280,7 @@ end
 
 function stowayclient.SetSlotFrameVisible(SlotFrame)
     if not SlotFrame then return end
+    if SlotFrame.Parent == ScrollingBackpack then SlotFrame.BackgroundTransparency = 0.8 end
 
     SlotFrame.slotbutton.Visible = true
     SlotFrame.stackcount.Visible = true
@@ -278,10 +292,16 @@ function stowayclient.UpdateSlotFrame(slotframe, tool:Tool) : any
     if not slotframe then return end
     local data = stowayclient.GetToolData(tool)
 
-    slotframe.stackcount.Text = tonumber(data.Amount) > 1 and data.Amount .. "x" or "" --1 stack count doesnt end wit "x"
+    slotframe.stackcount.Text = tonumber(data.Amount) > 1 and Settings.CanStack and data.Amount .. "x" or "" --1 stack count doesnt end wit "x"
     slotframe.slotbutton.Image = data.Image
     
-    if Settings.RarityCheck then slotframe.rarityframe.Visible = true; slotframe.rarityframe.BackgroundColor3 = RarityValues[data.Rarity] end
+    if Settings.RarityCheck then
+        slotframe.rarityframe.Visible = true;
+        slotframe.rarityframe.BackgroundColor3 = RarityValues[data.Rarity]
+    else
+        slotframe.rarityframe.Visible = false;
+    end
+
     return stowayclient.SetSlotFrameVisible(slotframe)
 end
 
@@ -302,30 +322,29 @@ function stowayclient.CreateSlotFrameName(slotnumber:number): string
 end
 
 function stowayclient.getKeyName(Keybinds, slotnumber)
-	if not Keybinds or slotnumber == nil then
-		return -- nil, as per original behavior for missing inputs
+	if not Keybinds or not slotnumber then return end
+
+	-- Directly access the bind data for the slot using its numerical index.
+	local bindData = Keybinds[slotnumber]
+	if not bindData then return end
+
+	-- The primary display key (e.g., "1", "0", "T") comes directly from the Display field.
+	local primaryDisplay = "[" .. bindData.Display .. "]"
+	
+	-- If there's only one key bound, no need to add more text.
+	if #bindData.Keys <= 1 then
+		return primaryDisplay
 	end
-    if slotnumber == 10 then slotnumber = 0 end
-
-	local slotKey = tostring(slotnumber)
-	local keyCodeEnumList = Keybinds[slotKey]
-
-	-- Check if the slot exists and has any keycodes
-	if not keyCodeEnumList or (type(keyCodeEnumList) == "table" and #keyCodeEnumList == 0) then
-		return -- nil, if slot not found or the list of keycodes is empty
-	end
-
-	local formattedKeyNames = {}
-	table.insert(formattedKeyNames, "[".. slotnumber .. "]")
-	for i=2, #keyCodeEnumList do
-		local nameParts = string.split(tostring(keyCodeEnumList[i]), ".")
-		local keyName = nameParts[3] -- Extracts "F" from "Enum.KeyCode.F"
+	
+	-- Handle multiple keybinds for one slot (e.g., "[G]/[H]")
+	local formattedKeyNames = { primaryDisplay }
+	
+	-- Loop through the *other* keys if they exist.
+	for i = 2, #bindData.Keys do
+		local keyCodeEnum = bindData.Keys[i]
+		local nameParts = string.split(tostring(keyCodeEnum), ".")
+		local keyName = nameParts[3]
 		table.insert(formattedKeyNames, "[" .. keyName .. "]")
-	end
-
-	-- If, after processing, the list is somehow empty (e.g., malformed input not caught by basic checks, though unlikely with assumptions)
-	if #formattedKeyNames == 0 then
-		return -- nil
 	end
 
 	return table.concat(formattedKeyNames, "/")
@@ -524,42 +543,66 @@ function stowayclient.ShiftEquippedSlot(slot)
 end
 
 function stowayclient.SwapSlots(slot1, slot2)
+    local requestStackAction = false -- Flag to determine what action to request from the server.
+    local MaxStack = Settings.MaxStackCount
+    local slot1value = function() return slot1.Value end
+    local slot2value = function() return slot2.Value end
+    -- First, determine if a stack should be requested.
+    -- This checks if stacking is enabled globally and if both slots actually contain items.
+    if Settings.CanStack and slot1.Value and slot2.Value then
+        local sourceWeight = slot1value():GetAttribute("Weight")
+		local targetWeight = slot2value():GetAttribute("Weight")
 
-    if slot1.Value and slot2.Value and slot1.Value:GetAttribute("Rarity") == slot2.Value:GetAttribute("Rarity") and slot1.Value:GetAttribute("ItemType") == slot2.Value:GetAttribute("ItemType") and slot1.Value.Name == slot2.Value.Name then
+        -- Check if the items have the same type and name.
+        if slot1value():GetAttribute("ItemType") == slot2value():GetAttribute("ItemType") and slot1value().Name == slot2value().Name then
+            -- If they do, now check the rarity based on the settings.
+            if Settings.RarityCheck then
+                -- If RarityCheck is ON, their rarities must also match.
+                if slot1value():GetAttribute("Rarity") == slot2value():GetAttribute("Rarity") then
+                    requestStackAction = true -- Conditions met for a rarity-checked stack.
+                end
+            else
+                -- If RarityCheck is OFF, matching name and type is enough.
+                requestStackAction = true -- Conditions met for a non-rarity-checked stack.
+            end
+        end
+
+        if sourceWeight == MaxStack or targetWeight == MaxStack then requestStackAction = false end
+    end
+
+    -- Now, fire the remote event based on the validation result.
+    if requestStackAction then
+        -- Request a STACK action from the server.
         swapSlots:FireServer(slot1, slot2, true)
 
+        -- Your existing client-side visual update logic for stacking.
         local slotframe1 = stowayclient.CreateSlotFrameName(slot1.Name)
         slotframe1 = HotbarFrame:FindFirstChild(slotframe1) or ScrollingBackpack:FindFirstChild(slotframe1)
 
         local slotframe2 = stowayclient.CreateSlotFrameName(slot2.Name)
         slotframe2 = HotbarFrame:FindFirstChild(slotframe2) or ScrollingBackpack:FindFirstChild(slotframe2)
 
-        print(slotframe1, slotframe2, slot2.Value)
-
-        --I dont like this either but I need a better way to track weight
         task.delay(0.1, function() 
             stowayclient.UpdateSlotFrame(slotframe1, slot1.Value)
             stowayclient.UpdateSlotFrame(slotframe2, slot2.Value) 
         end)
-
     else
+        -- Request a normal SWAP action from the server.
         swapSlots:FireServer(slot1, slot2, false)
     end
     
+    -- The rest of your logic for updating the equipped tool display remains the same.
 
-    local slot1value = slot1.Value
-    local slot2value = slot2.Value
-
-    if slot1value and slot1value.Parent == Character then
+    if slot1value() and slot1value().Parent == Character then
         stowayclient.SetEquipped(slot2)
-    elseif slot2value and slot2value.Parent == Character then
+    elseif slot2value() and slot2value().Parent == Character then
         stowayclient.SetEquipped(slot1)
     end
 
-    if slot1.Parent == BackpackFolder and not slot2value then
-        stowayclient.ShiftEquippedSlot(slot1)
-    elseif slot2.Parent == BackpackFolder and not slot1value then
-        stowayclient.ShiftEquippedSlot(slot2)
+    if slot1.Parent == BackpackFolder and not slot2value() then
+        if currentlyEquippedSlot == slot1 then stowayclient.SetEquipped(slot2) end
+    elseif slot2.Parent == BackpackFolder and not slot1value() then
+        if currentlyEquippedSlot == slot2 then stowayclient.SetEquipped(slot1) end
     end
 end
 
@@ -585,8 +628,30 @@ function stowayclient.DropTool(slot)
     local tool = slot.Value
     dropTool:FireServer(tool)
 
-    if not currentlyEquippedSlot then return end
-    stowayclient.ShiftEquippedSlot(slot)
+    -- if you cannot drop a tool then we must show the frames for slots that hold that tool 
+    if slot and slot.Value then   
+        local hotbarframe = HotbarFrame:FindFirstChild(stowayclient.CreateSlotFrameName(slot.Name))
+        local backpackframe = ScrollingBackpack:FindFirstChild(stowayclient.CreateSlotFrameName(slot.Name))
+
+        if hotbarframe then 
+            if currentlyEquippedFrame == hotbarframe then
+                stowayclient.SetSlotFrameVisible(hotbarframe)
+                stowayclient.SetEquipped(slot)
+            else
+                stowayclient.SetSlotFrameVisible(hotbarframe)
+            end
+        end
+
+            
+        if backpackframe then
+            if currentlyEquippedFrame == backpackframe then
+                stowayclient.SetSlotFrameVisible(backpackframe)
+                stowayclient.SetEquipped(slot)
+            else
+                stowayclient.SetSlotFrameVisible(backpackframe)
+            end 
+        end
+    end
 end
 
 

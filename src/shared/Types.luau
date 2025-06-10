@@ -3,6 +3,7 @@ local Types = {}
 
 Types.HotbarType = { Static = "Static", Dynamic = "Dynamic" }
 Types.CarryingType = { Inventory = "Inventory", Backpack = "Backpack" }
+Types.SortingType = {Name = "Name", Rarity = "Rarity", ItemType = "ItemType"}
 
 export type ItemData = {
 	ID: string,

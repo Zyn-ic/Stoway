@@ -47,7 +47,7 @@ Settings.CanStack = true
 Settings.MaxStackCount = 5
 
 -- this setting will allow the code to check for rarity attribute on a tool
-Settings.RarityCheck = false
+Settings.RarityCheck = true
 
 -- this setting will allow the code to drop an item if it is in a drop frame
 Settings.Droppable = true

@@ -33,20 +33,21 @@ function CreateHotbarValues(self: Types.Stoway)
     end
 end
 
-function CheckInventoryWeight(Folder: {ObjectValue}) : number
-    if #Folder < 0 then return 0 end
-    local weight = 0
-
-    for _,v in Folder do
-        if not v.Value then continue end
-        weight += v.Value:GetAttribute("Weight") 
+--- Checks if a player's inventory can accept an item with a given weight. returns boolean: True if the item can be added, false otherwise.
+function _canAcceptWeight(PlayerStowy, weightToAdd) : boolean
+    local PlayerLimit = PlayerStowy.Settings.BackpackSettings.Limit
+    -- If limit is 0, it signifies infinite capacity, so always accept.
+    if PlayerLimit == 0 then
+        return true
     end
 
-    return weight
-end
+    local PlayerTotalWeight = PlayerStowy.InventoryFolder:GetAttribute("TotalWeight")
+    -- Check if adding the new item would exceed the limit.
+    if (PlayerTotalWeight + weightToAdd) > PlayerLimit then
+        return false
+    end
 
-function IsWeightAtMax(PlayerWeight, MaxWeight: number) : boolean
-    return PlayerWeight >= MaxWeight
+    return true
 end
 
 function FindEmptySlot(folder: {ObjectValue}, MaxSlots: number) : ObjectValue?
@@ -171,26 +172,28 @@ function StowayServer:FindValueFromTool(Tool:Tool, Player:Player) : ObjectValue?
     return nil
 end
 
-function StowayServer:AddNewBackpackValue(Tool:Tool, Player:Player)
+function StowayServer:AddNewBackpackValue(Tool: Tool, Player: Player)
     local PlayerStowy = PlayerStoways[Player]
+
+    -- This is a completely new tool being added to the system. Perform the weight check.
+    if not StowayServer:FindValueFromTool(Tool, Player) then
+        local ToolWeight = Tool:GetAttribute("Weight")
+        if not _canAcceptWeight(PlayerStowy, ToolWeight) then
+            Tool:Destroy() -- Destroy the tool as the player can't carry it or drop the tool
+            return -- Exit the function
+        end
+
+        -- If the weight is acceptable, update the total weight attribute.
+        local PlayerTotalWeight = PlayerStowy.InventoryFolder:GetAttribute("TotalWeight")
+        PlayerStowy.InventoryFolder:SetAttribute("TotalWeight", PlayerTotalWeight + ToolWeight)
+    end
+    -- If the tool is already tracked (e.g., moving from hotbar), we don't need to re-check the weight limit. so findvaluefromtool will exit to out here
+
+    -- Get all current slots to name the new backpack slot correctly.
     local folder = PlayerStowy.HotBarFolder:GetChildren()
-    local PlayerTotalWeight = PlayerStowy.InventoryFolder:GetAttribute("TotalWeight")
-    local PlayerLimit = PlayerStowy.Settings.BackpackSettings.Limit
-    local ToolWeight = Tool:GetAttribute("Weight")
-
-    for _,v in PlayerStowy.BackpackFolder:GetChildren() do
-        table.insert(folder, v) 
+    for _, v in PlayerStowy.BackpackFolder:GetChildren() do
+        table.insert(folder, v)
     end
-
-    if StowayServer:FindValueFromTool(Tool, Player) then
-        local newbackpackValue = Instance.new("ObjectValue")
-        newbackpackValue.Name = #folder + 1
-        newbackpackValue.Value = Tool
-        newbackpackValue.Parent = PlayerStowy.BackpackFolder
-        return
-    end
-
-    if IsWeightAtMax(PlayerTotalWeight, PlayerLimit) or (PlayerTotalWeight + ToolWeight) > PlayerLimit then Tool:Destroy(); return --[[TODO DROP SYSTEM ]] end
 
     local newbackpackValue = Instance.new("ObjectValue")
     newbackpackValue.Name = #folder + 1
@@ -198,29 +201,34 @@ function StowayServer:AddNewBackpackValue(Tool:Tool, Player:Player)
     newbackpackValue.Parent = PlayerStowy.BackpackFolder
 end
 
-function  StowayServer:FindSuitableHotbarSlot(Tool:Tool?, Player:Player) : ObjectValue?
-    -- check if there is a slot with the same type AND IS NOT MAX
-    local PlayerStowy = PlayerStoways[Player]
-    if Tool then
-        if PlayerStowy.Settings.CanStack then
-            --gets the total weight and checks if we are at max copacity or if the tool being added plus our current weight will be more than max
-            local PlayerTotalWeight = PlayerStowy.InventoryFolder:GetAttribute("TotalWeight")
-            local PlayerLimit = PlayerStowy.Settings.BackpackSettings.Limit
-            local ToolWeight = Tool:GetAttribute("Weight")
-            
+function StowayServer:FindSuitableHotbarSlot(Tool: Tool?, Player: Player) : ObjectValue?
+    local PlayerStowy = PlayerStoways[Player] :: Types.Stoway
+    local raritycheck = PlayerStowy.Settings.RarityCheck
 
-            if IsWeightAtMax(PlayerTotalWeight, PlayerLimit) or (PlayerTotalWeight + ToolWeight) > PlayerLimit then return nil end
+    -- This block only runs if a tool is provided AND stacking is enabled in settings.
+    if Tool and PlayerStowy.Settings.CanStack then
+        local ToolWeight = Tool:GetAttribute("Weight")
+        local result = FindSameSlotType(PlayerStowy.HotBarFolder:GetChildren(), Tool)
 
-            PlayerStowy.InventoryFolder:SetAttribute("TotalWeight", PlayerTotalWeight + ToolWeight)
+        -- if we find a slot with the same type in the hotbar we must check rarity (if enabled) and stack count.
+        if result and result.Value then
+            local resultRarity = result.Value:GetAttribute("Rarity")
+            local toolRarity = Tool:GetAttribute("Rarity")
+            print(resultRarity, toolRarity)
+            local stackountiIsLessThanOr5 = ((ToolWeight + result.Value:GetAttribute("Weight")) <= PlayerStowy.Settings.MaxStackCount)
 
-            local result = FindSameSlotType(PlayerStowy.HotBarFolder:GetChildren(), Tool)
-            if result and ((ToolWeight + result.Value:GetAttribute("Weight")) <= PlayerStowy.Settings.MaxStackCount)  then 
-                return result 
+            -- if rarity check is enabled then we will find a suitable slot with the same type and rarity
+            if raritycheck and resultRarity == toolRarity and stackountiIsLessThanOr5 then
+                return result
+
+            elseif not raritycheck and stackountiIsLessThanOr5 then
+                -- Check if stacking in the found slot would exceed the item's individual max stack count.
+                return result
             end
-            
         end
     end
 
+    -- If stacking is disabled, or no suitable stackable slot was found, find the next empty slot.
     return FindEmptySlot(PlayerStowy.HotBarFolder:GetChildren(), PlayerStowy.Settings.HotbarSettings.MaxSlots)
 end
 
@@ -237,39 +245,59 @@ function StowayServer:ShiftBackpackValuesDown(StartingInventoryValue:ObjectValue
     PlayerStowy.BackpackFolder[currerntInventoryNum-1]:Destroy()
 end
 
-function StowayServer:UpdatePlayerTools(Player:Player)
-    local PlayerStowy = PlayerStoways[Player]
+function StowayServer:UpdatePlayerTools(Player: Player)
+    local PlayerStowy = PlayerStoways[Player] :: Types.Stoway
     local char = Player.Character
     local playerTools = StowayServer:getTools(Player.Backpack, char)
-
     local inventoryvalues = PlayerStowy.BackpackFolder:GetChildren()
 
     for _, v in PlayerStowy.HotBarFolder:GetChildren() do
         table.insert(inventoryvalues, v)
     end
 
-    for _, value:ObjectValue in inventoryvalues do
-        local tool = value.Value 
-        if not table.find(playerTools, tool) then
+    -- First, clean up any tracked values for tools that no longer exist.
+    for _, value: ObjectValue in inventoryvalues do
+        local tool = value.Value
+        if tool and not table.find(playerTools, tool) then
+            --This logic should also subtract the tool's weight from the total!
+            local PlayerTotalWeight = PlayerStowy.InventoryFolder:GetAttribute("TotalWeight")
+            PlayerStowy.InventoryFolder:SetAttribute("TotalWeight", PlayerTotalWeight - tool:GetAttribute("Weight"))
+            
             value.Value = nil
             if value.Parent == PlayerStowy.BackpackFolder then StowayServer:ShiftBackpackValuesDown(value, Player) end
         end
     end
 
-    for _, tool:Tool in playerTools do
+    -- Next, process any new, untracked tools.
+    for _, tool: Tool in playerTools do
         if not StowayServer:FindValueFromTool(tool, Player) then
+            local ToolWeight = tool:GetAttribute("Weight")
 
+            -- 1. CENTRAL WEIGHT CHECK: Check if the player can carry this new tool.
+            if not _canAcceptWeight(PlayerStowy, ToolWeight) then
+                tool:Destroy()
+                continue -- Skip to the next tool.
+            end
+
+            -- 2. Find a suitable slot in the hotbar (stackable or empty).
             local freehotbarslot = StowayServer:FindSuitableHotbarSlot(tool, Player)
-            if freehotbarslot then
 
-                if freehotbarslot.Value ~= nil then 
-                    local combindedweight = freehotbarslot.Value:GetAttribute("Weight") + tool:GetAttribute("Weight")
+            if freehotbarslot then
+                -- If a hotbar slot was found, add the tool's weight to the total count.
+                local PlayerTotalWeight = PlayerStowy.InventoryFolder:GetAttribute("TotalWeight")
+                PlayerStowy.InventoryFolder:SetAttribute("TotalWeight", PlayerTotalWeight + ToolWeight)
+
+                -- Check if the found slot is for stacking or for a new entry.
+                if freehotbarslot.Value ~= nil then -- Stacking case
+                    local combindedweight = freehotbarslot.Value:GetAttribute("Weight") + ToolWeight
                     freehotbarslot.Value:SetAttribute("Weight", combindedweight)
-                    tool:Destroy()
-                    continue
+                    tool:Destroy() -- Destroy the new tool as its weight was absorbed.
+                else -- New empty slot case
+                    freehotbarslot.Value = tool
                 end
-                freehotbarslot.Value = tool
             else
+                -- 3. No suitable hotbar slot found, so attempt to add to backpack.
+                -- AddNewBackpackValue will handle its own weight check and update.
                 StowayServer:AddNewBackpackValue(tool, Player)
             end
         end
@@ -349,9 +377,17 @@ end
 function StowayServer:DropTool(Player:Player, Tool:Tool)
     if not ValidateTool(Player, Tool) then return end
     local slot = StowayServer:FindValueFromTool(Tool, Player)
+    local PlayerStoway = PlayerStoways[Player] :: Types.Stoway
     if not slot then return end
-    local weight = PlayerStoways[Player].InventoryFolder:GetAttribute("TotalWeight")
-    PlayerStoways[Player].InventoryFolder:SetAttribute("TotalWeight", weight - Tool:GetAttribute("Weight"))
+
+    -- if a person's settings is set to droppable then we will check if an item has IsDroppable
+    if PlayerStoway.Settings.Droppable then
+        -- if the tool is a gamepass then is cannot be dropped but if its not and IsDroppable it will drop
+        local candrop = Tool:GetAttribute("IsDroppable"); if Tool:GetAttribute("IsGamepass") == true then candrop = false end;
+        if not candrop then return end
+    else
+        return
+    end
 
     local PlayerStowy = PlayerStoways[Player]
     local character = Player.Character or Player.CharacterAdded:Wait()
@@ -364,52 +400,81 @@ function StowayServer:DropTool(Player:Player, Tool:Tool)
 end
 
 function StowayServer:SwapSlots(Player: Player, Slot1: ObjectValue, Slot2: ObjectValue, stack: boolean?)
-    local PlayerStowy = PlayerStoways[Player]
-    if not ValidateSlot(Slot1, PlayerStowy) or not ValidateSlot(Slot2, PlayerStowy) then return end
-    if Slot1 == Slot2 then return end
-    if stack then
-        --  stacking logic
-        local slotbeingswapped = Slot1.Value -- The slot we are dragging FROM
-        local targetslot = Slot2.Value       -- The slot we are dragging TO
-        local MaxStack = PlayerStowy.Settings.MaxStackCount
+	local PlayerStowy = PlayerStoways[Player] :: Types.Stoway
+	if not ValidateSlot(Slot1, PlayerStowy) or not ValidateSlot(Slot2, PlayerStowy) then return end
+	if Slot1 == Slot2 then return end
 
-        if not slotbeingswapped or not targetslot then return end -- Can't stack if one is nil
+	local performStackAction = false -- Flag to determine which action to take
+    local MaxStack = PlayerStowy.Settings.MaxStackCount
+    local sourceWeight 
+	local targetWeight 
 
-        local sourceWeight = slotbeingswapped:GetAttribute("Weight")
-        local targetWeight = targetslot:GetAttribute("Weight")
+	-- First, determine if a stack is even possible and allowed.
+	if stack and PlayerStowy.Settings.CanStack then
+		local slotbeingswapped = Slot1.Value
+		local targetslot = Slot2.Value
 
-        -- 1. Calculate how much space is available in the target slot.
-        local spaceInTarget = MaxStack - targetWeight
-        
-        -- 2. Determine how much weight we can actually transfer.
-        -- It's the smaller of either the source's total weight or the available space in the target.
-        local amountToTransfer = math.min(sourceWeight, spaceInTarget)
-        
-        -- Only proceed if there is actually weight to transfer
-        if amountToTransfer > 0 then
-            -- 3. Update the attributes of both slots with the new weights.
-            targetslot:SetAttribute("Weight", targetWeight + amountToTransfer)
-            slotbeingswapped:SetAttribute("Weight", sourceWeight - amountToTransfer)
+		-- A stack is only possible if both slots contain an item.
+		if slotbeingswapped and targetslot then
+			local sourceItemType = slotbeingswapped:GetAttribute("ItemType")
+			local targetItemType = targetslot:GetAttribute("ItemType")
+            sourceWeight = slotbeingswapped:GetAttribute("Weight")
+		    targetWeight = targetslot:GetAttribute("Weight")
 
-            -- 4. If the source slot's weight is now zero, destroy it and clear the reference.
-            if slotbeingswapped:GetAttribute("Weight") <= 0 then
-                slotbeingswapped:Destroy()
-                Slot1.Value = nil -- Clear the ObjectValue so it knows the item is gone
-            end
-        end
-    else
-        -- swapping logic (this remains the same)
-        local oldslot1 = Slot1.Value
-        Slot1.Value = Slot2.Value
-        Slot2.Value = oldslot1
-    end
+			-- Check if items are identical based on Type and Name
+			if sourceItemType == targetItemType and slotbeingswapped.Name == targetslot.Name then
+				if PlayerStowy.Settings.RarityCheck then
+					-- If RarityCheck is ON, rarities must also match.
+					if slotbeingswapped:GetAttribute("Rarity") == targetslot:GetAttribute("Rarity") then
+						performStackAction = true
+					end
+				else
+					-- If RarityCheck is OFF, matching type and name is sufficient.
+					performStackAction = true
+				end
+			end
 
-    -- This shifting logic should run if either operation resulted in an empty slot
-    if Slot1.Parent == PlayerStowy.BackpackFolder and not Slot1.Value then
-        StowayServer:ShiftBackpackValuesDown(Slot1, Player)
-    elseif Slot2.Parent == PlayerStowy.BackpackFolder and not Slot2.Value then
-        StowayServer:ShiftBackpackValuesDown(Slot2, Player)
-    end
+            -- incase the client is trying to stack a slot that already is at max stack we will perform swapping
+            if sourceWeight == MaxStack or targetWeight == MaxStack then performStackAction = false end
+		end
+	end
+
+	-- Now, perform the action based on the flag.
+	if performStackAction then
+		-- --- STACKING LOGIC ---
+		-- This block now only runs if all server-side checks pass.
+		local slotbeingswapped = Slot1.Value
+		local targetslot = Slot2.Value
+		local spaceInTarget = MaxStack - targetWeight
+		local amountToTransfer = math.min(sourceWeight, spaceInTarget)
+		
+		if amountToTransfer > 0 then
+			targetslot:SetAttribute("Weight", targetWeight + amountToTransfer)
+			slotbeingswapped:SetAttribute("Weight", sourceWeight - amountToTransfer)
+
+			if slotbeingswapped:GetAttribute("Weight") <= 0 then
+				slotbeingswapped:Destroy()
+				Slot1.Value = nil -- Clear the ObjectValue reference
+			end
+		end
+	else
+		-- --- SWAPPING LOGIC ---
+		-- This is the fallback for all other cases:
+		-- 1. Client requested a swap (`stack` was false).
+		-- 2. Stacking is disabled on the server.
+		-- 3. One or both slots were empty.
+		-- 4. Items were not identical (failed the validation checks).
+		local oldslot1 = Slot1.Value
+		Slot1.Value = Slot2.Value
+		Slot2.Value = oldslot1
+	end
+
+	-- This shifting logic runs after either a stack or swap operation.
+	if Slot1.Parent == PlayerStowy.BackpackFolder and not Slot1.Value then
+		StowayServer:ShiftBackpackValuesDown(Slot1, Player)
+	elseif Slot2.Parent == PlayerStowy.BackpackFolder and not Slot2.Value then
+		StowayServer:ShiftBackpackValuesDown(Slot2, Player)
+	end
 end
 
 function StowayServer:MoveToEndofBackpack(Slot:ObjectValue, Player:Player)
