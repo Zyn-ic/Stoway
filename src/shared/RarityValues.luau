@@ -8,10 +8,19 @@ rarities.rarityColors = {
     ["common"] = Color3.new(0.4, 0.4, 0.4);
 }
 
-rarities.rarityItemTypes = {
-    "weapon",
-    "consumable",
-    "resource";
+rarities.RaritySortOrder = {
+    ["godly"] = 1,
+    ["legendary"] = 2,
+    ["rare"] = 3,
+    ["uncommon"] = 4,
+    ["common"] = 5
+}
+
+-- Same concept for ItemType
+rarities.ItemTypeSortOrder = {
+    ["weapon"] = 1,
+    ["consumable"] = 2,
+    ["resource"] = 3
 }
 
 return rarities

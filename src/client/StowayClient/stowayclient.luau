@@ -52,6 +52,7 @@ local DragginSlot = nil
 local DragginConnection = nil
 local DragginThresholdDistance = 5
 
+
 local stowayclient = {}
 
 --//Fusion Sections\\--
@@ -267,9 +268,11 @@ function stowayclient.SetSlotFrameHidden(SlotFrame)
     if not SlotFrame then return end
     if SlotFrame.Parent == ScrollingBackpack then SlotFrame.BackgroundTransparency = 1 end
 
-    SlotFrame.slotbutton.Visible = false
-    SlotFrame.stackcount.Visible = false
-    SlotFrame.rarityframe.Visible = false
+    if SlotFrame:FindFirstChild("slotbutton") then
+        SlotFrame.slotbutton.Visible = false
+        SlotFrame.stackcount.Visible = false
+        SlotFrame.rarityframe.Visible = false
+    end
 end
 
 function stowayclient.SetSlotFrameVisible(SlotFrame)
@@ -587,8 +590,10 @@ function stowayclient.SwapSlots(slot1, slot2)
     -- The rest of your logic for updating the equipped tool display remains the same.
 
     if slot1value() and slot1value().Parent == Character then
+        print("slot 2 equipped")
         return stowayclient.SetEquipped(slot2)
     elseif slot2value() and slot2value().Parent == Character then
+        print("slot 1 equipped")
         return stowayclient.SetEquipped(slot1)
     end
 
@@ -650,10 +655,111 @@ function stowayclient.DropTool(slot)
     end
 end
 
+--//Backpack Sorting\\
+-- (Place these new functions inside your 'stowayclient' table)
+
+--- Sorts the backpack UI frames by updating their LayoutOrder property.
+function stowayclient.UpdateBackpackSortOrder()
+	if not BackpackFolder then return end -- Guard against running too early
+    if not Settings.BackpackSettings.Sorting then return end
+
+	-- 1. GATHER DATA: Collect all current backpack items into a temporary table.
+	local backpackItemsData = {}
+	for _, slotValue in ipairs(BackpackFolder:GetChildren()) do
+		if slotValue.Value and slotValue:IsA("ObjectValue") then
+			local tool = slotValue.Value
+			table.insert(backpackItemsData, {
+				-- Store all data needed for sorting and a reference to the original ObjectValue
+				Name = tool.Name,
+				Rarity = tool:GetAttribute("Rarity"),
+				ItemType = tool:GetAttribute("ItemType"),
+				OriginalSlotValue = slotValue,
+			})
+		end
+	end
+
+	-- 2. SORT DATA: Choose a comparison function and sort the temporary table.
+	local comparisonFunction
+    local RaritySortOrder = RarityValues.RaritySortOrder
+    local ItemTypeSortOrder = RarityValues.ItemTypeSortOrder
+
+	if Settings.BackpackSettings.Sorting == Types.SortingType.Name then
+		comparisonFunction = function(a, b) return a.Name < b.Name end
+
+	elseif Settings.BackpackSettings.Sorting == Types.SortingType.Rarity then
+		comparisonFunction = function(a, b)
+			local priorityA = RaritySortOrder[a.Rarity] or 99
+			local priorityB = RaritySortOrder[b.Rarity] or 99
+			if priorityA == priorityB then return a.Name < b.Name end -- Secondary sort by name
+			return priorityA < priorityB
+		end
+
+	elseif Settings.BackpackSettings.Sorting == Types.SortingType.ItemType then
+		comparisonFunction = function(a, b)
+			local priorityA = ItemTypeSortOrder[a.ItemType] or 99
+			local priorityB = ItemTypeSortOrder[b.ItemType] or 99
+			if priorityA == priorityB then return a.Name < b.Name end -- Secondary sort by name
+			return priorityA < priorityB
+		end
+	end
+
+	if comparisonFunction then
+		table.sort(backpackItemsData, comparisonFunction)
+	end
+
+	-- 3. RE-ORDER UI: Loop through the *sorted* data and update the LayoutOrder of existing UI frames.
+	for i, itemData in ipairs(backpackItemsData) do
+		local slotValue = itemData.OriginalSlotValue
+		local frameName = stowayclient.CreateSlotFrameName(slotValue.Name)
+		local frame = ScrollingBackpack:FindFirstChild(frameName)
+
+		if frame then
+			-- The index 'i' now represents the item's new position in the sorted list.
+			frame.LayoutOrder = i
+		end
+	end
+	print("Backpack sorted by:", Settings.BackpackSettings.Sorting)
+end
+
+
+--- Filters backpack items based on the search bar text.
+function stowayclient.ApplyBackpackFilter(searchText)
+	local currentSearchText = searchText:lower() -- Update the current search text
+	if not ScrollingBackpack then return end
+	
+	for _, frame in ipairs(ScrollingBackpack:GetChildren()) do
+		if frame:IsA("Frame") and frame:FindFirstChild("slotbutton") then -- Ensure it's a slot frame
+			
+			local objectValueName = frame.Name:gsub("_", "")
+			local slotValue = BackpackFolder:FindFirstChild(objectValueName)
+			
+			if slotValue and slotValue.Value then
+				local toolName = slotValue.Value.Name:lower()
+				-- Show the frame if search is empty OR if the item name contains the search text.
+				frame.Visible = (currentSearchText == "" or toolName:find(currentSearchText, 1, true))
+			else
+				-- If the slot has no item, only show it if the search bar is empty.
+				frame.Visible = (currentSearchText == "")
+			end
+		end
+	end
+	print("Backpack filter applied with text:", currentSearchText)
+end
+
 
 stowayclient.new()
 ContextActionService:BindAction("toggle_backpack", stowayclient.ToggleBackpack, false, unpack(Binds.BackpackBinds))
-BackpackFolder.ChildAdded:Connect(stowayclient.CreateBackpackFrames)
+
+BackpackFolder.ChildAdded:Connect(function()
+    stowayclient.CreateBackpackFrames()
+    task.wait()
+    stowayclient.UpdateBackpackSortOrder()
+end)
+
+BackpackFolder.ChildRemoved:Connect(function()
+    stowayclient.UpdateBackpackSortOrder()
+end)
+
 Character.ChildAdded:Connect(stowayclient.updateEquippedTool)
 Character.ChildRemoved:Connect(stowayclient.updateEquippedTool)
 UserInputService.InputEnded:Connect(stowayclient.Release)

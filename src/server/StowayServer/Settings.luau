@@ -4,6 +4,7 @@ local Types = require(ReplicatedStorage.Shared.Types)
 
 local HotbarTypes = Types.HotbarType
 local CarryingTypes = Types.CarryingType
+local SortingTypes = Types.SortingType
 
 Settings.HotbarSettings = {}
 Settings.BackpackSettings = {}
@@ -26,7 +27,7 @@ Settings.BackpackSettings.CarryingType = CarryingTypes.Backpack
 
 --lets you set a limit for the backpack 0 means inf
 Settings.BackpackSettings.Limit = 15
-Settings.BackpackSettings.Sorting = false
+Settings.BackpackSettings.Sorting = SortingTypes.Rarity
 
 --// settings section
 
