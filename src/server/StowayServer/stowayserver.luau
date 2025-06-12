@@ -214,7 +214,6 @@ function StowayServer:FindSuitableHotbarSlot(Tool: Tool?, Player: Player) : Obje
         if result and result.Value then
             local resultRarity = result.Value:GetAttribute("Rarity")
             local toolRarity = Tool:GetAttribute("Rarity")
-            print(resultRarity, toolRarity)
             local stackountiIsLessThanOr5 = ((ToolWeight + result.Value:GetAttribute("Weight")) <= PlayerStowy.Settings.MaxStackCount)
 
             -- if rarity check is enabled then we will find a suitable slot with the same type and rarity
@@ -368,9 +367,12 @@ function StowayServer.EquipTool(Player:Player, Tool:Tool)
     local character = Player.Character or Player.CharacterAdded:Wait()
     if not character then return end
     if not Tool then return end
+    if not ValidateTool(Player, Tool) or Tool.Parent == character then return end
 
     StowayServer.UnEquip(Player)
-    if not ValidateTool(Player, Tool) then return end
+    local primarytool, primarychar = Tool.PrimaryPart or Tool:FindFirstChild("Handle"), character.PrimaryPart
+    primarytool:PivotTo(primarychar.CFrame)
+
     Tool.Parent = Player.Character
 end
 

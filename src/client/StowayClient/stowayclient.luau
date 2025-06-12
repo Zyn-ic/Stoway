@@ -173,15 +173,12 @@ function stowayclient.Release(inputObject, gameProcessedEvent)
 
             if backpackslot then
                 if DragginSlot == value then
-                    print(Player.Name .. "same backpack slot", DragginSlot.Name)
                     stowayclient.SetSlotFrameVisible(DragginOrigianlFrame)
                     if value == currentlyEquippedSlot then stowayclient.SetEquipped(value) end
                 else
-                    print(Player.Name .. "swapping in backpack", DragginSlot.Name)
                     stowayclient.SwapSlots(DragginSlot, value)
                 end
             else
-                print(Player.Name .. "moving to the end of backpack", DragginSlot.Name)
                 stowayclient.MoveToEndofBackpack(DragginSlot)
             end
 
@@ -192,18 +189,15 @@ function stowayclient.Release(inputObject, gameProcessedEvent)
                 local slotvalue = HotbarFolder[tostring(number)]
 
                 if DragginSlot == slotvalue then
-                    print(Player.Name .. "same slot in hotbar", DragginSlot.Name)
                     stowayclient.SetSlotFrameVisible(DragginOrigianlFrame)
                     if slotvalue == currentlyEquippedSlot then stowayclient.SetEquipped(slotvalue) end
                 else
                     stowayclient.SwapSlots(DragginSlot, slotvalue)
-                    print(Player.Name .. "swapping in hotbar", DragginSlot.Name, slotvalue)
                 end
             end
 
         else
             stowayclient.DropTool(DragginSlot)
-            print(Player.Name .. "dropping", DragginSlot.Name)
         end
 
         DragginFakeFrame:Destroy()
@@ -288,7 +282,7 @@ function stowayclient.SetSlotFrameVisible(SlotFrame)
 end
 
 function stowayclient.UpdateSlotFrame(slotframe, tool:Tool) : any
-    if not tool then print("hidden at line 243"); return stowayclient.SetSlotFrameHidden(slotframe) end 
+    if not tool then return stowayclient.SetSlotFrameHidden(slotframe) end 
     if not slotframe then return end
     local data = stowayclient.GetToolData(tool)
 
@@ -297,7 +291,7 @@ function stowayclient.UpdateSlotFrame(slotframe, tool:Tool) : any
     
     if Settings.RarityCheck then
         slotframe.rarityframe.Visible = true;
-        slotframe.rarityframe.BackgroundColor3 = RarityValues[data.Rarity]
+        slotframe.rarityframe.BackgroundColor3 = RarityValues.rarityColors[data.Rarity]
     else
         slotframe.rarityframe.Visible = false;
     end
@@ -428,7 +422,6 @@ function stowayclient.CreateSlotFrame(slotvalue:ObjectValue)
         SetFramePos()
 
         DragginFakeFrame.Parent = DraggingGui
-        print("hidden at line 378")
         stowayclient.SetSlotFrameHidden(DragginOrigianlFrame)
         stowayclient.SetSlotFrameUnequipped(DragginOrigianlFrame)
 
@@ -594,13 +587,16 @@ function stowayclient.SwapSlots(slot1, slot2)
     -- The rest of your logic for updating the equipped tool display remains the same.
 
     if slot1value() and slot1value().Parent == Character then
-        stowayclient.SetEquipped(slot2)
+        return stowayclient.SetEquipped(slot2)
     elseif slot2value() and slot2value().Parent == Character then
-        stowayclient.SetEquipped(slot1)
+        return stowayclient.SetEquipped(slot1)
     end
 
     if slot1.Parent == BackpackFolder and not slot2value() then
-        if currentlyEquippedSlot == slot1 then stowayclient.SetEquipped(slot2) end
+        if currentlyEquippedSlot == slot1 then return stowayclient.SetEquipped(slot2) end
+        if currentlyEquippedFrame then 
+            local number = currentlyEquippedSlot.Name; number = tonumber(number); number -= 1 
+            stowayclient.SetEquipped(slot1.Parent[number]) end
     elseif slot2.Parent == BackpackFolder and not slot1value() then
         if currentlyEquippedSlot == slot2 then stowayclient.SetEquipped(slot1) end
     end
