@@ -1,5 +1,4 @@
 local ContextActionService = game:GetService("ContextActionService")
-local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -8,7 +7,6 @@ local UserInputService = game:GetService("UserInputService")
 
 --Modules
 local Binds = require(ReplicatedStorage.Shared.Binds)
-local Janitor = require(ReplicatedStorage.Packages.Janitor)
 local fusion = require(ReplicatedStorage.Packages.fusion)
 local Types = require(ReplicatedStorage.Shared.Types)
 local RarityValues = require(ReplicatedStorage.Shared.RarityValues)
@@ -56,8 +54,8 @@ local DragginThresholdDistance = 5
 local stowayclient = {}
 
 --//Fusion Sections\\--
-local scoped = fusion.scoped 
-local peek = fusion.peek
+local _scoped = fusion.scoped 
+local _peek = fusion.peek
 
 
 --//HelperFuncs\\--
@@ -605,6 +603,8 @@ function stowayclient.SwapSlots(slot1, slot2)
     elseif slot2.Parent == BackpackFolder and not slot1value() then
         if currentlyEquippedSlot == slot2 then stowayclient.SetEquipped(slot1) end
     end
+    
+    return
 end
 
 function stowayclient.MoveToEndofBackpack(slot)

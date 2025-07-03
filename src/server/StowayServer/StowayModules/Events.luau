@@ -15,12 +15,18 @@ function Events.OnPlayerAdded(Player:Player)
 	PlayerStoways[Player] = PlayerStowy
 
 	PlayerStowy.Settings = Settings
-	PlayerStowy.InventoryFolder = Instance.new("Folder", Player)
+
+	PlayerStowy.InventoryFolder = Instance.new("Folder"); 
+	PlayerStowy.InventoryFolder.Parent = Player;
 	PlayerStowy.InventoryFolder.Name = "Inventory"
 	PlayerStowy.InventoryFolder:SetAttribute("TotalWeight", 0)
-	PlayerStowy.HotBarFolder = Instance.new("Folder", PlayerStowy.InventoryFolder)
+
+	PlayerStowy.HotBarFolder = Instance.new("Folder"); 
+	PlayerStowy.HotBarFolder.Parent = PlayerStowy.InventoryFolder
 	PlayerStowy.HotBarFolder.Name = "Hotbar"
-	PlayerStowy.BackpackFolder = Instance.new("Folder", PlayerStowy.InventoryFolder)
+
+	PlayerStowy.BackpackFolder = Instance.new("Folder"); 
+	PlayerStowy.BackpackFolder.Parent = PlayerStowy.InventoryFolder;
 	PlayerStowy.BackpackFolder.Name = "Backpack"
 
 	Actions.CreateHotbarValues(PlayerStowy)

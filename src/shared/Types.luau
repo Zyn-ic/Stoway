@@ -1,5 +1,3 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Janitor = require(ReplicatedStorage.Packages.Janitor)
 -- ReplicatedStorage/Shared/Types.lua
 local Types = {}
 
