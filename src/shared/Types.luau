@@ -1,3 +1,5 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Janitor = require(ReplicatedStorage.Packages.Janitor)
 -- ReplicatedStorage/Shared/Types.lua
 local Types = {}
 
@@ -46,6 +48,18 @@ export type Stoway = {
     InventoryFolder : Folder,
     HotBarFolder :Folder,
     BackpackFolder : Folder
+}
+
+export type Context = {
+    PlayerStoways: {Stoway},
+	Janitor: nil?,
+    Settings : Settings,
+    -- Pass the modules themselves so they can call each other's functions
+    API: ModuleScript,
+    Actions: ModuleScript,
+    Events: ModuleScript,
+    Utils: ModuleScript,
+    Remotes: ModuleScript
 }
 
 return Types

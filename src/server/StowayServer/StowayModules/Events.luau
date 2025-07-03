@@ -1,20 +1,62 @@
---API.LUAU MODULE(Functions for getting data, e.g., GetStoway)
+-- src/server/StowayServer/stowayserver_modules/Events.lua
+local Events = {}
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Types = require(ReplicatedStorage.Shared.Types)
 
--- Module-level variables to hold the shared dependencies. They start as nil.
+-- Dependencies
 local PlayerStoways
 local Settings
-local Utils -- A reference to our other utility module!
+local Janitor
+local Actions
 
-local Events = {}
+function Events.OnPlayerAdded(Player:Player)
+	local PlayerStowy = {}
+	PlayerStowy.PrivateJanitor = Janitor.new()
+	PlayerStoways[Player] = PlayerStowy
 
+	PlayerStowy.Settings = Settings
+	PlayerStowy.InventoryFolder = Instance.new("Folder", Player)
+	PlayerStowy.InventoryFolder.Name = "Inventory"
+	PlayerStowy.InventoryFolder:SetAttribute("TotalWeight", 0)
+	PlayerStowy.HotBarFolder = Instance.new("Folder", PlayerStowy.InventoryFolder)
+	PlayerStowy.HotBarFolder.Name = "Hotbar"
+	PlayerStowy.BackpackFolder = Instance.new("Folder", PlayerStowy.InventoryFolder)
+	PlayerStowy.BackpackFolder.Name = "Backpack"
 
--- This Init function receives all the shared parts from the main script
-function Events:Init(context)
-    if not context then warn("No context added for API MODULE"); return end
-    
-    PlayerStoways = context.PlayerStoways
-    Settings = context.Settings
-    Utils = context.Utils -- We can even share other modules
+	Actions.CreateHotbarValues(PlayerStowy)
+	
+	PlayerStowy.PrivateJanitor:Add(PlayerStowy.InventoryFolder)
+	PlayerStowy.PrivateJanitor:Add(function() PlayerStoways[Player] = nil end)
+
+	Events.TrackPlayerTools(Player)
+end
+
+function Events.OnPlayerRemoving(Player:Player)
+    if PlayerStoways[Player] then
+        PlayerStoways[Player].PrivateJanitor:Destroy()
+    end
+end
+
+function Events.TrackPlayerTools(Player:Player)
+	local PlayerStowy = PlayerStoways[Player]
+	local janitor = PlayerStowy.PrivateJanitor
+
+	janitor:Add(Player.CharacterAdded:Connect(function(char)
+		Actions.Clear(PlayerStowy)
+		Actions.UpdatePlayerTools(Player)
+
+		janitor:Add(Player.Backpack.ChildAdded:Connect(function() Actions.UpdatePlayerTools(Player) end))
+		janitor:Add(Player.Backpack.ChildRemoved:Connect(function() Actions.UpdatePlayerTools(Player) end))
+		janitor:Add(char.ChildAdded:Connect(function() Actions.UpdatePlayerTools(Player) end))
+		janitor:Add(char.ChildRemoved:Connect(function() Actions.UpdatePlayerTools(Player) end))
+	end))
+end
+
+function Events:Init(context:Types.Context)
+	PlayerStoways = context.PlayerStoways
+	Settings = context.Settings
+	Janitor = context.Janitor 
+	Actions = context.Actions
 end
 
 return Events

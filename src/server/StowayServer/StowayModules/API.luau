@@ -1,20 +1,45 @@
---API.LUAU MODULE(Functions for getting data, e.g., GetStoway)
-
--- Module-level variables to hold the shared dependencies. They start as nil.
-local PlayerStoways
-local Settings
-local Utils -- A reference to our other utility module!
-
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+-- src/server/StowayServer/stowayserver_modules/API.lua
 local API = {}
 
+-- Dependencies
+local PlayerStoways
+local Types = require(ReplicatedStorage.Shared.Types)
 
--- This Init function receives all the shared parts from the main script
-function API:Init(context)
-    if not context then warn("No context added for API MODULE"); return end
-    
-    PlayerStoways = context.PlayerStoways
-    Settings = context.Settings
-    Utils = context.Utils -- We can even share other modules
+function API.GetSettings(Player:Player) : Types.Settings
+	local PlayerStowy = PlayerStoways[Player]
+	local settings = {}
+	settings.BackpackSettings = {}
+	settings.HotbarSettings = {}
+
+	settings.BackpackSettings.CarryingType = PlayerStowy.Settings.BackpackSettings.CarryingType
+	settings.BackpackSettings.Limit = PlayerStowy.Settings.BackpackSettings.Limit
+	settings.BackpackSettings.Sorting = PlayerStowy.Settings.BackpackSettings.Sorting
+	settings.HotbarSettings.HotbarType = PlayerStowy.Settings.HotbarSettings.HotbarType
+	settings.HotbarSettings.MaxSlots = PlayerStowy.Settings.HotbarSettings.MaxSlots
+	settings.CanStack = PlayerStowy.Settings.CanStack
+	settings.Droppable = PlayerStowy.Settings.Droppable
+	settings.MaxStackCount = PlayerStowy.Settings.MaxStackCount
+	settings.RarityCheck = PlayerStowy.Settings.RarityCheck
+
+	return settings
+end
+
+function API.GetStoway(Player:Player) : Types.Stoway
+	local PlayerStowy = PlayerStoways[Player]
+	local Stoway = {}
+
+	Stoway.BackpackFolder = PlayerStowy.BackpackFolder
+	Stoway.HotBarFolder = PlayerStowy.HotBarFolder
+	Stoway.InventoryFolder = PlayerStowy.InventoryFolder
+	Stoway.PrivateJanitor = nil
+	Stoway.Settings = API.GetSettings(Player)
+
+	return Stoway
+end
+
+function API:Init(context: Types.Context)
+	PlayerStoways = context.PlayerStoways
 end
 
 return API
