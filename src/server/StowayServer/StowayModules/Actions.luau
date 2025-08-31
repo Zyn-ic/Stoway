@@ -9,7 +9,7 @@ local PlayerStoways
 local Settings
 local Utils
 
-function Actions.CreateHotbarValues(PlayerStowy)
+function Actions.CreateHotbarValues(PlayerStowy:Types.Stoway)
 	for i = 1, PlayerStowy.Settings.HotbarSettings.MaxSlots do
 		local hotbarvalue = Instance.new("ObjectValue")
 		hotbarvalue.Name = i
@@ -17,7 +17,7 @@ function Actions.CreateHotbarValues(PlayerStowy)
 	end
 end
 
-function Actions.Clear(PlayerStowy)
+function Actions.Clear(PlayerStowy:Types.Stoway)
 	for _, v in PlayerStowy.HotBarFolder:GetChildren() do
 		v.Value = nil
 	end
@@ -26,7 +26,7 @@ function Actions.Clear(PlayerStowy)
 	end
 end
 
-function Actions.ShiftBackpackValuesDown(StartingInventoryValue, Player)
+function Actions.ShiftBackpackValuesDown(StartingInventoryValue:ObjectValue, Player:Player) -- REWRITE VALUE
 	local PlayerStowy = PlayerStoways[Player]
 	local currerntInventoryNum = tonumber(StartingInventoryValue.Name)
 	if currerntInventoryNum then currerntInventoryNum += 1 end
@@ -38,7 +38,7 @@ function Actions.ShiftBackpackValuesDown(StartingInventoryValue, Player)
 	PlayerStowy.BackpackFolder[currerntInventoryNum - 1]:Destroy()
 end
 
-function Actions.AddNewBackpackValue(Tool, Player)
+function Actions.AddNewBackpackValue(Tool:Tool, Player:Player)
 	local PlayerStowy = PlayerStoways[Player]
 	if not Utils.FindValueFromTool(Tool, Player) then
 		local ToolWeight = Tool:GetAttribute("Weight")
@@ -60,7 +60,7 @@ function Actions.AddNewBackpackValue(Tool, Player)
 	newbackpackValue.Parent = PlayerStowy.BackpackFolder
 end
 
-function Actions.FindSuitableHotbarSlot(Tool, Player)
+function Actions.FindSuitableHotbarSlot(Tool:Tool, Player:Player)
 	local PlayerStowy = PlayerStoways[Player]
 	if Tool and PlayerStowy.Settings.CanStack then
 		local result = Utils.FindSameSlotType(PlayerStowy.HotBarFolder:GetChildren(), Tool)
@@ -79,7 +79,7 @@ function Actions.FindSuitableHotbarSlot(Tool, Player)
 	return Utils.FindEmptySlot(PlayerStowy.HotBarFolder:GetChildren(), PlayerStowy.Settings.HotbarSettings.MaxSlots)
 end
 
-function Actions.UpdatePlayerTools(Player)
+function Actions.UpdatePlayerTools(Player:Player)
 	local PlayerStowy = PlayerStoways[Player]
 	local char = Player.Character
 	local playerTools = Utils.getTools(Player.Backpack, char)
@@ -122,7 +122,7 @@ function Actions.UpdatePlayerTools(Player)
 	end
 end
 
-function Actions.SwapSlots(Player, Slot1, Slot2, stack)
+function Actions.SwapSlots(Player:Player, Slot1:ObjectValue, Slot2:ObjectValue, stack:boolean)
 	local PlayerStowy = PlayerStoways[Player]
 	if not Utils.ValidateSlot(Slot1, PlayerStowy) or not Utils.ValidateSlot(Slot2, PlayerStowy) then return end
 	if Slot1 == Slot2 then return end
@@ -176,7 +176,7 @@ function Actions.SwapSlots(Player, Slot1, Slot2, stack)
 	end
 end
 
-function Actions.MoveToEndofBackpack(Slot, Player)
+function Actions.MoveToEndofBackpack(Slot:ObjectValue, Player:Player)
 	local PlayerStowy = PlayerStoways[Player]
 	if not Utils.ValidateSlot(Slot, PlayerStowy) or not Slot.Value then return end
 	local tool = Slot.Value
@@ -187,7 +187,7 @@ function Actions.MoveToEndofBackpack(Slot, Player)
 	end
 end
 
-function Actions:Init(context : Types.Context)
+function Actions.Init(context : Types.Context)
 	PlayerStoways = context.PlayerStoways
 	Settings = context.Settings
 	Utils = context.Utils

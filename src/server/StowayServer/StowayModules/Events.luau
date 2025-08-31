@@ -58,7 +58,7 @@ function Events.TrackPlayerTools(Player:Player)
 	end))
 end
 
-function Events:Init(context:Types.Context)
+function Events.Init(context:Types.Context)
 	PlayerStoways = context.PlayerStoways
 	Settings = context.Settings
 	Janitor = context.Janitor 

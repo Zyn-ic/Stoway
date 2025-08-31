@@ -5,7 +5,7 @@ local Types = require(ReplicatedStorage.Shared.Types)
 
 -- Dependencies
 local API
-local Actions
+local PlayerStoways
 local Utils
 
 function Remotes.OnAskForStoway(player:Player, arg:string)
@@ -44,7 +44,7 @@ end
 
 function Remotes.OnDropTool(Player:Player, Tool:Tool)
 	if not Utils.ValidateTool(Player, Tool) then return end
-	local PlayerStowy = Actions.PlayerStoways[Player]
+	local PlayerStowy = PlayerStoways[Player]
 	local slot = Utils.FindValueFromTool(Tool, Player)
 	if not slot then return end
 
@@ -68,9 +68,9 @@ function Remotes.OnDropTool(Player:Player, Tool:Tool)
 	Tool.Parent = workspace
 end
 
-function Remotes:Init(context:Types.Context)
+function Remotes.Init(context:Types.Context)
 	API = context.API
-	Actions = context.Actions
+	PlayerStoways = context.PlayerStoways
 	Utils = context.Utils
 end
 

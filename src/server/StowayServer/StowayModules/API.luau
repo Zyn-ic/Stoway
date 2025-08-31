@@ -38,7 +38,20 @@ function API.GetStoway(Player:Player) : Types.Stoway
 	return Stoway
 end
 
-function API:Init(context: Types.Context)
+function API.SendStowayorSettings(player:Player, arg:string) : Types.Stoway | Types.Settings | nil
+    if player.Parent == nil or not player then return end
+    if typeof(arg) ~= "string" then return nil end
+
+    if arg == "stoway" then
+        return API.GetStoway(player)
+    elseif arg == "settings" then
+        return API.GetStoway(player)
+    end
+
+    return nil
+end
+
+function API.Init(context: Types.Context)
 	PlayerStoways = context.PlayerStoways
 end
 

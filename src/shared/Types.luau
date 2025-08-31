@@ -48,16 +48,54 @@ export type Stoway = {
     BackpackFolder : Folder
 }
 
+export type API = {
+	GetSettings: (Player)->(Settings),
+	GetStoway: (Player)->(Stoway),
+	SendStowayorSettings: (Player, string)->(Stoway | Settings | nil),
+	Init: (Context)->();
+}
+
+export type Actions = {
+	CreateHotbarValues : (Stoway)->(),
+	Clear: (Stoway)->(),
+	ShiftBackpackValuesDown: (ObjectValue, Player)->(),
+	AddNewBackpackValue: (Tool, Player)->(),
+	FindSuitableHotbarSlot: (Tool, Player)->(),
+	UpdatePlayerTools: (Player)->(),
+	SwapSlots: (Player, ObjectValue, ObjectValue, boolean)->(),
+	MoveToEndofBackpack: (ObjectValue, Player)->(),
+	Init: (Context)->();
+}
+
+export type Remotes = {
+	OnAskForStoway: (Player, string)->(),
+	OnUnEquip: (Player)->(),
+	OnEquipTool: (Player, Tool)->(),
+	OnDropTool: (Player, Tool)->(),
+	Init: (Context)->();
+}
+
+export type Utils = {
+	canAcceptWeight: (Stoway, number)->(),
+	FindEmptySlot: ({ObjectValue}, number)->(),
+	FindSameSlotType: ({ObjectValue}, Tool)->(),
+	ValidateTool: (Player, Tool)->(),
+	ValidateSlot: (ObjectValue, Stoway)->(),
+	getTools: (Folder, Model)->(),
+	FindValueFromTool: (Tool, Player)->(),
+	Init: (Context)->();
+}
+
 export type Context = {
-    PlayerStoways: {Stoway},
-	Janitor: nil?,
+    PlayerStoways: {[Player]: Stoway},
+	Janitor: any?,
     Settings : Settings,
     -- Pass the modules themselves so they can call each other's functions
-    API: ModuleScript,
-    Actions: ModuleScript,
-    Events: ModuleScript,
-    Utils: ModuleScript,
-    Remotes: ModuleScript
+    API: API,
+    Actions: Actions,
+    --Events: ModuleScript,
+    Utils: Utils,
+    Remotes: Remotes
 }
 
 return Types

@@ -49,7 +49,7 @@ end
 function Utils.getTools(Backpack:Folder, character:Model)
 	local tools = Backpack:GetChildren()
 	if character then
-		local charactertool = character:FindFirstChildWhichIsA("Tool")
+		local charactertool = character:FindFirstChildWhichIsA("Tool");
 		if charactertool then table.insert(tools, charactertool) end
 	end
 	return tools
@@ -67,8 +67,8 @@ function Utils.FindValueFromTool(Tool:Tool, Player:Player)
 	return nil
 end
 
-function Utils:Init(context: Types.Context)
-	PlayerStoways = context.PlayerStoways :: {Types.Stoway}
+function Utils.Init(context: Types.Context)
+	PlayerStoways = context.PlayerStoways :: {[Player]: Types.Stoway}
 end
 
 return Utils

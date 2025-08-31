@@ -409,7 +409,7 @@ function stowayclient.CreateSlotFrame(slotvalue:ObjectValue)
         local function SetFrameSize()
             local sizeX = absolutebuttonsize.X / screenx
             local sizeY = absolutebuttonsize.Y / screeny
-            DragginFakeFrame.Size = UDim2.new(sizeX, 0, sizeY, 0)
+            DragginFakeFrame.Size = UDim2.fromScale(sizeX, sizeY)
         end
 
         local function SetFramePos()
