@@ -14,7 +14,7 @@ Settings.Hotbar = {
 --// Backpack/Storage Settings
 Settings.Storage = {
 	Type = "Backpack" :: CarryingType, -- Inventory: Data-only storage, Backpack: Roblox Backpack (Not used in this V1 rework logic, but kept for config)
-	Limit = 15, -- Total slots including hotbar or separate? Usually separate.
+	Limit = 15, -- Total slots including hotbar
 	CanStack = true,
 	MaxStackSize = 5,
 }

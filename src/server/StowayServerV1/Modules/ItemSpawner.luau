@@ -2,15 +2,14 @@
 local ItemSpawner = {}
 
 local ServerStorage = game:GetService("ServerStorage")
-local Debris = game:GetService("Debris")
+local Settings = require(script.Parent.Parent.Config.Settings)
 
 -- Assuming tools are stored in a folder named "Tools" in ServerStorage
 -- You might need to adjust this path based on your actual project structure
-local ToolStorage = ServerStorage:FindFirstChild("Tools") or Instance.new("Folder", ServerStorage)
-ToolStorage.Name = "Tools"
+local ToolStorage = ServerStorage:FindFirstChild("Tools") :: Folder
 
 function ItemSpawner.SpawnTool(player: Player, itemId: string, metadata: any?): Tool?
-	local toolTemplate = ToolStorage:FindFirstChild(itemId)
+	local toolTemplate = ToolStorage:FindFirstChild(itemId) :: Tool
 	if not toolTemplate then
 		warn("[ItemSpawner] Tool not found in storage:", itemId)
 		return nil
@@ -21,6 +20,9 @@ function ItemSpawner.SpawnTool(player: Player, itemId: string, metadata: any?): 
 	-- Apply metadata if needed (e.g., durability, name change)
 	if metadata then
 		-- Example: toolClone:SetAttribute("Durability", metadata.Durability)
+		for i,v in metadata do
+			toolClone:SetAttribute(i, v)
+		end
 	end
 
 	toolClone.Parent = player.Character
@@ -45,12 +47,17 @@ function ItemSpawner.DropTool(player: Player, itemId: string, amount: number, me
 	if toolTemplate then
 		local pickup = toolTemplate:Clone()
 		if pickup:IsA("Tool") then
-			pickup.Parent = workspace
+			pickup.Parent = player.Backpack
+			local rootCframe = hrp.CFrame
+			local positionOffset = (rootCframe.LookVector * Vector3.new(1, 0, 1)) * Settings.Gameplay.DropDistance
+
 			if pickup:FindFirstChild("Handle") then
-				pickup.Handle.CFrame = hrp.CFrame * CFrame.new(0, 0, -5)
+				pickup:FindFirstChild("Handle").Cframe = rootCframe + positionOffset
 			else
-				pickup:PivotTo(hrp.CFrame * CFrame.new(0, 0, -5))
+				pickup:PivotTo(rootCframe + positionOffset)
 			end
+
+			pickup.Parent = workspace
 			-- Add a pickup script or tag here
 		end
 	end

@@ -17,6 +17,12 @@ export type ItemData = {
 	-- No ToolRef here; the slot will hold the ToolRef and this ItemData as Properties
 }
 
+export type DragStateTable = {
+	ID: number,
+	SourceSlot: any,
+	MouseOffset: Vector2
+}
+
 -- Represents the content of a single slot in Hotbar or Backpack_Data
 export type SlotContents = {
 	ToolRef: Tool, -- Direct reference to the Tool instance

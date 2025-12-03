@@ -64,7 +64,8 @@ function InventoryData:AddItem(itemId: string, amount: number, metadata: any?): 
 			self.Items[uuid] = newItem
 			self.Hotbar[hotbarSlot] = uuid
 		else
-			local storageSlot = InventoryUtils.FindEmptySlot(self.Storage, Settings.Storage.MaxSlots)
+			local storageSlot = InventoryUtils.FindEmptySlot(self.Storage, Settings.Storage.Limit - Settings.Hotbar.MaxSlots)
+			-- if you want items in the hotbar to be weightless then remove the - settings.hotbar.maxslots
 			if storageSlot then
 				self.Items[uuid] = newItem
 				self.Storage[storageSlot] = uuid
