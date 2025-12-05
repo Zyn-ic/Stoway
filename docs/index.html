@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stoway - Documentation</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <nav class="nav">
+        <a href="index.html" class="nav-logo">
+            <img src="../pics/Logo.png" alt="Stoway">
+            <h1>Stoway</h1>
+        </a>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Documentation</div>
+            <a href="index.html" class="nav-link active">Home</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Backend</div>
+            <a href="server/index.html" class="nav-link">Server Overview</a>
+            <a href="server/inventory-service.html" class="nav-link">InventoryService</a>
+            <a href="server/inventory-data.html" class="nav-link">InventoryData</a>
+            <a href="server/utils.html" class="nav-link">Utilities</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Frontend</div>
+            <a href="client/index.html" class="nav-link">Client Overview</a>
+        </div>
+    </nav>
+
+    <main class="main">
+        <section class="hero">
+            <span class="hero-badge">⚡ Headless Backend Architecture</span>
+            <h1>Stoway Docs</h1>
+            <p>A production-ready, server-authoritative inventory system for Roblox with O(1) lookups and full
+                persistence support.</p>
+
+            <div class="section-cards">
+                <a href="server/index.html" class="section-card">
+                    <div class="section-card-icon">🖥️</div>
+                    <h3>Server Backend</h3>
+                    <p>Server-authoritative inventory management, API reference, and helper modules.</p>
+                    <span class="arrow">→</span>
+                </a>
+
+                <a href="client/index.html" class="section-card">
+                    <div class="section-card-icon">🎨</div>
+                    <h3>Client Frontend</h3>
+                    <p>UI components, Fusion integration, and drag-and-drop implementation.</p>
+                    <span class="arrow">→</span>
+                </a>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>What We Offer</h2>
+                <p>Enterprise-grade features for professional Roblox development</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3>Headless Backend</h3>
+                    <p>Fully server-authoritative with zero client trust.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>O(1) Lookups</h3>
+                    <p>Lightning-fast item stacking with hash table lookups.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Exploit-Proof</h3>
+                    <p>All operations validated server-side with bounds checking.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Drag & Drop</h3>
+                    <p>Intuitive item management with full swap support.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📦</div>
+                    <h3>Smart Stacking</h3>
+                    <p>Automatic stack management with metadata-aware grouping.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💾</div>
+                    <h3>Persistence Ready</h3>
+                    <p>Data-first architecture for seamless DataStore integration.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+</body>
+
+</html>

@@ -13,7 +13,7 @@ local PlayerInventories = {} -- [Player] = InventoryData
 local ServiceJanitor = Janitor.new()
 
 --// Remotes
-local RemotesFolder = ReplicatedStorage:FindFirstChild("Remotes") or Instance.new("Folder", ReplicatedStorage)
+local RemotesFolder = ReplicatedStorage:FindFirstChild("Remotes")
 RemotesFolder.Name = "Remotes"
 
 local function GetRemote(name, class)
@@ -30,6 +30,9 @@ local InventoryUpdateRemote = GetRemote("InventoryUpdate", "RemoteEvent")
 local InitialSyncRemote = GetRemote("InitialSync", "RemoteFunction")
 local SwapSlotsRemote = GetRemote("SwapSlots", "RemoteEvent")
 local EquipSlotRemote = GetRemote("EquipSlot", "RemoteEvent")
+local UnequipSlotRemote = GetRemote("UnequipSlot", "RemoteEvent")
+local RemoveItemRemote = GetRemote("RemoveItem", "RemoteEvent")
+local DropItemRemote = GetRemote("DropItem", "RemoteEvent")
 
 --// Private Methods
 
@@ -163,6 +166,61 @@ function InventoryService.EquipSlot(player: Player, slotIndex: number)
 	InventoryService.Replicate(player)
 end
 
+function InventoryService.UnequipSlot(player: Player)
+	local inventory = PlayerInventories[player]
+	if not inventory or not inventory.EquippedSlot then return end
+	
+	-- Find and destroy equipped tool
+	local char = player.Character
+	if char then
+		local tool = char:FindFirstChildWhichIsA("Tool")
+		if tool then tool:Destroy() end
+	end
+	
+	inventory.EquippedSlot = nil
+	InventoryService.Replicate(player)
+end
+
+function InventoryService.RemoveItem(player: Player, uuid: string, amount: number)
+	local inventory = PlayerInventories[player]
+	if not inventory then return false end
+	
+	local success = inventory:RemoveItem(uuid, amount)
+	if success then
+		InventoryService.Replicate(player)
+	end
+	return success
+end
+
+function InventoryService.DropItem(player: Player, slotType: "Hotbar" | "Storage", slotIndex: number)
+	local inventory = PlayerInventories[player]
+	if not inventory then
+		warn("[InventoryService] No inventory found for player:", player.Name)
+		return false
+	end
+	
+	-- Get the item in the slot
+	local item = inventory:GetItemInSlot(slotType, slotIndex)
+	if not item then
+		warn("[InventoryService] No item in slot:", slotType, slotIndex)
+		return false
+	end
+	
+	-- If equipped, unequip first
+	if slotType == "Hotbar" and inventory.EquippedSlot == slotIndex then
+		InventoryService.UnequipSlot(player)
+	end
+	
+	-- Drop the item into the world
+	ItemSpawner.DropTool(player, item.Id, item.Amount, item.Metadata)
+	
+	-- Remove from inventory
+	inventory:RemoveItem(item.UUID, item.Amount)
+	InventoryService.Replicate(player)
+	
+	return true
+end
+
 function InventoryService.Replicate(player: Player)
 	local inventory = PlayerInventories[player]
 	if inventory then
@@ -208,6 +266,18 @@ function InventoryService.Init()
 
 	EquipSlotRemote.OnServerEvent:Connect(function(player, slotIndex)
 		InventoryService.EquipSlot(player, slotIndex)
+	end)
+	
+	UnequipSlotRemote.OnServerEvent:Connect(function(player)
+		InventoryService.UnequipSlot(player)
+	end)
+	
+	RemoveItemRemote.OnServerEvent:Connect(function(player, uuid, amount)
+		InventoryService.RemoveItem(player, uuid, amount)
+	end)
+	
+	DropItemRemote.OnServerEvent:Connect(function(player, slotType, slotIndex)
+		InventoryService.DropItem(player, slotType, slotIndex)
 	end)
 	
 	print("[InventoryService] Initialized V1")

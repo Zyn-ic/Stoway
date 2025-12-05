@@ -3,6 +3,7 @@ local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local StarterGui = game:GetService("StarterGui")
 local RunService = game:GetService("RunService")
 
 --modules
@@ -87,6 +88,8 @@ end
 
 function ClientInventoryService.Init()
 	print("ClientInventoryService Initialized")
+	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+    StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
 end
 
 return ClientInventoryService

@@ -47,4 +47,16 @@ function InventoryUtils.FindEmptySlot(slots: { [number]: any }, maxSlots: number
 	return nil
 end
 
+--// Parses metadata from a Tool's attributes
+function InventoryUtils.ParseToolMetadata(tool: Tool): any
+	if not tool or not tool:IsA("Tool") then
+		return nil
+	end
+	
+	local attributes = tool:GetAttributes()
+	
+	-- Return nil if no attributes found, otherwise return a copy of the attributes table
+	return next(attributes) and table.clone(attributes) or nil
+end
+
 return InventoryUtils

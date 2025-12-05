@@ -9,6 +9,12 @@ local Settings = require(script.Parent.Parent.Config.Settings)
 local ToolStorage = ServerStorage:FindFirstChild("Tools") :: Folder
 
 function ItemSpawner.SpawnTool(player: Player, itemId: string, metadata: any?): Tool?
+	-- Safety: Check if character exists
+	if not player.Character then
+		warn("[ItemSpawner] Cannot spawn tool - player has no character:", player.Name)
+		return nil
+	end
+	
 	local toolTemplate = ToolStorage:FindFirstChild(itemId) :: Tool
 	if not toolTemplate then
 		warn("[ItemSpawner] Tool not found in storage:", itemId)

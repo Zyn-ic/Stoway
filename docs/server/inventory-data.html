@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InventoryData - Stoway Docs</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <nav class="nav">
+        <a href="../index.html" class="nav-logo">
+            <img src="../../pics/Logo.png" alt="Stoway">
+            <h1>Stoway</h1>
+        </a>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Documentation</div>
+            <a href="../index.html" class="nav-link">Home</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Backend</div>
+            <a href="index.html" class="nav-link">Server Overview</a>
+            <a href="inventory-service.html" class="nav-link">InventoryService</a>
+            <a href="inventory-data.html" class="nav-link active">InventoryData</a>
+            <a href="utils.html" class="nav-link">Utilities</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Frontend</div>
+            <a href="../client/index.html" class="nav-link">Client Overview</a>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="breadcrumb">
+            <a href="../index.html">Docs</a>
+            <span>/</span>
+            <a href="index.html">Server</a>
+            <span>/</span>
+            <span class="current">InventoryData</span>
+        </div>
+
+        <section>
+            <div class="section-header">
+                <h2>InventoryData</h2>
+                <p>Core data structure for player inventory state</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                This class is instantiated per-player and holds all inventory state including items, slots, and equipped
+                status.
+                It uses the <code class="inline-code">ItemsByID</code> lookup table for O(1) stack searches.
+            </p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Type Definition</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="keyword">export type</span> ItemInstance <span class="operator">=</span> {
+    UUID: <span class="keyword">string</span>,
+    Id: <span class="keyword">string</span>,
+    Amount: <span class="keyword">number</span>,
+    Metadata: { [<span class="keyword">string</span>]: <span class="keyword">any</span> }?
+}
+
+<span class="keyword">export type</span> InventoryData <span class="operator">=</span> {
+    Player: Player,
+    Items: { [<span class="keyword">string</span>]: ItemInstance },      <span class="comment">-- UUID -> Item</span>
+    ItemsByID: { [<span class="keyword">string</span>]: {<span class="keyword">string</span>} },    <span class="comment">-- ItemId -> UUIDs (O(1) lookup)</span>
+    Hotbar: { [<span class="keyword">number</span>]: <span class="keyword">string</span>? },         <span class="comment">-- Slot -> UUID</span>
+    Storage: { [<span class="keyword">number</span>]: <span class="keyword">string</span>? },        <span class="comment">-- Slot -> UUID</span>
+    EquippedSlot: <span class="keyword">number</span>?,
+}</code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Methods</h2>
+            </div>
+
+            <div class="module-card">
+                <div class="module-header">
+                    <div class="module-icon">➕</div>
+                    <div class="module-title">
+                        <h3>AddItem(itemId, amount, metadata?)</h3>
+                        <p>Adds items with auto-stacking <span class="tag tag-performance">O(1) Lookup</span></p>
+                    </div>
+                </div>
+                <p style="color: var(--text-secondary);">
+                    First attempts to stack with existing items using the <code class="inline-code">ItemsByID</code>
+                    lookup table.
+                    If stacking fails or isn't possible, finds an empty slot (Hotbar first, then Storage).
+                </p>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-title">Flow</span>
+                        <span class="code-lang">Pseudocode</span>
+                    </div>
+                    <pre>1. Check if stacking enabled
+2. Look up existing UUIDs via ItemsByID[itemId]  ← O(1)
+3. Try to add to existing stacks (respecting MaxStackSize)
+4. Create new item instances for remaining amount
+5. Find empty slots (Hotbar priority)
+6. Update Items, slots, and ItemsByID</pre>
+                </div>
+            </div>
+
+            <div class="module-card">
+                <div class="module-header">
+                    <div class="module-icon">➖</div>
+                    <div class="module-title">
+                        <h3>RemoveItem(uuid, amount)</h3>
+                        <p>Removes items and maintains lookup table</p>
+                    </div>
+                </div>
+                <p style="color: var(--text-secondary);">
+                    Decrements stack count or removes item entirely if amount matches.
+                    Automatically cleans up <code class="inline-code">ItemsByID</code> entries.
+                </p>
+            </div>
+
+            <div class="module-card">
+                <div class="module-header">
+                    <div class="module-icon">🔄</div>
+                    <div class="module-title">
+                        <h3>SwapSlots(fromType, fromSlot, toType, toSlot)</h3>
+                        <p>Swaps items with bounds validation <span class="tag tag-safety">Bounds Checked</span></p>
+                    </div>
+                </div>
+                <p style="color: var(--text-secondary);">
+                    Validates that both slot indices are within valid limits before swapping.
+                    Returns <code class="inline-code">false</code> if bounds check fails.
+                </p>
+            </div>
+
+            <div class="module-card">
+                <div class="module-header">
+                    <div class="module-icon">🔍</div>
+                    <div class="module-title">
+                        <h3>GetItemInSlot(slotType, slot)</h3>
+                        <p>Returns item data for a specific slot</p>
+                    </div>
+                </div>
+                <p style="color: var(--text-secondary);">
+                    Looks up UUID in the slot table, then retrieves full item data from <code
+                        class="inline-code">Items</code>.
+                </p>
+            </div>
+        </section>
+    </main>
+</body>
+
+</html>
