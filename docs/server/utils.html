@@ -102,9 +102,9 @@
                         <span class="code-lang">Pseudocode</span>
                     </div>
                     <pre>1. Check ID match: item1.Id == item2.Id
-2. Compare metadata (deep equality check)
-3. If RarityCheck enabled:
-   - Compare item1.Metadata.Rarity == item2.Metadata.Rarity
+2. <strong>Strict Check:</strong> Name, Rarity, and Type MUST match exactly
+3. <strong>Blacklist:</strong> Check Settings.RarityBlacklist (e.g. Legendary)
+   - If blacklisted, return false
 4. Return true if all checks pass</pre>
                 </div>
             </div>

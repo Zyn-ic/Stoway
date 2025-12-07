@@ -58,7 +58,7 @@ function ItemSpawner.DropTool(player: Player, itemId: string, amount: number, me
 			local positionOffset = (rootCframe.LookVector * Vector3.new(1, 0, 1)) * Settings.Gameplay.DropDistance
 
 			if pickup:FindFirstChild("Handle") then
-				pickup:FindFirstChild("Handle").Cframe = rootCframe + positionOffset
+				pickup:FindFirstChild("Handle").CFrame = rootCframe + positionOffset
 			else
 				pickup:PivotTo(rootCframe + positionOffset)
 			end

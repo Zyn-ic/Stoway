@@ -7,7 +7,8 @@ local Janitor = require(ReplicatedStorage.Packages.Janitor)
 
 local InventoryData = require(script.Parent.Classes.InventoryData)
 local ItemSpawner = require(script.Parent.Modules.ItemSpawner)
---local Settings = require(script.Parent.Config.Settings)
+local ChatCommands = require(script.Parent.Modules.ChatCommands)
+
 
 local PlayerInventories = {} -- [Player] = InventoryData
 local ServiceJanitor = Janitor.new()
@@ -43,67 +44,12 @@ local function OnPlayerAdded(player: Player)
 	-- Hook up character spawning logic if needed
 	player.CharacterAdded:Connect(function()
 		-- Reset equipped state or respawn tool if persistent
-		inventory.EquippedSlot = nil
+		-- For now, reset
+		inventory.EquippedItemUUID = nil
 	end)
 
 	--// Debug Chat Commands
-	player.Chatted:Connect(function(msg)
-		local args = string.split(msg, " ")
-		local cmd = string.lower(args[1])
-
-		if cmd == "/inv" then
-			print("--- Inventory for " .. player.Name .. " ---")
-			print("Hotbar:", inventory.Hotbar)
-			print("Storage:", inventory.Storage)
-			print("Items:", inventory.Items)
-			print("--------------------------------")
-		
-		elseif cmd == "/add" then
-			-- /add [id] [amount]
-			local id = args[2]
-			local amount = tonumber(args[3]) or 1
-			if id then
-				InventoryService.AddItem(player, id, amount)
-				print("Added", amount, id)
-			end
-
-		elseif cmd == "/remove" then
-			-- /remove [uuid] [amount]
-			local uuid = args[2]
-			local amount = tonumber(args[3]) or 1
-			if uuid then
-				local success = inventory:RemoveItem(uuid, amount)
-				if success then
-					print("Removed item", uuid)
-					InventoryService.Replicate(player)
-				else
-					warn("Failed to remove item")
-				end
-			end
-
-		elseif cmd == "/swap" then
-			-- /swap [Hotbar/Storage] [slot1] [Hotbar/Storage] [slot2]
-			-- Example: /swap Hotbar 1 Hotbar 2
-			local type1 = args[2]
-			local slot1 = tonumber(args[3])
-			local type2 = args[4]
-			local slot2 = tonumber(args[5])
-			
-			if type1 and slot1 and type2 and slot2 then
-				inventory:SwapSlots(type1, slot1, type2, slot2)
-				print("Swapped slots")
-				InventoryService.Replicate(player)
-			end
-
-		elseif cmd == "/equip" then
-			-- /equip [slot]
-			local slot = tonumber(args[2])
-			if slot then
-				InventoryService.EquipSlot(player, slot)
-				print("Equipped slot", slot)
-			end
-		end
-	end)
+	ChatCommands.Register(player, InventoryService, PlayerInventories)
 	
 	print("[InventoryService] Loaded inventory for " .. player.Name)
 end
@@ -132,61 +78,89 @@ function InventoryService.EquipSlot(player: Player, slotIndex: number)
 	local inventory = PlayerInventories[player]
 	if not inventory then return end
 	
-	-- If already equipped, unequip
-	if inventory.EquippedSlot == slotIndex then
-		local currentItem = inventory:GetItemInSlot("Hotbar", slotIndex)
-		if currentItem then
-			-- Find tool and destroy
+	-- Currently only allowing equipping from Hotbar via hotkey
+	-- If UI requests equip from storage, we can support it if needed, but usually storage items must be moved to hotbar
+	-- Let's support Hotbar equipping for now.
+	local item = inventory:GetItemInSlot("Hotbar", slotIndex) or inventory:GetItemInSlot("Storage", slotIndex)
+	
+	if item then
+		-- Unequip current if any
+		if inventory.EquippedItemUUID then
+			-- Destroy old tool
 			local char = player.Character
 			if char then
-				local tool = char:FindFirstChildWhichIsA("Tool")
-				if tool then tool:Destroy() end
+				local tool = char:FindFirstChildOfClass("Tool")
+				if tool then
+					ItemSpawner.DespawnTool(player, tool)
+				end
 			end
 		end
-		inventory.EquippedSlot = nil
-		InventoryService.Replicate(player) -- Update client equipped state
-		return
-	end
-	
-	-- Unequip old
-	if inventory.EquippedSlot then
-		local char = player.Character
-		if char then
-			local tool = char:FindFirstChildWhichIsA("Tool")
-			if tool then tool:Destroy() end
-		end
-	end
-	
-	-- Equip new
-	local item = inventory:GetItemInSlot("Hotbar", slotIndex)
-	if item then
+
+		inventory.EquippedItemUUID = item.UUID
 		ItemSpawner.SpawnTool(player, item.Id, item.Metadata)
-		inventory.EquippedSlot = slotIndex
+		InventoryService.Replicate(player)
 	end
-	InventoryService.Replicate(player)
 end
 
 function InventoryService.UnequipSlot(player: Player)
 	local inventory = PlayerInventories[player]
-	if not inventory or not inventory.EquippedSlot then return end
+	if not inventory or not inventory.EquippedItemUUID then return end
+	
+	inventory.EquippedItemUUID = nil
 	
 	-- Find and destroy equipped tool
 	local char = player.Character
 	if char then
-		local tool = char:FindFirstChildWhichIsA("Tool")
-		if tool then tool:Destroy() end
+		local tool = char:FindFirstChildOfClass("Tool")
+		if tool then
+			ItemSpawner.DespawnTool(player, tool)
+		end
 	end
 	
-	inventory.EquippedSlot = nil
 	InventoryService.Replicate(player)
+end
+
+function InventoryService.SwapSlots(player: Player, slotType1: "Hotbar" | "Storage", slotIndex1: number, slotType2: "Hotbar" | "Storage", slotIndex2: number)
+	local inventory = PlayerInventories[player]
+	if not inventory then return end
+	
+	local succ = inventory:SwapSlots(slotType1, slotIndex1, slotType2, slotIndex2)
+	if succ then 
+		InventoryService.Replicate(player) 
+	end
 end
 
 function InventoryService.RemoveItem(player: Player, uuid: string, amount: number)
 	local inventory = PlayerInventories[player]
 	if not inventory then return false end
 	
+	-- RemoveItem handles setting EquippedItemUUID to nil if the equipped item is removed
 	local success = inventory:RemoveItem(uuid, amount)
+	
 	if success then
+		-- If item removed was equipped, we should ensure the physical tool is gone too
+		-- RemoveItem in InventoryData sets EquippedItemUUID to nil, so we check that
+		if not inventory.EquippedItemUUID then
+			local char = player.Character
+			if char then
+				local tool = char:FindFirstChildOfClass("Tool")
+				if tool then tool:Destroy() end
+			end
+		end
+		
+		InventoryService.Replicate(player)
+	end
+	return success
+end
+
+function InventoryService.UpdateMetadata(player: Player, uuid: string, updates: { [string]: any })
+	local inventory = PlayerInventories[player]
+	if not inventory then return false end
+	
+	local success = inventory:UpdateMetadata(uuid, updates)
+	if success then
+		-- In a real production environment, you might want to debounce this 
+		-- if it's called extremely frequently (e.g. ammo counters)
 		InventoryService.Replicate(player)
 	end
 	return success
@@ -207,7 +181,7 @@ function InventoryService.DropItem(player: Player, slotType: "Hotbar" | "Storage
 	end
 	
 	-- If equipped, unequip first
-	if slotType == "Hotbar" and inventory.EquippedSlot == slotIndex then
+	if inventory.EquippedItemUUID == item.UUID then
 		InventoryService.UnequipSlot(player)
 	end
 	
@@ -224,11 +198,20 @@ end
 function InventoryService.Replicate(player: Player)
 	local inventory = PlayerInventories[player]
 	if inventory then
+		-- Serialize data for client
+		-- Client expects: { Items: {}, Vector3s? No. }
+		-- We need to send Equipped Data. 
+		-- We should send the *UUID* that is equipped, and let Client figure out which slot it is.
+		-- OR we can send "IsEquipped" flag on items.
+		
+		-- Let's assume the Client UI iterates slots and checks UUID against EquippedUUID or something?
+		-- Or we stick to the plan: Send Items, Hotbar, Storage, and EquippedUUID.
+		
 		local data = {
 			Items = inventory.Items,
 			Hotbar = inventory.Hotbar,
 			Storage = inventory.Storage,
-			EquippedSlot = inventory.EquippedSlot
+			EquippedUUID = inventory.EquippedItemUUID
 		}
 		InventoryUpdateRemote:FireClient(player, data)
 	end
@@ -250,7 +233,7 @@ function InventoryService.Init()
 				Items = inventory.Items,
 				Hotbar = inventory.Hotbar,
 				Storage = inventory.Storage,
-				EquippedSlot = inventory.EquippedSlot
+				EquippedUUID = inventory.EquippedItemUUID
 			}
 		end
 		return nil

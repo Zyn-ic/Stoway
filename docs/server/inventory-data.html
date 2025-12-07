@@ -107,13 +107,27 @@
                         <span class="code-title">Flow</span>
                         <span class="code-lang">Pseudocode</span>
                     </div>
-                    <pre>1. Check if stacking enabled
-2. Look up existing UUIDs via ItemsByID[itemId]  ← O(1)
-3. Try to add to existing stacks (respecting MaxStackSize)
-4. Create new item instances for remaining amount
-5. Find empty slots (Hotbar priority)
-6. Update Items, slots, and ItemsByID</pre>
+                    <pre>1. Find tool template in ServerStorage
+2. Parse base attributes -> baseMetadata
+3. Merge passed metadata (overrides) -> finalMetadata
+4. Look up existing UUIDs (O(1))
+5. Try to stack (Strict Rarity/Type/Name Check)
+6. Add to empty slot (Hotbar priority)</pre>
                 </div>
+            </div>
+
+            <div class="module-card">
+                <div class="module-header">
+                    <div class="module-icon">📝</div>
+                    <div class="module-title">
+                        <h3>UpdateMetadata(uuid, updates)</h3>
+                        <p>Modifies item state without removing/adding</p>
+                    </div>
+                </div>
+                <p style="color: var(--text-secondary);">
+                    Merges the <code class="inline-code">updates</code> table into existing item metadata. 
+                    Useful for syncing cooldowns, durability, or ammo counts.
+                </p>
             </div>
 
             <div class="module-card">

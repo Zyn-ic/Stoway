@@ -9,35 +9,38 @@ function InventoryUtils.GenerateUUID(): string
 end
 
 --// Checks if two items can stack based on ID and Metadata
-function InventoryUtils.CanStack(item1: any, item2: any, checkRarity: boolean): boolean
+function InventoryUtils.CanStack(item1: any, item2: any, settings: any?): boolean
 	if item1.Id ~= item2.Id then return false end
 	
-	-- Check metadata equality (simplified)
-	-- In a real scenario, you might want deep comparison or specific field checks
-	if item1.Metadata and item2.Metadata then
-		-- For now, assume if metadata exists, they might not stack unless identical
-		-- This is a placeholder for deep comparison
-		for k, v in pairs(item1.Metadata) do
-			if item2.Metadata[k] ~= v then return false end
+	local meta1 = item1.Metadata or {}
+	local meta2 = item2.Metadata or {}
+
+	-- STRICT CHECK: Name, Rarity, Type used for stacking
+	-- If these exist, they MUST match
+	if meta1.Name ~= meta2.Name then return false end
+	if meta1.Rarity ~= meta2.Rarity then return false end
+	if meta1.Type ~= meta2.Type then return false end
+
+	-- Rarity Blacklist Check
+	if settings and settings.RarityBlacklist then
+		local rarity = meta1.Rarity
+		if rarity and settings.RarityBlacklist[rarity] then
+			return false -- Cannot stack this rarity
 		end
-		for k, v in pairs(item2.Metadata) do
-			if item1.Metadata[k] ~= v then return false end
-		end
-	elseif item1.Metadata ~= item2.Metadata then
-		return false
 	end
 
-	-- Rarity check if enabled
-	if checkRarity then
-		local r1 = item1.Metadata and item1.Metadata.Rarity
-		local r2 = item2.Metadata and item2.Metadata.Rarity
-		if r1 ~= r2 then return false end
+	-- General Metadata Equality Check (Deep compare for other fields?)
+	-- For now, we still iterate to ensure other custom properties match if desired
+	for k, v in pairs(meta1) do
+		if meta2[k] ~= v then return false end
+	end
+	for k, v in pairs(meta2) do
+		if meta1[k] ~= v then return false end
 	end
 
 	return true
 end
 
---// Finds the first empty slot in a dictionary of slots
 function InventoryUtils.FindEmptySlot(slots: { [number]: any }, maxSlots: number): number?
 	for i = 1, maxSlots do
 		if not slots[i] then

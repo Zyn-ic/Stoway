@@ -22,13 +22,5 @@ export type DragStateTable = {
 	MouseOffset: Vector2
 }
 
-export type Settings = {
-	HotbarSettings : {HotbarType:string, MaxSlots:number},
-	BackpackSettings : {CarryingType:string, Limit:number, Sorting:boolean},
-	CanStack:boolean,
-	MaxStackCount:number,
-	RarityCheck:boolean,
-	Droppable:boolean
-}
 
 return Types

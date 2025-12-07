@@ -90,6 +90,11 @@
                         <td>Drops item into world and removes from inventory.</td>
                     </tr>
                     <tr>
+                        <td><span class="method-name">UpdateMetadata</span> <span class="tag tag-new">NEW</span></td>
+                        <td><span class="param-type">player, uuid: string, updates: table</span></td>
+                        <td>Updates metadata for an item and replicates to client (lazy sync).</td>
+                    </tr>
+                    <tr>
                         <td><span class="method-name">Replicate</span></td>
                         <td><span class="param-type">player</span></td>
                         <td>Syncs inventory state to client via InventoryUpdate remote.</td>
@@ -102,7 +107,36 @@
                     <span class="code-title">Server Usage Example</span>
                     <span class="code-lang">Luau</span>
                 </div>
-                <pre><code><span class="comment">-- Add items to inventory</span>
+                <pre><code><span class="comment">-- Update item cooldown</span>
+local cooldownEnd = workspace:GetServerTimeNow() + 5
+InventoryService.<span class="function">UpdateMetadata</span>(player, itemUUID, { CooldownEnd = cooldownEnd })</code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Best Practices & Performance</h2>
+                <p>Handling high-frequency updates</p>
+            </div>
+            
+            <div class="warning-box">
+                <strong>⚠️ Rapid-Fire Scenarios (Mini-Gun):</strong>
+                <span>For weapons with high fire rates (e.g., 100/sec), <strong>DO NOT</strong> replicate inventory on every shot.</span>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-top: 1rem;">
+                Bandwidth is precious. For rapid state changes like ammo counters:
+            </p>
+            <ul style="color: var(--text-secondary); margin-left: 1.5rem; margin-top: 0.5rem; list-style-type: disc;">
+                <li><strong>Client (Visuals):</strong> Update local UI immediately for responsiveness (0-latency feel).</li>
+                <li><strong>Server (Logic):</strong> Validate shots and decrement ammo securely.</li>
+                <li><strong>Replication (Lazy Sync):</strong> Only call <code class="inline-code">InventoryService.UpdateMetadata</code> on specific events (Reload, Unequip, or batched intervals).</li>
+            </ul>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Client Remote Events</h2>
 InventoryService.<span class="function">AddItem</span>(player, <span class="string">"Sword"</span>, <span class="number">1</span>)
 
 <span class="comment">-- Equip/Unequip</span>

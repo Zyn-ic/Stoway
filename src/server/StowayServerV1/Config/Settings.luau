@@ -24,6 +24,11 @@ Settings.Gameplay = {
 	Droppable = true,
 	DropDistance = 10,
 	RarityCheck = true, -- If true, prevents stacking different rarities
+	RarityBlacklist = { -- Rarities that cannot stack at all
+		["Legendary"] = true,
+		["Mythic"] = true,
+		["Special"] = true,
+	}
 }
 
 return Settings

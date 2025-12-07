@@ -14,11 +14,11 @@ export type ItemInstance = {
 
 export type InventoryData = {
 	Player: Player,
-	Items: { [string]: ItemInstance }, -- UUID -> Item
-	ItemsByID: { [string]: {string} }, -- ItemId -> Array of UUIDs (for fast stacking lookup)
-	Hotbar: { [number]: string? },     -- Slot -> UUID
-	Storage: { [number]: string? },    -- Slot -> UUID
-	EquippedSlot: number?,
+	Items: { [string]: ItemInstance },      -- UUID -> Item
+	ItemsByID: { [string]: {string} },    -- ItemId -> Array of UUIDs (for fast stacking lookup)
+	Hotbar: { [number]: string? },         -- Slot -> UUID
+	Storage: { [number]: string? },        -- Slot -> UUID
+	EquippedItemUUID: string?             -- UUID of the currently equipped item (persists across slots)
 }
 
 function InventoryData.new(player: Player)
@@ -28,18 +28,48 @@ function InventoryData.new(player: Player)
 	self.ItemsByID = {}
 	self.Hotbar = {}
 	self.Storage = {}
-	self.EquippedSlot = nil
+	self.EquippedItemUUID = nil
 	return self
 end
 
 function InventoryData:AddItem(itemId: string, amount: number, metadata: any?): boolean
+	-- 0. Prepare Metadata (Parse from Tool + Merge Overrides)
+	local ServerStorage = game:GetService("ServerStorage")
+	local toolsFolder = ServerStorage:FindFirstChild("Tools")
+	local toolTemplate = toolsFolder and toolsFolder:FindFirstChild(itemId)
+	
+	local finalMetadata = {}
+	
+	-- Parse base metadata from Tool
+	if toolTemplate and toolTemplate:IsA("Tool") then
+		local baseMeta = InventoryUtils.ParseToolMetadata(toolTemplate)
+		if baseMeta then
+			finalMetadata = baseMeta
+		end
+	end
+	
+	-- Merge passed metadata (overrides)
+	if metadata then
+		for k, v in pairs(metadata) do
+			finalMetadata[k] = v
+		end
+	end
+	
+	-- Normalize empty metadata to nil if table empty? 
+	-- InventoryUtils.CanStack handles empty tables gracefully now.
+	-- But to save memory we might want it nil if empty? 
+	-- For consistency let's keep it as a table if it has keys, or nil?
+	-- Let's just use finalMetadata table.
+	if next(finalMetadata) == nil then finalMetadata = {} end
+
 	-- 1. Try to stack (using lookup table for O(1) performance)
 	if Settings.Storage.CanStack then
 		local existingUUIDs = self.ItemsByID[itemId]
 		if existingUUIDs then
 			for _, uuid in ipairs(existingUUIDs) do
 				local item = self.Items[uuid]
-				if InventoryUtils.CanStack({Id = itemId, Metadata = metadata}, item, Settings.Gameplay.RarityCheck) then
+				-- Updated CanStack call with Settings.Gameplay
+				if InventoryUtils.CanStack({Id = itemId, Metadata = finalMetadata}, item, Settings.Gameplay) then
 					if item.Amount < Settings.Storage.MaxStackSize then
 						local space = Settings.Storage.MaxStackSize - item.Amount
 						local toAdd = math.min(amount, space)
@@ -61,7 +91,7 @@ function InventoryData:AddItem(itemId: string, amount: number, metadata: any?): 
 			UUID = uuid,
 			Id = itemId,
 			Amount = newAmount,
-			Metadata = metadata
+			Metadata = finalMetadata -- Use the merged metadata
 		}
 
 		-- Find slot
@@ -104,6 +134,11 @@ function InventoryData:RemoveItem(uuid: string, amount: number): boolean
 		item.Amount -= amount
 		return true
 	elseif item.Amount == amount then
+		-- Unequip if currently equipped
+		if self.EquippedItemUUID == uuid then
+			self.EquippedItemUUID = nil
+		end
+
 		-- Remove from Items
 		self.Items[uuid] = nil
 		
@@ -129,6 +164,21 @@ function InventoryData:RemoveItem(uuid: string, amount: number): boolean
 	else
 		return false -- Not enough
 	end
+end
+
+function InventoryData:UpdateMetadata(uuid: string, updates: { [string]: any }): boolean
+	local item = self.Items[uuid]
+	if not item then return false end
+	
+	if not item.Metadata then
+		item.Metadata = {}
+	end
+	
+	for k, v in pairs(updates) do
+		item.Metadata[k] = v
+	end
+	
+	return true
 end
 
 function InventoryData:GetItemInSlot(slotType: "Hotbar" | "Storage", slot: number): ItemInstance?
@@ -162,6 +212,7 @@ function InventoryData:SwapSlots(fromType: "Hotbar" | "Storage", fromSlot: numbe
 	local fromTable = (fromType == "Hotbar") and self.Hotbar or self.Storage
 	local toTable = (toType == "Hotbar") and self.Hotbar or self.Storage
 	
+	-- Swap UUIDs (Equipped Status Persists via UUID)
 	local temp = fromTable[fromSlot]
 	fromTable[fromSlot] = toTable[toSlot]
 	toTable[toSlot] = temp
