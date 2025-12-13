@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Commands - Stoway Docs</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="icon" href="../assets/Logo.png" />
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <nav class="nav">
+        <a href="../index.html" class="nav-logo">
+            <img src="../assets/Logo.png" alt="Stoway">
+            <h1>Stoway</h1>
+        </a>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Documentation</div>
+            <a href="../index.html" class="nav-link">Home</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Backend V1.2</div>
+            <a href="index.html" class="nav-link">Server Overview</a>
+            <a href="inventory-service.html" class="nav-link">InventoryService</a>
+            <a href="inventory-data.html" class="nav-link">InventoryState</a>
+            <a href="utils.html" class="nav-link">Utilities</a>
+            <a href="debug-commands.html" class="nav-link active">Debug Commands</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Frontend</div>
+            <a href="../client/index.html" class="nav-link">Client Overview</a>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="breadcrumb">
+            <a href="../index.html">Docs</a>
+            <span>/</span>
+            <a href="index.html">Server</a>
+            <span>/</span>
+            <span class="current">Debug Commands</span>
+        </div>
+
+        <section>
+            <div class="section-header">
+                <h2>Debug Chat Commands</h2>
+                <p>In-game testing commands for StowayServerV1.2</p>
+            </div>
+
+            <div class="warning-box">
+                <strong>⚠️ Production Warning</strong>
+                <p style="margin-top: 0.5rem;">
+                    Remove <code class="inline-code">Debug/ChatCommands.luau</code> before shipping!
+                    These commands bypass normal validation and are intended for testing only.
+                </p>
+            </div>
+        </section>
+
+        <section style="margin-top: 2rem;">
+            <div class="section-header">
+                <h2>Inventory Display</h2>
+            </div>
+
+            <div class="module-card">
+                <div class="module-header">
+                    <div class="module-icon">📋</div>
+                    <div class="module-title">
+                        <h3>/inv</h3>
+                        <p>Display current inventory state</p>
+                    </div>
+                </div>
+                <p style="color: var(--text-secondary);">
+                    Shows weight, settings, equipped UUID, hotbar slots, and storage contents with full UUIDs.
+                </p>
+                <div class="code-block" style="margin-top: 1rem;">
+                    <div class="code-header">
+                        <span class="code-title">Example Output</span>
+                    </div>
+                    <pre>═══════════════════════════════════════════════════
+INVENTORY for PlayerName
+───────────────────────────────────────────────────
+Weight: 7 / 15 (0 = Infinite)
+CanStack: true | MaxStack: 5
+Equipped UUID: abc-123-def
+───────────────────────────────────────────────────
+HOTBAR (max 9):
+  [1] Sword x1 (UUID:abc-123-def)
+  [2] (empty)
+  [3] Potion x5 (UUID:xyz-456-ghi)
+STORAGE: #1
+  [1] Wood x5 (UUID:jkl-789-mno)
+═══════════════════════════════════════════════════</pre>
+                </div>
+            </div>
+
+            <div class="module-card">
+                <div class="module-header">
+                    <div class="module-icon">❓</div>
+                    <div class="module-title">
+                        <h3>/help</h3>
+                        <p>Show all available commands</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section style="margin-top: 2rem;">
+            <div class="section-header">
+                <h2>Item Operations</h2>
+            </div>
+
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Command</th>
+                        <th>Usage</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/add</code></td>
+                        <td><code>/add Sword 3</code></td>
+                        <td>Add item to hotbar first, then storage. Amount defaults to 1.</td>
+                    </tr>
+                    <tr>
+                        <td><code>/addback</code></td>
+                        <td><code>/addback Potion 5</code></td>
+                        <td>Add directly to backpack (bypasses hotbar).</td>
+                    </tr>
+                    <tr>
+                        <td><code>/remove</code></td>
+                        <td><code>/remove abc-123 2</code></td>
+                        <td>Remove amount from item by UUID. Omit amount to remove all.</td>
+                    </tr>
+                    <tr>
+                        <td><code>/clear</code></td>
+                        <td><code>/clear</code></td>
+                        <td>Remove ALL items from inventory.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="code-block" style="margin-top: 1rem;">
+                <div class="code-header">
+                    <span class="code-title">Examples</span>
+                </div>
+                <pre>/add Sword           -- Adds 1 Sword to first empty hotbar slot
+/add Potion 10       -- Adds 10 Potions (stacks across slots if needed)
+/addback Wood 5      -- Adds 5 Wood directly to storage
+/remove abc-123-def  -- Removes entire stack with that UUID
+/remove abc-123-def 2 -- Removes 2 from that stack</pre>
+            </div>
+        </section>
+
+        <section style="margin-top: 2rem;">
+            <div class="section-header">
+                <h2>Slot Operations</h2>
+            </div>
+
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Command</th>
+                        <th>Usage</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/swap</code></td>
+                        <td><code>/swap Hotbar 1 Storage 2</code></td>
+                        <td>Swap items between any two slots.</td>
+                    </tr>
+                    <tr>
+                        <td><code>/stack</code></td>
+                        <td><code>/stack Hotbar 1 Hotbar 2</code></td>
+                        <td>Merge two stacks (rarely needed - add auto-stacks).</td>
+                    </tr>
+                    <tr>
+                        <td><code>/equip</code></td>
+                        <td><code>/equip 3</code></td>
+                        <td>Equip item from hotbar slot. Also accepts <code>/equip Storage 1</code>.</td>
+                    </tr>
+                    <tr>
+                        <td><code>/unequip</code></td>
+                        <td><code>/unequip</code></td>
+                        <td>Unequip currently equipped item.</td>
+                    </tr>
+                    <tr>
+                        <td><code>/drop</code></td>
+                        <td><code>/drop Hotbar 1</code></td>
+                        <td>Drop item from slot into world.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="code-block" style="margin-top: 1rem;">
+                <div class="code-header">
+                    <span class="code-title">Slot Types</span>
+                </div>
+                <pre>Hotbar  -- Slots 1-9 (configurable via MaxHotbarSlots)
+Storage -- Dynamic array, indices start at 1</pre>
+            </div>
+        </section>
+
+        <section style="margin-top: 2rem;">
+            <div class="section-header">
+                <h2>Settings (Per-Player)</h2>
+                <p>Modify player-specific settings at runtime</p>
+            </div>
+
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Command</th>
+                        <th>Usage</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/toggle_stack</code></td>
+                        <td><code>/toggle_stack</code></td>
+                        <td>Toggle CanStack on/off for this player.</td>
+                    </tr>
+                    <tr>
+                        <td><code>/toggle_limit</code></td>
+                        <td><code>/toggle_limit</code></td>
+                        <td>Toggle Limit between 0 (infinite) and 15.</td>
+                    </tr>
+                    <tr>
+                        <td><code>/set_limit</code></td>
+                        <td><code>/set_limit 50</code></td>
+                        <td>Set weight limit. 0 = infinite.</td>
+                    </tr>
+                    <tr>
+                        <td><code>/set_max_stack</code></td>
+                        <td><code>/set_max_stack 10</code></td>
+                        <td>Set max items per stack.</td>
+                    </tr>
+                    <tr>
+                        <td><code>/set_hotbar_slots</code></td>
+                        <td><code>/set_hotbar_slots 5</code></td>
+                        <td>Set number of hotbar slots.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="code-block" style="margin-top: 1rem;">
+                <div class="code-header">
+                    <span class="code-title">Testing Scenarios</span>
+                </div>
+                <pre>-- Test stacking disabled
+/toggle_stack
+/add Sword 3        -- Creates 3 separate stacks
+
+-- Test infinite inventory
+/set_limit 0
+/add Wood 100       -- No weight rejection
+
+-- Test small hotbar
+/set_hotbar_slots 3
+/add Sword 5        -- 3 go to hotbar, 2 to storage</pre>
+            </div>
+        </section>
+    </main>
+</body>
+
+</html>

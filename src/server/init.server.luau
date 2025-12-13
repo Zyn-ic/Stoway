@@ -4,7 +4,7 @@
 -- We are transitioning to the new V1 architecture.
 -- The old StowayServer code is replaced by this single service entry point.
 
-local InventoryService = require(script.StowayServerV1.InventoryService)
+local InventoryService = require(script["StowayServerV1_2"])
 
 InventoryService.Init()
 

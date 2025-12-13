@@ -1,0 +1,40 @@
+-- src/server/StowayServerV1.2/Config/Settings.luau
+-- Configuration for the Inventory System V1.2
+
+local Settings = {}
+
+--// Types
+export type HotbarType = "Static" | "Dynamic"
+
+--// Hotbar Settings
+Settings.Hotbar = {
+	Type = "Static" :: HotbarType, -- Static: fixed slots with holes, Dynamic: packed array
+	MaxSlots = 9,
+}
+
+--// Storage/Backpack Settings (Always Dynamic)
+Settings.Storage = {
+	Limit = 15,             -- Total weight limit (Hotbar + Storage combined)
+	CanStack = true,
+	MaxStackSize = 5,
+}
+
+--// Stacking Rules
+Settings.Stacking = {
+	-- Fields that MUST match for items to stack
+	RequiredFields = { "Rarity", "Type" },
+	-- Rarities that can NEVER stack
+	Blacklist = {
+		["Legendary"] = true,
+		["Mythic"] = true,
+		["Special"] = true,
+	}
+}
+
+--// Gameplay Settings
+Settings.Gameplay = {
+	Droppable = true,
+	DropDistance = 10,
+}
+
+return Settings

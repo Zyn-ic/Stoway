@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InventoryService - Stoway Docs</title>
+    <title>InventoryService V1.2 - Stoway Docs</title>
     <link
         href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
@@ -27,11 +27,12 @@
         </div>
 
         <div class="nav-section">
-            <div class="nav-section-title">Backend</div>
+            <div class="nav-section-title">Backend V1.2</div>
             <a href="index.html" class="nav-link">Server Overview</a>
             <a href="inventory-service.html" class="nav-link active">InventoryService</a>
-            <a href="inventory-data.html" class="nav-link">InventoryData</a>
+            <a href="inventory-data.html" class="nav-link">InventoryState</a>
             <a href="utils.html" class="nav-link">Utilities</a>
+            <a href="debug-commands.html" class="nav-link">Debug Commands</a>
         </div>
 
         <div class="nav-section">
@@ -46,13 +47,13 @@
             <span>/</span>
             <a href="index.html">Server</a>
             <span>/</span>
-            <span class="current">InventoryService</span>
+            <span class="current">InventoryService V1.2</span>
         </div>
 
         <section>
             <div class="section-header">
-                <h2>InventoryService</h2>
-                <p>The central service managing all inventory operations</p>
+                <h2>Server API</h2>
+                <p>All available methods for inventory management</p>
             </div>
 
             <table class="api-table">
@@ -66,38 +67,53 @@
                 <tbody>
                     <tr>
                         <td><span class="method-name">AddItem</span></td>
-                        <td><span class="param-type">player, itemId: string, amount: number</span></td>
-                        <td>Adds items to player inventory. Auto-stacks if possible.</td>
+                        <td><span class="param-type">player, itemId, amount, metadata?</span></td>
+                        <td>Add to hotbar first, then storage. Auto-stacks.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">AddToBackpack</span> <span class="tag tag-new">NEW</span></td>
+                        <td><span class="param-type">player, itemId, amount?, metadata?</span></td>
+                        <td>Add directly to storage (bypasses hotbar).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">RemoveItem</span></td>
+                        <td><span class="param-type">player, uuid, amount?</span></td>
+                        <td>Remove item by UUID. Partial removal supported.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">SwapSlots</span></td>
+                        <td><span class="param-type">player, fromType, fromSlot, toType, toSlot</span></td>
+                        <td>Swap any two slots (Hotbar/Storage).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">StackTwoSlots</span> <span class="tag tag-new">NEW</span></td>
+                        <td><span class="param-type">player, fromType, fromSlot, toType, toSlot</span></td>
+                        <td>Merge two stacks (rarely needed - add auto-stacks).</td>
                     </tr>
                     <tr>
                         <td><span class="method-name">EquipSlot</span></td>
-                        <td><span class="param-type">player, slotIndex: number</span></td>
-                        <td>Equips item from hotbar slot. Spawns tool on character.</td>
+                        <td><span class="param-type">player, slotType, slot</span></td>
+                        <td>Equip item from Hotbar or Storage.</td>
                     </tr>
                     <tr>
-                        <td><span class="method-name">UnequipSlot</span> <span class="tag tag-new">NEW</span></td>
+                        <td><span class="method-name">UnequipSlot</span></td>
                         <td><span class="param-type">player</span></td>
-                        <td>Removes currently equipped tool from character.</td>
+                        <td>Unequip current tool.</td>
                     </tr>
                     <tr>
-                        <td><span class="method-name">RemoveItem</span> <span class="tag tag-new">NEW</span></td>
-                        <td><span class="param-type">player, uuid: string, amount: number</span></td>
-                        <td>Removes specific amount from an item stack by UUID.</td>
+                        <td><span class="method-name">DropItem</span></td>
+                        <td><span class="param-type">player, slotType, slot</span></td>
+                        <td>Drop item into world.</td>
                     </tr>
                     <tr>
-                        <td><span class="method-name">DropItem</span> <span class="tag tag-new">NEW</span></td>
-                        <td><span class="param-type">player, slotType: string, slotIndex: number</span></td>
-                        <td>Drops item into world and removes from inventory.</td>
+                        <td><span class="method-name">UpdateMetadata</span></td>
+                        <td><span class="param-type">player, uuid, updates</span></td>
+                        <td>Update item metadata (delta sync).</td>
                     </tr>
                     <tr>
-                        <td><span class="method-name">UpdateMetadata</span> <span class="tag tag-new">NEW</span></td>
-                        <td><span class="param-type">player, uuid: string, updates: table</span></td>
-                        <td>Updates metadata for an item and replicates to client (lazy sync).</td>
-                    </tr>
-                    <tr>
-                        <td><span class="method-name">Replicate</span></td>
+                        <td><span class="method-name">GetState</span></td>
                         <td><span class="param-type">player</span></td>
-                        <td>Syncs inventory state to client via InventoryUpdate remote.</td>
+                        <td>Get player's inventory state.</td>
                     </tr>
                 </tbody>
             </table>
@@ -107,108 +123,205 @@
                     <span class="code-title">Server Usage Example</span>
                     <span class="code-lang">Luau</span>
                 </div>
-                <pre><code><span class="comment">-- Update item cooldown</span>
-local cooldownEnd = workspace:GetServerTimeNow() + 5
-InventoryService.<span class="function">UpdateMetadata</span>(player, itemUUID, { CooldownEnd = cooldownEnd })</code></pre>
-            </div>
-        </section>
+                <pre><code><span class="comment">-- Initialize</span>
+<span class="keyword">local</span> InventoryService = <span class="function">require</span>(game.ServerScriptService.StowayServerV1_2)
+InventoryService.<span class="function">Init</span>()
 
-        <section>
-            <div class="section-header">
-                <h2>Best Practices & Performance</h2>
-                <p>Handling high-frequency updates</p>
-            </div>
-            
-            <div class="warning-box">
-                <strong>⚠️ Rapid-Fire Scenarios (Mini-Gun):</strong>
-                <span>For weapons with high fire rates (e.g., 100/sec), <strong>DO NOT</strong> replicate inventory on every shot.</span>
-            </div>
-
-            <p style="color: var(--text-secondary); margin-top: 1rem;">
-                Bandwidth is precious. For rapid state changes like ammo counters:
-            </p>
-            <ul style="color: var(--text-secondary); margin-left: 1.5rem; margin-top: 0.5rem; list-style-type: disc;">
-                <li><strong>Client (Visuals):</strong> Update local UI immediately for responsiveness (0-latency feel).</li>
-                <li><strong>Server (Logic):</strong> Validate shots and decrement ammo securely.</li>
-                <li><strong>Replication (Lazy Sync):</strong> Only call <code class="inline-code">InventoryService.UpdateMetadata</code> on specific events (Reload, Unequip, or batched intervals).</li>
-            </ul>
-        </section>
-
-        <section>
-            <div class="section-header">
-                <h2>Client Remote Events</h2>
+<span class="comment">-- Add items</span>
 InventoryService.<span class="function">AddItem</span>(player, <span class="string">"Sword"</span>, <span class="number">1</span>)
 
-<span class="comment">-- Equip/Unequip</span>
-InventoryService.<span class="function">EquipSlot</span>(player, <span class="number">1</span>)
-InventoryService.<span class="function">UnequipSlot</span>(player)
-
-<span class="comment">-- Remove items by UUID</span>
-InventoryService.<span class="function">RemoveItem</span>(player, uuidString, <span class="number">5</span>)
-
-<span class="comment">-- Drop items into world</span>
-InventoryService.<span class="function">DropItem</span>(player, <span class="string">"Hotbar"</span>, <span class="number">3</span>)</code></pre>
+<span class="comment">-- Add directly to backpack</span>
+InventoryService.<span class="function">AddToBackpack</span>(player, <span class="string">"Potion"</span>, <span class="number">5</span>)</code></pre>
             </div>
         </section>
 
         <section>
             <div class="section-header">
-                <h2>Client Remote Events</h2>
-                <p>All available remotes for client-server communication</p>
+                <h2>Network Protocol (Anti-Exploit)</h2>
+                <p>Single unified remote with per-player operation lock</p>
             </div>
 
-            <table class="api-table">
+            <div class="warning-box">
+                <strong>🔒 Anti-Exploit Features:</strong>
+                <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                    <li>Per-player operation lock prevents remote spam</li>
+                    <li>Spammed calls return <code
+                            class="inline-code">{ success = false, reason = "OPERATION_IN_PROGRESS" }</code></li>
+                    <li>Lock auto-releases on completion (success or error)</li>
+                    <li>pcall wrapper prevents server crashes</li>
+                </ul>
+            </div>
+
+            <table class="api-table" style="margin-top: 2rem;">
                 <thead>
                     <tr>
-                        <th>Remote</th>
-                        <th>Arguments</th>
+                        <th>Operation</th>
+                        <th>Args Table</th>
                         <th>Description</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td><span class="method-name">SwapSlots</span></td>
-                        <td><span class="param-type">type1, slot1, type2, slot2</span></td>
-                        <td>Swaps items between two slots</td>
+                        <td><span class="method-name">"Swap"</span></td>
+                        <td><span class="param-type">{ fromType, fromSlot, toType, toSlot }</span></td>
+                        <td>Swap two slots</td>
                     </tr>
                     <tr>
-                        <td><span class="method-name">EquipSlot</span></td>
-                        <td><span class="param-type">slotIndex</span></td>
-                        <td>Equips item from hotbar</td>
+                        <td><span class="method-name">"Equip"</span></td>
+                        <td><span class="param-type">{ slotType?, slot }</span></td>
+                        <td>Equip from slot</td>
                     </tr>
                     <tr>
-                        <td><span class="method-name">UnequipSlot</span></td>
-                        <td><span class="param-type">(none)</span></td>
-                        <td>Unequips current tool</td>
+                        <td><span class="method-name">"Unequip"</span></td>
+                        <td><span class="param-type">{}</span></td>
+                        <td>Unequip current</td>
                     </tr>
                     <tr>
-                        <td><span class="method-name">RemoveItem</span></td>
-                        <td><span class="param-type">uuid, amount</span></td>
-                        <td>Removes items from inventory</td>
+                        <td><span class="method-name">"Remove"</span></td>
+                        <td><span class="param-type">{ uuid, amount? }</span></td>
+                        <td>Remove item</td>
                     </tr>
                     <tr>
-                        <td><span class="method-name">DropItem</span></td>
-                        <td><span class="param-type">slotType, slotIndex</span></td>
-                        <td>Drops item into world</td>
+                        <td><span class="method-name">"Drop"</span></td>
+                        <td><span class="param-type">{ slotType, slot }</span></td>
+                        <td>Drop item</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"Stack"</span></td>
+                        <td><span class="param-type">{ fromType, fromSlot, toType, toSlot }</span></td>
+                        <td>Stack two items</td>
                     </tr>
                 </tbody>
             </table>
 
             <div class="code-block">
                 <div class="code-header">
-                    <span class="code-title">Client Usage Example</span>
+                    <span class="code-title">Client Usage (V1.2)</span>
                     <span class="code-lang">Luau</span>
                 </div>
-                <pre><code><span class="comment">-- Swap slots between hotbar and storage</span>
-SwapSlotsRemote:<span class="function">FireServer</span>(<span class="string">"Hotbar"</span>, <span class="number">1</span>, <span class="string">"Storage"</span>, <span class="number">5</span>)
+                <pre><code><span class="comment">-- All operations through single RemoteFunction</span>
+<span class="keyword">local</span> Remotes = ReplicatedStorage.Remotes
+<span class="keyword">local</span> result = Remotes.InventoryAction:<span class="function">InvokeServer</span>(<span class="string">"Swap"</span>, {
+    fromType = <span class="string">"Hotbar"</span>, fromSlot = <span class="number">1</span>,
+    toType = <span class="string">"Storage"</span>, toSlot = <span class="number">2</span>
+})
 
-<span class="comment">-- Equip/Unequip</span>
-EquipSlotRemote:<span class="function">FireServer</span>(<span class="number">3</span>)
-UnequipSlotRemote:<span class="function">FireServer</span>()
+<span class="comment">-- Equip</span>
+Remotes.InventoryAction:<span class="function">InvokeServer</span>(<span class="string">"Equip"</span>, { slot = <span class="number">3</span> })
 
-<span class="comment">-- Drop item from slot</span>
-DropItemRemote:<span class="function">FireServer</span>(<span class="string">"Hotbar"</span>, <span class="number">2</span>)</code></pre>
+<span class="comment">-- Drop</span>
+Remotes.InventoryAction:<span class="function">InvokeServer</span>(<span class="string">"Drop"</span>, { slotType = <span class="string">"Hotbar"</span>, slot = <span class="number">1</span> })</code></pre>
             </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Per-Player Settings</h2>
+                <p>Runtime-configurable settings stored in state.Settings</p>
+            </div>
+
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Setting</th>
+                        <th>Default</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method-name">Limit</span></td>
+                        <td><span class="param-type">15</span></td>
+                        <td>Weight limit (0 = infinite)</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">CanStack</span></td>
+                        <td><span class="param-type">true</span></td>
+                        <td>Enable/disable stacking</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">MaxStackSize</span></td>
+                        <td><span class="param-type">5</span></td>
+                        <td>Max items per stack</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">MaxHotbarSlots</span></td>
+                        <td><span class="param-type">9</span></td>
+                        <td>Hotbar slot count</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Debug Commands</h2>
+                <p>Test commands (remove in production!)</p>
+            </div>
+
+            <div class="warning-box">
+                <strong>⚠️ Remove <code class="inline-code">Debug/ChatCommands.luau</code> in production!</strong>
+                <span>These commands bypass normal validation.</span>
+            </div>
+
+            <table class="api-table" style="margin-top: 1rem;">
+                <thead>
+                    <tr>
+                        <th>Command</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/inv</code></td>
+                        <td>Display inventory state</td>
+                    </tr>
+                    <tr>
+                        <td><code>/add [id] [amt?]</code></td>
+                        <td>Add item (hotbar first)</td>
+                    </tr>
+                    <tr>
+                        <td><code>/addback [id] [amt?]</code></td>
+                        <td>Add directly to backpack</td>
+                    </tr>
+                    <tr>
+                        <td><code>/remove [uuid] [amt?]</code></td>
+                        <td>Remove item by UUID</td>
+                    </tr>
+                    <tr>
+                        <td><code>/swap [t1] [s1] [t2] [s2]</code></td>
+                        <td>Swap slots</td>
+                    </tr>
+                    <tr>
+                        <td><code>/stack [t1] [s1] [t2] [s2]</code></td>
+                        <td>Stack items together</td>
+                    </tr>
+                    <tr>
+                        <td><code>/equip [slot]</code></td>
+                        <td>Equip from hotbar</td>
+                    </tr>
+                    <tr>
+                        <td><code>/unequip</code></td>
+                        <td>Unequip current</td>
+                    </tr>
+                    <tr>
+                        <td><code>/drop [type] [slot]</code></td>
+                        <td>Drop item</td>
+                    </tr>
+                    <tr>
+                        <td><code>/clear</code></td>
+                        <td>Clear inventory</td>
+                    </tr>
+                    <tr>
+                        <td><code>/toggle_stack</code></td>
+                        <td>Toggle stacking</td>
+                    </tr>
+                    <tr>
+                        <td><code>/set_limit [n]</code></td>
+                        <td>Set weight limit</td>
+                    </tr>
+                </tbody>
+            </table>
         </section>
     </main>
 </body>

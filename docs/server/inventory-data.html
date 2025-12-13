@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InventoryData - Stoway Docs</title>
+    <title>InventoryState V1.2 - Stoway Docs</title>
     <link
         href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
@@ -27,11 +27,12 @@
         </div>
 
         <div class="nav-section">
-            <div class="nav-section-title">Backend</div>
+            <div class="nav-section-title">Backend V1.2</div>
             <a href="index.html" class="nav-link">Server Overview</a>
             <a href="inventory-service.html" class="nav-link">InventoryService</a>
-            <a href="inventory-data.html" class="nav-link active">InventoryData</a>
+            <a href="inventory-data.html" class="nav-link active">InventoryState</a>
             <a href="utils.html" class="nav-link">Utilities</a>
+            <a href="debug-commands.html" class="nav-link">Debug Commands</a>
         </div>
 
         <div class="nav-section">
@@ -46,24 +47,24 @@
             <span>/</span>
             <a href="index.html">Server</a>
             <span>/</span>
-            <span class="current">InventoryData</span>
+            <span class="current">InventoryState V1.2</span>
         </div>
 
         <section>
             <div class="section-header">
-                <h2>InventoryData</h2>
-                <p>Core data structure for player inventory state</p>
+                <h2>InventoryState</h2>
+                <p>Pure data container for player inventory state (V1.2)</p>
             </div>
 
             <p style="color: var(--text-secondary); margin-bottom: 2rem;">
-                This class is instantiated per-player and holds all inventory state including items, slots, and equipped
-                status.
-                It uses the <code class="inline-code">ItemsByID</code> lookup table for O(1) stack searches.
+                Instantiated per-player. Holds all inventory state including items, slots, equipped status,
+                and <strong>per-player settings</strong>. Uses <code class="inline-code">ItemsByID</code> for O(1) stack
+                lookups.
             </p>
 
             <div class="code-block">
                 <div class="code-header">
-                    <span class="code-title">Type Definition</span>
+                    <span class="code-title">Type Definitions</span>
                     <span class="code-lang">Luau</span>
                 </div>
                 <pre><code><span class="keyword">export type</span> ItemInstance <span class="operator">=</span> {
@@ -73,104 +74,139 @@
     Metadata: { [<span class="keyword">string</span>]: <span class="keyword">any</span> }?
 }
 
-<span class="keyword">export type</span> InventoryData <span class="operator">=</span> {
+<span class="keyword">export type</span> PlayerSettings <span class="operator">=</span> {
+    Limit: <span class="keyword">number</span>,             <span class="comment">-- Weight limit (0 = infinite)</span>
+    CanStack: <span class="keyword">boolean</span>,         <span class="comment">-- Enable/disable stacking</span>
+    MaxStackSize: <span class="keyword">number</span>,      <span class="comment">-- Max items per stack</span>
+    MaxHotbarSlots: <span class="keyword">number</span>,    <span class="comment">-- Hotbar slot count</span>
+}
+
+<span class="keyword">export type</span> InventoryStateType <span class="operator">=</span> {
     Player: Player,
     Items: { [<span class="keyword">string</span>]: ItemInstance },      <span class="comment">-- UUID -> Item</span>
     ItemsByID: { [<span class="keyword">string</span>]: {<span class="keyword">string</span>} },    <span class="comment">-- ItemId -> UUIDs (O(1) lookup)</span>
-    Hotbar: { [<span class="keyword">number</span>]: <span class="keyword">string</span>? },         <span class="comment">-- Slot -> UUID</span>
-    Storage: { [<span class="keyword">number</span>]: <span class="keyword">string</span>? },        <span class="comment">-- Slot -> UUID</span>
-    EquippedSlot: <span class="keyword">number</span>?,
+    Hotbar: { [<span class="keyword">number</span>]: <span class="keyword">string</span>? },          <span class="comment">-- Static: nil holes allowed</span>
+    Storage: { <span class="keyword">string</span> },                    <span class="comment">-- Dynamic: packed array</span>
+    EquippedItemUUID: <span class="keyword">string</span>?,             <span class="comment">-- UUID of equipped item</span>
+    Weight: <span class="keyword">number</span>,                        <span class="comment">-- Total item amounts</span>
+    Settings: PlayerSettings,              <span class="comment">-- Per-player settings!</span>
 }</code></pre>
             </div>
         </section>
 
         <section>
             <div class="section-header">
-                <h2>Methods</h2>
+                <h2>V1.2 Changes</h2>
+                <p>Key improvements from V1</p>
+            </div>
+
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>V1</th>
+                        <th>V1.2</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Equipped Tracking</td>
+                        <td>Slot-based</td>
+                        <td><span class="tag tag-new">UUID-based</span></td>
+                    </tr>
+                    <tr>
+                        <td>Storage</td>
+                        <td>Static array</td>
+                        <td><span class="tag tag-new">Dynamic (packed)</span></td>
+                    </tr>
+                    <tr>
+                        <td>Settings</td>
+                        <td>Global only</td>
+                        <td><span class="tag tag-new">Per-player</span></td>
+                    </tr>
+                    <tr>
+                        <td>Weight Tracking</td>
+                        <td>Not tracked</td>
+                        <td><span class="tag tag-new">state.Weight</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Hotbar vs Storage</h2>
+                <p>Static vs Dynamic slot management</p>
             </div>
 
             <div class="module-card">
                 <div class="module-header">
-                    <div class="module-icon">➕</div>
+                    <div class="module-icon">📌</div>
                     <div class="module-title">
-                        <h3>AddItem(itemId, amount, metadata?)</h3>
-                        <p>Adds items with auto-stacking <span class="tag tag-performance">O(1) Lookup</span></p>
+                        <h3>Hotbar (Static)</h3>
+                        <p>Fixed slots with nil holes preserved</p>
                     </div>
                 </div>
                 <p style="color: var(--text-secondary);">
-                    First attempts to stack with existing items using the <code class="inline-code">ItemsByID</code>
-                    lookup table.
-                    If stacking fails or isn't possible, finds an empty slot (Hotbar first, then Storage).
-                </p>
-                <div class="code-block">
-                    <div class="code-header">
-                        <span class="code-title">Flow</span>
-                        <span class="code-lang">Pseudocode</span>
-                    </div>
-                    <pre>1. Find tool template in ServerStorage
-2. Parse base attributes -> baseMetadata
-3. Merge passed metadata (overrides) -> finalMetadata
-4. Look up existing UUIDs (O(1))
-5. Try to stack (Strict Rarity/Type/Name Check)
-6. Add to empty slot (Hotbar priority)</pre>
-                </div>
-            </div>
-
-            <div class="module-card">
-                <div class="module-header">
-                    <div class="module-icon">📝</div>
-                    <div class="module-title">
-                        <h3>UpdateMetadata(uuid, updates)</h3>
-                        <p>Modifies item state without removing/adding</p>
-                    </div>
-                </div>
-                <p style="color: var(--text-secondary);">
-                    Merges the <code class="inline-code">updates</code> table into existing item metadata. 
-                    Useful for syncing cooldowns, durability, or ammo counts.
-                </p>
-            </div>
-
-            <div class="module-card">
-                <div class="module-header">
-                    <div class="module-icon">➖</div>
-                    <div class="module-title">
-                        <h3>RemoveItem(uuid, amount)</h3>
-                        <p>Removes items and maintains lookup table</p>
-                    </div>
-                </div>
-                <p style="color: var(--text-secondary);">
-                    Decrements stack count or removes item entirely if amount matches.
-                    Automatically cleans up <code class="inline-code">ItemsByID</code> entries.
-                </p>
-            </div>
-
-            <div class="module-card">
-                <div class="module-header">
-                    <div class="module-icon">🔄</div>
-                    <div class="module-title">
-                        <h3>SwapSlots(fromType, fromSlot, toType, toSlot)</h3>
-                        <p>Swaps items with bounds validation <span class="tag tag-safety">Bounds Checked</span></p>
-                    </div>
-                </div>
-                <p style="color: var(--text-secondary);">
-                    Validates that both slot indices are within valid limits before swapping.
-                    Returns <code class="inline-code">false</code> if bounds check fails.
+                    Hotbar maintains fixed 1-9 slots. When an item is removed, the slot becomes <code
+                        class="inline-code">nil</code>
+                    (hole preserved). Slots don't shift.
                 </p>
             </div>
 
             <div class="module-card">
                 <div class="module-header">
-                    <div class="module-icon">🔍</div>
+                    <div class="module-icon">📦</div>
                     <div class="module-title">
-                        <h3>GetItemInSlot(slotType, slot)</h3>
-                        <p>Returns item data for a specific slot</p>
+                        <h3>Storage (Dynamic)</h3>
+                        <p>Packed array that shifts on removal</p>
                     </div>
                 </div>
                 <p style="color: var(--text-secondary);">
-                    Looks up UUID in the slot table, then retrieves full item data from <code
-                        class="inline-code">Items</code>.
+                    Storage is a packed array. When an item is removed via <code
+                        class="inline-code">table.remove</code>,
+                    items shift up to fill the gap. No holes.
                 </p>
             </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Getters</h2>
+                <p>Data access methods (no logic)</p>
+            </div>
+
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Returns</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method-name">GetItem(uuid)</span></td>
+                        <td><span class="param-type">ItemInstance?</span></td>
+                        <td>Get item by UUID</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">GetHotbarUUID(slot)</span></td>
+                        <td><span class="param-type">string?</span></td>
+                        <td>Get UUID in hotbar slot</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">GetStorageUUID(index)</span></td>
+                        <td><span class="param-type">string?</span></td>
+                        <td>Get UUID in storage index</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">IsEquipped(uuid)</span></td>
+                        <td><span class="param-type">boolean</span></td>
+                        <td>Check if item is equipped</td>
+                    </tr>
+                </tbody>
+            </table>
         </section>
     </main>
 </body>
