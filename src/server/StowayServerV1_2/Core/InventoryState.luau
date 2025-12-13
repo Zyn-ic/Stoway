@@ -20,6 +20,7 @@ export type PlayerSettings = {
 	CanStack: boolean,         -- Allow stacking
 	MaxStackSize: number,      -- Max items per stack
 	MaxHotbarSlots: number,    -- Number of hotbar slots
+	Droppable: boolean,        -- Allow dropping
 }
 
 export type InventoryStateType = {
@@ -46,6 +47,7 @@ function InventoryState.new(player: Player): InventoryStateType
 	
 	-- Per-player settings (defaults from Config)
 	self.Settings = {
+		Droppable = Settings.Storage.Droppable,
 		Limit = Settings.Storage.Limit,
 		CanStack = Settings.Storage.CanStack,
 		MaxStackSize = Settings.Storage.MaxStackSize,

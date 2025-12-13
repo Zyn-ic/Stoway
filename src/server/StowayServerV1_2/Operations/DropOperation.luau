@@ -26,6 +26,14 @@ function DropOperation.Execute(state: any, player: Player, slotType: string, slo
 	if not item then
 		return { success = false, reason = "ITEM_NOT_FOUND" }
 	end
+
+	if not state.Droppable then
+		return { success = false, reason = "INVENTORY_NOT_Droppable" }
+	end
+
+	if not item.Metadata.Droppable then
+		return { success = false, reason = "ITEM_NOT_Droppable" }
+	end
 	
 	-- Cache item data before removal
 	local itemId = item.Id
