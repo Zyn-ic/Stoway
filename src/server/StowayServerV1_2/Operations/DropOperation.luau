@@ -27,7 +27,7 @@ function DropOperation.Execute(state: any, player: Player, slotType: string, slo
 		return { success = false, reason = "ITEM_NOT_FOUND" }
 	end
 
-	if not state.Droppable then
+	if not state.Settings.Droppable then
 		return { success = false, reason = "INVENTORY_NOT_Droppable" }
 	end
 
