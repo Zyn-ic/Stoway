@@ -1,2 +1,2 @@
 -- src/client/init.client.luau
-require(script.StowayClientv1.ClientInventoryService).Init()
+require(script.StowayClientv1_2).Init()

@@ -43,14 +43,27 @@ local function OnPlayerAdded(player: Player)
 	
 	player.CharacterAdded:Connect(function()
 		state.EquippedItemUUID = nil
-		Replicator.SendInit(player, state)
+		--Replicator.SendInit(player, state)
 	end)
 	
 	-- Register debug chat commands
 	ChatCommands.Register(player, InventoryService)
+	InventoryService.AddItem(player, "apple", 1)
+	InventoryService.AddItem(player, "shield", 1)
+	InventoryService.AddItem(player, "sword", 2)
+	InventoryService.AddToBackpack(player, "wood", 1)
 	
 	print("[InventoryService V1.2] Loaded inventory for", player.Name)
 end
+
+-- Register sync callback
+-- Replicator.RegisterInitialSyncCallback(function(player)
+-- 	local state = PlayerInventories[player]
+-- 	if state then
+-- 		return Actions.Init(state)
+-- 	end
+-- 	return nil
+-- end)
 
 local function OnPlayerRemoving(player: Player)
 	PlayerInventories[player] = nil
@@ -354,7 +367,7 @@ local function SetupRemotes()
 	end
 	
 	-- InitialSync (Client requests full state) - No lock needed, read-only
-	local InitialSyncRemote = GetOrCreateRemote("InitialSync", "RemoteFunction")
+	local InitialSyncRemote = GetOrCreateRemote("AskForStoway", "RemoteFunction")
 	InitialSyncRemote.OnServerInvoke = function(player)
 		-- Anti-exploit: Check if player is locked
 		if PlayerOperationLock[player] then
@@ -372,14 +385,15 @@ local function SetupRemotes()
 		local state = PlayerInventories[player]
 		if state then
 			PlayerOperationLock[player] = nil
-			return Replicator.SendInit(player, state)
+			return { success = true, reason = "", data = state }
 		end
-		return nil
+
+		return { success = false, reason = "NO_PLAYER_STATE_EXIST" }
 	end
 	
 	-- UNIFIED REMOTE: InventoryAction (All operations go through here)
-	local InventoryActionRemote = GetOrCreateRemote("InventoryAction", "RemoteFunction")
-	InventoryActionRemote.OnServerInvoke = function(player, operation: string, args: any)
+	local InventoryActionRemote = GetOrCreateRemote("InventoryAction", "RemoteEvent") :: RemoteEvent
+	InventoryActionRemote.OnServerEvent:Connect(function(player, operation: string, args: any)
 		-- Anti-exploit: Check if player is locked
 		if PlayerOperationLock[player] then
 			return { success = false, reason = "OPERATION_IN_PROGRESS" }
@@ -421,7 +435,7 @@ local function SetupRemotes()
 		end
 		
 		return result
-	end
+	end)
 end
 
 --// ═══════════════════════════════════════════════════════════════════════════

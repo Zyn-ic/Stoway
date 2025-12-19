@@ -22,7 +22,8 @@ function MetadataParser.FromTool(tool: Tool): ({ [string]: any }?, number?)
 	local attributes = tool:GetAttributes()
 	local metadata = {}
 	local amount = nil
-	
+	if tool.TextureId ~= "" then metadata.Image = tool.TextureId end
+
 	for key, value in pairs(attributes) do
 		if key == "Amount" then
 			amount = value  -- Extract Amount separately

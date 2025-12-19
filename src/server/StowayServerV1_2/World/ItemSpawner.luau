@@ -3,8 +3,9 @@
 
 local ItemSpawner = {}
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
-local Settings = require(script.Parent.Parent.Config.Settings)
+local Settings = require(ReplicatedStorage.Shared.Settings)
 
 local ToolStorage = ServerStorage:FindFirstChild("Tools") :: Folder?
 

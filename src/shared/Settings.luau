@@ -9,7 +9,7 @@ export type HotbarType = "Static" | "Dynamic"
 --// Hotbar Settings
 Settings.Hotbar = {
 	Type = "Static" :: HotbarType, -- Static: fixed slots with holes, Dynamic: packed array
-	MaxSlots = 9,
+	MaxSlots = 10,
 }
 
 --// Storage/Backpack Settings (Always Dynamic)
@@ -17,6 +17,7 @@ Settings.Storage = {
 	Limit = 15,             -- Total weight limit (Hotbar + Storage combined)
 	CanStack = true,
 	MaxStackSize = 5,
+	SortOrder = "None" -- Name, Rarity, ItemType, None
 }
 
 --// Stacking Rules

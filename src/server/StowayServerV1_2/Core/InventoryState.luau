@@ -2,10 +2,11 @@
 -- Pure data container for player inventory state
 -- Includes per-player settings (defaults from Config, modifiable at runtime)
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InventoryState = {}
 InventoryState.__index = InventoryState
 
-local Settings = require(script.Parent.Parent.Config.Settings)
+local Settings = require(ReplicatedStorage.Shared.Settings)
 
 --// Types
 export type ItemInstance = {

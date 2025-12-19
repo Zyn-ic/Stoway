@@ -4,8 +4,8 @@
 -- Uses global Settings.Stacking for item-level rules (RequiredFields, Blacklist)
 
 local StackChecker = {}
-
-local Settings = require(script.Parent.Parent.Config.Settings) -- For Stacking rules
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Settings = require(ReplicatedStorage.Shared.Settings) -- For Stacking rules
 local LimitChecker = require(script.Parent.Parent.Core.LimitChecker)
 
 --// Check if two items can stack based on ID and metadata

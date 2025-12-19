@@ -63,6 +63,13 @@ function Replicator.SendUpdateMeta(player: Player, uuid: string, updates: { [str
 	Replicator.Send(player, Actions.Types.UPDATE_META, payload)
 end
 
+--// Initial Sync Request Handling
+local InitialSyncRemote = GetRemote("AskForStoway", "RemoteFunction")
+
+function Replicator.RegisterInitialSyncCallback(callback: (Player) -> any)
+	InitialSyncRemote.OnServerInvoke = callback
+end
+
 --// Get remote for external access (e.g., InitialSync)
 function Replicator.GetRemotesFolder(): Folder
 	return RemotesFolder

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Client Overview - Stoway Docs</title>
+    <title>Client Overview V1.2 - Stoway Docs</title>
     <link
         href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
@@ -37,6 +37,9 @@
         <div class="nav-section">
             <div class="nav-section-title">Frontend</div>
             <a href="index.html" class="nav-link active">Client Overview</a>
+            <a href="hooks.html" class="nav-link">Hook System</a>
+            <a href="state.html" class="nav-link">Core State</a>
+            <a href="operations.html" class="nav-link">Operations</a>
         </div>
     </nav>
 
@@ -44,15 +47,64 @@
         <div class="breadcrumb">
             <a href="../index.html">Docs</a>
             <span>/</span>
-            <span class="current">Client</span>
+            <span class="current">Client V1.2</span>
         </div>
 
-        <div class="coming-soon">
-            <div style="font-size: 4rem; margin-bottom: 1rem;">🚧</div>
-            <h2>Coming Soon</h2>
-            <p>Client-side documentation is under development. Check back later for UI components, Fusion integration,
-                and drag-and-drop implementation.</p>
+        <section class="hero" style="padding: 2rem;">
+            <h1 style="font-size: 2.5rem;">Client Frontend V1.2</h1>
+            <p>Reactive UI built with Fusion, featuring a robust Hook system and Drag-and-Drop.</p>
+        </section>
+
+        <div class="section-cards" style="margin-top: 2rem;">
+            <a href="hooks.html" class="section-card">
+                <div class="section-card-icon">🪝</div>
+                <h3>Hook System</h3>
+                <p>Event-driven customization for slot interactions.</p>
+                <span class="arrow">→</span>
+            </a>
+
+            <a href="state.html" class="section-card">
+                <div class="section-card-icon">🧠</div>
+                <h3>Core State</h3>
+                <p>Reactive InventoryStore powered by Fusion.</p>
+                <span class="arrow">→</span>
+            </a>
+
+            <a href="operations.html" class="section-card">
+                <div class="section-card-icon">🎮</div>
+                <h3>Operations</h3>
+                <p>InventoryController for safe server actions.</p>
+                <span class="arrow">→</span>
+            </a>
         </div>
+
+        <section style="margin-top: 4rem;">
+            <div class="section-header">
+                <h2>Architecture</h2>
+                <p>Client-side structure</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Directory Structure</span>
+                    <span class="code-lang">Tree</span>
+                </div>
+                <pre>src/client/StowayClientv1_2/
+├── init.luau                    # Entry Point (ClientInventoryService)
+├── CoreState/
+│   └── InventoryStore.luau      # Fusion State (Items, Hotbar, Storage)
+├── Hook/
+│   └── HookManager.luau         # Event Bus for UI Hooks
+├── Operations/
+│   └── InventoryController.luau # Actions (Add, Remove, Swap, Drop)
+├── DragFunctions/
+│   └── DragHandler.luau         # Drag & Drop Logic
+├── SlotCreation/
+│   └── SlotFactory.luau         # Slot UI Component
+└── NetworkFunctions/
+    └── NetworkHandler.luau      # Server Sync</pre>
+            </div>
+        </section>
     </main>
 </body>
 
