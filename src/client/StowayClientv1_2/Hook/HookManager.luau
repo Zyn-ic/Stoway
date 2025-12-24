@@ -23,7 +23,8 @@ function HookManager.new(): HookManager
 	local self = setmetatable({}, HookManager)
 	
 	self._hooks = {}
-	for _, hookName in ipairs(HOOK_TYPES) do
+
+	for _, hookName in pairs(HOOK_TYPES) do
 		self._hooks[hookName] = {}
 	end
 	

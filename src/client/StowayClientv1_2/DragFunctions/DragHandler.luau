@@ -52,7 +52,7 @@ function DragHandler.GetDragState() : {isDragging : boolean,sourceType :any ,sou
 end
 
 --// Start drag
-function DragHandler.StartDrag(slotType: string, slotIndex: number, originalFrame: Frame, FullData, Scope:{})
+function DragHandler.StartDrag(slotType: string, slotIndex: number, originalFrame: Frame, FullData--[[, Scope]])
     if DragState.isDragging then return end
     
 	-- Validate slot has item
@@ -96,7 +96,7 @@ function DragHandler.StartDrag(slotType: string, slotIndex: number, originalFram
     
     releaseConnection = UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
-             DragHandler.EndDrag(Scope)
+             DragHandler.EndDrag(--[[, Scope]])
         end
     end)
 end
@@ -228,7 +228,7 @@ local function GetBackpackSlotUnderMouse()
 end
 
 --// End drag
-function DragHandler.EndDrag(Scope)
+function DragHandler.EndDrag(--[[, Scope]])
 	if checkConnection then checkConnection:Disconnect() end
 	if dragConnection then dragConnection:Disconnect() end
 	if releaseConnection then releaseConnection:Disconnect() end
@@ -265,10 +265,10 @@ function DragHandler.EndDrag(Scope)
 
 		if FromType == "Hotbar" and FromSlot then
 			warn("from hotbar to hotbar swapping ".. FromSlot.Name .. " with " .. hotbarIndex)
-			InventoryController.Swap(FromType, index, targetType, hotbarIndex)
+			InventoryController.Swap(FromType, index, targetType, hotbarIndex, true)
 		else
 			warn("from backpack to hotbar swapping ".. FromSlot.Name .. " with " .. hotbarIndex)
-			InventoryController.Swap(FromType, index, targetType, hotbarIndex)
+			InventoryController.Swap(FromType, index, targetType, hotbarIndex, true)
 		end
 	end
 
@@ -279,25 +279,25 @@ function DragHandler.EndDrag(Scope)
 
 		if FromType == "Hotbar" then
 			warn("from hotbar to backpack swapping ".. FromSlot.Name .. " with " .. backpackIndex)
-			InventoryController.Swap(FromType, index, targetType, backpackIndex)
+			InventoryController.Swap(FromType, index, targetType, backpackIndex, true)
 		else
 			warn("from backpack to backpack swapping ".. FromSlot.Name .. " with " .. backpackIndex)
-			InventoryController.Swap(FromType, index, targetType, backpackIndex)
+			InventoryController.Swap(FromType, index, targetType, backpackIndex, true)
 		end
 	end
 
 	if OverBackpack and not backpackSlot and FromType == "Hotbar" then
 		if  BackpackFrame.Visible then
 			warn("append to backpack")
-			InventoryController.AddToBackpack(FromType, index)
+			InventoryController.AddToBackpack(FromType, index, true)
 		else
-			InventoryController.Drop(FromType, index, Scope)
+			InventoryController.Drop(FromType, index, true)
 			warn("drop")
 		end
 	end
 
 	if not OverHotbar and not OverBackpack then 
-		InventoryController.Drop(FromType, index, Scope)
+		InventoryController.Drop(FromType, index, true)
 		warn("drop")
 	end
 

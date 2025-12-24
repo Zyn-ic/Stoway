@@ -13,6 +13,7 @@ export type AddResult = {
 	success: boolean,
 	reason: string?,
 	addedItems: { { uuid: string, slotType: string, slot: number } }?,
+	updatedItems: { [string]: number }?, -- UUID -> New Amount
 	addedAmount: number?,   -- How many were actually added
 	overflow: number?       -- How many could NOT be added (for dropping/ignoring)
 }
@@ -77,12 +78,15 @@ function AddOperation.Execute(state: any, itemId: string, amount: number?, metad
 	local amountToAdd = _amount -- Track how much we'll try to add after capping
 	
 	-- 2. Try stacking first (StackChecker updates weight internally)
+	local updatedItems = {}
 	if state.Settings.CanStack then
-		local stacked = StackChecker.TryStack(state, itemId, _amount, finalMetadata)
+		local stacked, updates = StackChecker.TryStack(state, itemId, _amount, finalMetadata)
 		_amount -= stacked
+		updatedItems = updates or {}
+		
 		if _amount <= 0 then
 			local overflow = originalAmount - amountToAdd
-			return { success = true, addedItems = addedItems, addedAmount = amountToAdd, overflow = overflow }
+			return { success = true, addedItems = addedItems, updatedItems = updatedItems, addedAmount = amountToAdd, overflow = overflow }
 		end
 	end
 	
@@ -122,6 +126,7 @@ function AddOperation.Execute(state: any, itemId: string, amount: number?, metad
 	return { 
 		success = addedAmount > 0, 
 		addedItems = addedItems, 
+		updatedItems = updatedItems,
 		addedAmount = addedAmount, 
 		overflow = overflow,
 		reason = overflow > 0 and "PARTIAL" or nil

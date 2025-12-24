@@ -21,6 +21,8 @@ function EquipOperation.Equip(state: any, player: Player, uuid: string): EquipRe
 	end
 	
 	local previousUUID = state.EquippedItemUUID
+
+	if previousUUID == uuid then return {success = true, reason = "Item is already equipped"} end
 	
 	-- Unequip current if different
 	if previousUUID and previousUUID ~= uuid then
@@ -57,11 +59,13 @@ function EquipOperation.Unequip(state: any, player: Player): EquipResult
 	state.EquippedItemUUID = nil
 	
 	-- Despawn physical tool
-	local char = player.Character
+	local char = player.Character or player.CharacterAdded:Wait()
 	if char then
-		local tool = char:FindFirstChildOfClass("Tool")
-		if tool then
-			ItemSpawner.DespawnTool(player, tool)
+		local childs = char:GetChildren()
+		for _, v in childs do
+			if v:IsA("Tool") then
+				ItemSpawner.DespawnTool(player, v)
+			end
 		end
 	end
 	

@@ -54,8 +54,44 @@
 
         <section>
             <div class="section-header">
-                <h2>Hook System</h2>
-                <p>Event-driven customization for slot interactions</p>
+                <h2>Hook Presets</h2>
+                <p>Modular hook configurations</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                To keep your codebase clean and allow for dynamic swapping (e.g., changing UI themes or game modes),
+                hooks should be stored in ModuleScripts within a folder named <code>HookFuncs</code> in
+                <code>ReplicatedStorage</code>.
+            </p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Example Preset Module</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- ReplicatedStorage/HookFuncs/DefaultHooks.luau</span>
+<span class="keyword">return</span> {
+    OnSlotClick = <span class="keyword">function</span>(slotType, index, uuid)
+        <span class="comment">-- Your custom click logic</span>
+        <span class="function">print</span>(<span class="string">"Clicked "</span> .. slotType .. <span class="string">" #"</span> .. index)
+    end,
+    
+    OnDragStart = <span class="keyword">function</span>(type, index)
+        <span class="comment">-- Play sound</span>
+        SoundService.Drag:<span class="function">Play</span>()
+    end
+}</code></pre>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                These presets can then be loaded dynamically by the server using the <code class="inline-code">ReloadClient</code> API.
+            </p>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Manual Registration</h2>
+                <p>Registering hooks via code</p>
             </div>
 
             <p style="color: var(--text-secondary); margin-bottom: 2rem;">

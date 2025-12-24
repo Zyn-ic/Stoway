@@ -1,34 +1,45 @@
--- src/client/Inventory/NetworkHandler.luau
+-- src/client/StowayClientV1_2/NetworkFunctions/NetworkHandler.luau
+-- Centralized Network Gateway for Inventory System V1.2
+-- This module handles all server communication (incoming & outgoing)
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local InventoryUpdateRemote = ReplicatedStorage.Remotes.InventoryUpdate
-local Fusion = require(ReplicatedStorage.Packages.fusion)
-local Store = require(script.Parent.Parent.CoreState.InventoryStore)
 
 local NetworkHandler = {}
 
-function NetworkHandler.Init()
-    InventoryUpdateRemote.OnClientEvent:Connect(NetworkHandler.ProcessUpdate)
+-- Remotes
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local InventoryUpdate = Remotes:WaitForChild("InventoryUpdate") :: RemoteEvent
+local InventoryAction = Remotes:WaitForChild("InventoryAction") :: RemoteEvent
+
+-- Connection storage for cleanup
+local _updateConnection = nil
+
+
+function NetworkHandler.Send(action: string, args: {[string]: any})
+    InventoryAction:FireServer(action, args)
 end
 
-function NetworkHandler.ProcessUpdate(action: string, payload: any)
-    -- This looks at the Store and forces it to match the payload
-    -- Because the UI listens to the Store, the UI will correct itself automatically.
+
+function NetworkHandler.Init(handlers: {[string]: (any) -> ()})
+    if _updateConnection then
+        _updateConnection:Disconnect()
+    end
     
-    if action == "FullSync" then
-        Store.Init(payload)
-        
-    elseif action == "UpdateSlot" then
-        -- Example: Server says "Slot 1 in Hotbar is now UUID 'XYZ'"
-        local newHotbar = table.clone(Fusion.peek(Store.Hotbar))
-        newHotbar[payload.Slot] = payload.UUID
-        Store.Hotbar:set(newHotbar)
-        
-        -- Also update item data if provided
-        if payload.ItemData then
-            local newItems = table.clone(Fusion.peek(Store.Items))
-            newItems[payload.UUID] = payload.ItemData
-            Store.Items:set(newItems)
+    _updateConnection = InventoryUpdate.OnClientEvent:Connect(function(action: string, payload: any)
+        local handler = handlers[action]
+        if handler then
+            handler(payload)
+        else
+            warn("[NetworkHandler] Unknown action received:", action)
         end
+    end)
+end
+
+
+function NetworkHandler.Destroy()
+    if _updateConnection then
+        _updateConnection:Disconnect()
+        _updateConnection = nil
     end
 end
 

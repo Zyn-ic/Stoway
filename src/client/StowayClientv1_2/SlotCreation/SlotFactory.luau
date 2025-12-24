@@ -12,6 +12,7 @@ type SlotProps = {
     SlotIndex: number,
     SlotType: string, -- "Hotbar" | "Storage"
     Parent: Instance,
+	GuiFOLDER: any,
     KeybindDisplay: string,
     OnDrag: (...any) -> (),
     hookManager: any
@@ -34,8 +35,8 @@ function CreateSlotFrameName(slotnumber:number): string
 end
 
 function SlotFactory.Create(Scope: any, props: SlotProps)
-    local TemplateFolder = ReplicatedStorage:FindFirstChild("Gui") :: Folder
-	local templateSlot = TemplateFolder.Slot.template:Clone()
+
+	local templateSlot = props.GuiFOLDER.Slot.template:Clone()
 	templateSlot.Name = CreateSlotFrameName(props.SlotIndex)
 
 	local slotbutton = templateSlot:FindFirstChild("slotbutton") :: ImageButton
@@ -103,59 +104,38 @@ function SlotFactory.Create(Scope: any, props: SlotProps)
 			Visible = hasItem,
 		}
 		
-		--[[local dragconnection =]] slotbutton.MouseButton1Down:Connect(function()
+		slotbutton.MouseButton1Down:Connect(function()
 			if scope.peek(hasItem) and props.OnDrag then
 				templateSlot.ZIndex = 1
-				props.OnDrag(props.SlotType, props.SlotIndex, templateSlot, InventoryStore:GetState(), scope)
+				props.OnDrag(props.SlotType, props.SlotIndex, templateSlot, InventoryStore:GetState()--[[, scope]])
 			end
 		end)
 		
-		--[[local clickconnection =]] slotbutton.MouseButton1Click:Connect(function()
-			InventoryController.HandleEquipped(scope.peek(slotUUID))
+		slotbutton.MouseButton1Click:Connect(function()
+			InventoryController.HandleEquipped(scope.peek(slotUUID), true)
 
 			if props.hookManager then
 				props.hookManager:Fire("OnSlotClick", props.SlotType, props.SlotIndex, scope.peek(slotUUID))
 			end
 		end)
-
-		-- scope:Hydrate(templateSlot) {
-		-- 	Visible = scope:Computed(function(use)
-		-- 		if props.SlotType == "Hotbar" then return true end
-		-- 		return use(slotUUID) ~= nil
-		-- 	end),
-		-- }
-
-		-- -- Put the "Executioner" logic in an Observer
-		-- if props.SlotType == "Storage" then
-		-- 	scope:Observer(slotUUID):onChange(function()
-		-- 		if scope.peek(slotUUID) == nil then
-		-- 			-- Wait a tiny bit to ensure the Frame hides first
-		-- 			task.defer(function()
-		-- 				-- Disconnect external connections first
-		-- 				if clickconnection then clickconnection:Disconnect() end
-		-- 				if dragconnection then dragconnection:Disconnect() end
-						
-		-- 				-- Now kill the scope and the frame
-		-- 				scope:doCleanup()
-		-- 				templateSlot:Destroy()
-		-- 			end)
-		-- 		end
-		-- 	end)
-		-- end
-	
 	end
 
 	--// Hydrate stack count
 	if stackcount then
-		scope:Hydrate(stackcount) {
-			Text = scope:Computed(function(use)
-				local item = use(currentItem)
-				if item and item.Amount > 1 and Settings.Storage.CanStack then
-					return item.Amount .. "x"
-				end
-				return ""
-			end),
-		}
+		if Settings.Storage.CanStack then
+			scope:Hydrate(stackcount) {
+				Text = scope:Computed(function(use)
+					local item = use(currentItem)
+					if item and item.Amount > 1 then
+						return item.Amount .. "x"
+					end
+					return ""
+				end),
+				Visible = true
+			}
+		else
+			stackcount.Visible = false
+		end
 	end
 
 	--// Hydrate equipped indicator
@@ -180,16 +160,20 @@ function SlotFactory.Create(Scope: any, props: SlotProps)
 
 	--// Hydrate rarity frame
 	if rarityframe then
-		scope:Hydrate(rarityframe) {
-			BackgroundColor3 = scope:Computed(function(use)
-				local item = use(currentItem)
-				if item and item.Metadata and item.Metadata.Rarity then
-					return RarityValues.rarityColors[item.Metadata.Rarity] or Color3.new(0.4, 0.4, 0.4)
-				end
-				return Color3.new(0.4, 0.4, 0.4)
-			end),
-			Visible = hasItem,
-		}
+		if Settings.Stacking.Rarity then
+			scope:Hydrate(rarityframe) {
+				BackgroundColor3 = scope:Computed(function(use)
+					local item = use(currentItem)
+					if item and item.Metadata and item.Metadata.Rarity then
+						return RarityValues.rarityColors[item.Metadata.Rarity] or Color3.new(0.4, 0.4, 0.4)
+					end
+					return Color3.new(0.4, 0.4, 0.4)
+				end),
+				Visible = hasItem,
+			}
+		else
+			rarityframe.Visible = false
+		end
 	end
 
 	templateSlot.Parent = props.Parent

@@ -57,7 +57,7 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 			local itemId = args[2]
 			local amount = tonumber(args[3])
 			if itemId then
-				local result = InventoryService.AddItem(player, itemId, amount)
+				local result = InventoryService.AddItem(player, itemId, amount, nil, true)
 				print("[Add]", itemId)
 				print("  Success:", result.success)
 				print("  Added:", result.addedAmount or "?")
@@ -72,7 +72,7 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 			local itemId = args[2]
 			local amount = tonumber(args[3])
 			if itemId then
-				local result = InventoryService.AddToBackpack(player, itemId, amount)
+				local result = InventoryService.AddToBackpack(player, itemId, amount, nil, true)
 				print("[AddToBackpack]", itemId)
 				print("  Success:", result.success)
 				print("  Added:", result.addedAmount or "?")
@@ -109,7 +109,7 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 			local uuid = args[2]
 			local amount = tonumber(args[3])
 			if uuid then
-				local result = InventoryService.RemoveItem(player, uuid, amount)
+				local result = InventoryService.RemoveItem(player, uuid, amount, true)
 				print("[Remove]", uuid)
 				print("  Success:", result.success)
 				print("  Remaining:", result.remaining or 0)
@@ -124,12 +124,17 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 		
 		elseif cmd == "/swap" then
 			-- /swap [fromType] [fromSlot] [toType] [toSlot]
-			local fromType = args[2]
+            -- Normalize types to TitleCase (Hotbar, Storage)
+            local function toTitleCase(str)
+                return str:sub(1,1):upper() .. str:sub(2):lower()
+            end
+
+			local fromType = args[2] and toTitleCase(args[2])
 			local fromSlot = tonumber(args[3])
-			local toType = args[4]
+			local toType = args[4] and toTitleCase(args[4])
 			local toSlot = tonumber(args[5])
 			if fromType and fromSlot and toType and toSlot then
-				local result = InventoryService.SwapSlots(player, fromType, fromSlot, toType, toSlot)
+				local result = InventoryService.SwapSlots(player, fromType, fromSlot, toType, toSlot, true)
 				print("[Swap]", fromType, fromSlot, "->", toType, toSlot)
 				print("  Success:", result.success)
 				print("  Reason:", result.reason or "OK")
@@ -152,7 +157,7 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 				slot = tonumber(args[3])
 			end
 			if slot then
-				local result = InventoryService.EquipSlot(player, slotType, slot)
+				local result = InventoryService.EquipSlot(player, slotType, slot, true)
 				print("[Equip]", slotType, slot)
 				print("  Success:", result.success)
 				print("  Equipped UUID:", result.currentUUID or "None")
@@ -161,7 +166,7 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 			end
 		
 		elseif cmd == "/unequip" then
-			local result = InventoryService.UnequipSlot(player)
+			local result = InventoryService.UnequipSlot(player, true)
 			print("[Unequip]")
 			print("  Success:", result.success)
 		
@@ -188,6 +193,7 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 		elseif cmd == "/toggle_stack" then
 			state.Settings.CanStack = not state.Settings.CanStack
 			print("[Settings] CanStack:", state.Settings.CanStack)
+            InventoryService.SyncSettings(player)
 		
 		elseif cmd == "/toggle_limit" then
 			if state.Settings.Limit == 0 then
@@ -196,21 +202,25 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 				state.Settings.Limit = 0
 			end
 			print("[Settings] Limit:", state.Settings.Limit, "(0 = Infinite)")
+            InventoryService.SyncSettings(player)
 		
 		elseif cmd == "/set_limit" then
 			local newLimit = tonumber(args[2]) or 15
 			state.Settings.Limit = newLimit
 			print("[Settings] Limit set to:", newLimit)
+            InventoryService.SyncSettings(player)
 		
 		elseif cmd == "/set_max_stack" then
 			local newMax = tonumber(args[2]) or 5
 			state.Settings.MaxStackSize = newMax
 			print("[Settings] MaxStackSize set to:", newMax)
+            InventoryService.SyncSettings(player)
 		
 		elseif cmd == "/set_hotbar_slots" then
 			local newSlots = tonumber(args[2]) or 9
 			state.Settings.MaxHotbarSlots = newSlots
 			print("[Settings] MaxHotbarSlots set to:", newSlots)
+            InventoryService.SyncSettings(player)
 		
 		--// ═══════════════════════════════════════════════════════════════════
 		--// CLEAR INVENTORY
@@ -222,7 +232,7 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 				table.insert(uuidsToRemove, uuid)
 			end
 			for _, uuid in pairs(uuidsToRemove) do
-				InventoryService.RemoveItem(player, uuid)
+				InventoryService.RemoveItem(player, uuid, nil, true)
 			end
 			print("[Clear] Inventory cleared")
 		

@@ -11,6 +11,8 @@ Actions.Types = {
 	SWAP = "Swap",           -- Slots swapped
 	EQUIP = "Equip",         -- Equipped item changed
 	UPDATE_META = "UpdateMeta", -- Item metadata updated
+	UPDATE_SETTINGS = "UpdateSettings", -- Settings updated
+	RELOAD = "Reload",       -- Reload client interface/config
 }
 
 --// Payload Builders
@@ -20,6 +22,17 @@ function Actions.Init(state: any)
 		Hotbar = state.Hotbar,
 		Storage = state.Storage,
 		EquippedUUID = state.EquippedItemUUID
+	}
+end
+
+function Actions.UpdateSettings(settings: any)
+	return settings
+end
+
+function Actions.Reload(uiType:string, data: any?)
+	return {
+		UiType = uiType,
+		Data = data
 	}
 end
 
@@ -56,10 +69,11 @@ function Actions.Equip(uuid: string?)
 	return { UUID = uuid }
 end
 
-function Actions.UpdateMeta(uuid: string, updates: { [string]: any })
+function Actions.UpdateMeta(uuid: string, updates: { [string]: any }, newWeight:number)
 	return {
 		UUID = uuid,
-		Updates = updates
+		Updates = updates,
+		NewWeight = newWeight
 	}
 end
 

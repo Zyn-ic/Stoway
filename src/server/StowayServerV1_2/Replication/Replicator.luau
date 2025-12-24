@@ -58,9 +58,23 @@ function Replicator.SendEquip(player: Player, uuid: string?)
 	Replicator.Send(player, Actions.Types.EQUIP, payload)
 end
 
-function Replicator.SendUpdateMeta(player: Player, uuid: string, updates: { [string]: any })
-	local payload = Actions.UpdateMeta(uuid, updates)
-	Replicator.Send(player, Actions.Types.UPDATE_META, payload)
+function Replicator.SendUpdateSettings(player: Player, Settings: any?)
+	if player and Settings then
+		local payload = Actions.UpdateSettings(Settings)
+		Replicator.Send(player, Actions.Types.UPDATE_SETTINGS, payload)
+	end
+end
+
+function Replicator.SendReload(player: Player, configSettingName: string, data: any)
+	if player and configSettingName then
+		local playload = Actions.Reload(configSettingName, data)
+		Replicator.Send(player, Actions.Types.RELOAD, playload)
+	end
+end
+
+function Replicator.SendUpdateMeta(player: Player, uuid: string, updates: { [string]: any }, newWeight)
+	local payload = Actions.UpdateMeta(uuid, updates, newWeight)
+	Replicator.Send(player, Actions.Types.RELOAD, payload)
 end
 
 --// Initial Sync Request Handling

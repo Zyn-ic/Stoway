@@ -1,17 +1,17 @@
 -- src/client/Inventory/InventoryController.luau
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local InventoryActionRemote = ReplicatedStorage.Remotes.InventoryAction
 
 local Store = require(script.Parent.Parent.CoreState.InventoryStore)
+local NetworkHandler = require(script.Parent.Parent.NetworkFunctions.NetworkHandler)
 local Fusion = require(ReplicatedStorage.Packages.fusion)
-local Settings = require(ReplicatedStorage.Shared.Settings)
+local GlobalSettings = require(ReplicatedStorage.Shared.Settings)
 local _peek = Fusion.peek
 
 local Controller = {}
 
 --// Helper to safely get data
 
-function CreateSlotFrameName(slotnumber:number): string
+function _CreateSlotFrameName(slotnumber:number): string
     local numberstring = tostring(slotnumber) :: string
     local slotframeName = ""
     local len = numberstring:len()
@@ -29,7 +29,6 @@ end
 
 --// Controller.Add(payload: { Slots: { {UUID, SlotType, Slot, Item} } })
 function Controller.Add(payload)
-    -- Get current state
     local items = table.clone(_peek(Store.Items))
     local hotbar = table.clone(_peek(Store.Hotbar))
     local storage = table.clone(_peek(Store.Storage))
@@ -38,15 +37,15 @@ function Controller.Add(payload)
 
     for _, data in ipairs(payload.Slots) do
         -- 1. Register the full item data in the central Items map
+        if items[data.UUID] then return end
         items[data.UUID] = data.Item
         weightChange += data.Item.Amount or 1
         
         -- 2. Place it in the correct container
         if data.SlotType == "Hotbar" then
-            -- For Hotbar, we target a specific index (1-9)
+            -- For Hotbar, we target a specific index (1-9) e.g
             hotbar[data.Slot] = data.UUID
         else
-            -- For Storage, your state is a packed array {string}
             -- We insert it at the end (or specific slot if server dictates)
             if data.Slot > #storage then
                 table.insert(storage, data.UUID)
@@ -56,16 +55,14 @@ function Controller.Add(payload)
         end
     end
 
-    -- Update the State Objects (This triggers the Fusion UI automatically)
     Store.Items:set(items)
     Store.Hotbar:set(hotbar)
     Store.Storage:set(storage)
     
-    -- Update weight
     Store.Weight:set(_peek(Store.Weight) + weightChange)
 end
 
-function Controller.AddToBackpack(fromType: string, fromIndex: number)
+function Controller.AddToBackpack(fromType: string, fromIndex: number, REPLICATE:boolean)
     local state = Store:GetState()
     local hotbar = table.clone(state.Hotbar)
     local storage = table.clone(state.Storage)
@@ -87,19 +84,28 @@ function Controller.AddToBackpack(fromType: string, fromIndex: number)
         Store.Hotbar:set(hotbar)
         Store.Storage:set(storage)
         
-        
+        if REPLICATE then
+            NetworkHandler.Send("Swap", {
+            fromType = fromType, fromSlot = fromIndex,
+            toType = "Storage", toSlot = #storage
+        })
+        end
         print("Moved item to backpack end")
     end
 end
 
--- src/client/Inventory/InventoryController.luau
-
-function Controller.Remove(slotType: string, slotIndex: number, Scope)
+function Controller.Remove(slotType: string, slotIndex: number, REPLICATE:boolean)
     local state = Store:GetState()
     local uuid = Store:GetUUidFromIndex(slotIndex, slotType)
     local uuidToRemove = nil
 
-    if not Settings.Gameplay.Droppable or not _peek(Store.Settings).Droppable or not Store:GetDroppableStatus(uuid) then return uuidToRemove end
+    -- Check Settings: First check per-player settings, fallback to global
+    local playerSettings = _peek(Store.Settings)
+    local isDroppable = playerSettings.Gameplay and playerSettings.Gameplay.Droppable
+    if isDroppable == nil then isDroppable = GlobalSettings.Gameplay.Droppable end
+    
+    if not isDroppable then return uuidToRemove end
+    if not Store:GetDroppableStatus(uuid) then return uuidToRemove end
     
     --// MODE 1: HOTBAR (Soft Delete)
     -- We want the slot to stay, but the item to vanish.
@@ -124,7 +130,7 @@ function Controller.Remove(slotType: string, slotIndex: number, Scope)
     elseif slotType == "Storage" then
         local newStorage = table.clone(state.Storage)
         local newItems = table.clone(state.Items)
-        local newWeight = _peek(Store.Weight) - Store:GetWeightOfUuid(Store:GetUUidFromIndex(slotIndex, slotType))
+        local newWeight = _peek(Store.Weight) - Store:GetWeightOfUuid(uuid)
         uuidToRemove = newStorage[slotIndex]
         Store.Weight:set(newWeight)
         
@@ -141,35 +147,41 @@ function Controller.Remove(slotType: string, slotIndex: number, Scope)
 
     --// CLEANUP: Unequip if holding that item
     if uuidToRemove and state.Equipped == uuidToRemove then
-        Controller.SetUnequipped()
+        Controller.SetUnequipped(REPLICATE)
     end
 
-    if slotType == "Storage" then
-        task.defer( function()
-            local gui = game.Players.LocalPlayer.PlayerGui:FindFirstChild("StowayGui").Stoway
-            local backpackframe = gui.Backpack.ScrollingFrame
-            local frame = backpackframe:FindFirstChild(tostring(CreateSlotFrameName(slotIndex)))
-            --print(gui, backpackframe, frame)
-            if frame then
-                Scope:doCleanup()
-            end
-        end)
-    end
+
+    --automatic clean up but incase the memory goes up for some reason imma keep this here
+    -- if slotType == "Storage" then
+    --     task.defer( function()
+    --         local gui = game.Players.LocalPlayer.PlayerGui:FindFirstChild("StowayGui").Stoway
+    --         local backpackframe = gui.Backpack.ScrollingFrame
+    --         local frame = backpackframe:FindFirstChild(tostring(CreateSlotFrameName(slotIndex)))
+            
+    --         -- extra clean up just incase but the scope should cleanup
+    --         if frame then
+    --             Scope:doCleanup()
+    --         end
+    --     end)
+    -- end
+
 
     return uuidToRemove
 end
 
-function Controller.Drop(slotType: string, slotIndex: number, Scope)
-    local droppedUUID = Controller.Remove(slotType, slotIndex, Scope)
+function Controller.Drop(slotType: string, slotIndex: number, REPLICATE:boolean)
+    local droppedUUID = Controller.Remove(slotType, slotIndex, REPLICATE)
     if droppedUUID then
-        warn("fired to server to drop")
-        -- Fire Server to spawn the drop in the world
-        -- InventoryActionRemote:FireServer("Drop", {UUID = droppedUUID}) 
+        NetworkHandler.Send("Drop", {
+            slotType = slotType,
+            slot = slotIndex,
+            uuid = droppedUUID
+        })
     end
 end
 
 --// ACTION: SWAP
-function Controller.Swap(fromType: string, fromSlot: number, toType: string, toSlot: number)
+function Controller.Swap(fromType: string, fromSlot: number, toType: string, toSlot: number, REPLICATE:boolean)
     local state = Store:GetState()
     local newHotbar = table.clone(state.Hotbar)
     local newStorage = table.clone(state.Storage)
@@ -205,28 +217,46 @@ function Controller.Swap(fromType: string, fromSlot: number, toType: string, toS
     Store.Hotbar:set(newHotbar)
     Store.Storage:set(newStorage)
     
-    InventoryActionRemote:FireServer("Swap", {
-        From = {Type = fromType, Slot = fromSlot},
-        To = {Type = toType, Slot = toSlot}
-    })
-end
-
---// ACTION: EQUIP
-function Controller.HandleEquipped(uuid:string)
-    if _peek(Store.EquippedUUID) == uuid then
-        Controller.SetUnequipped()
-    else
-        Controller.SetEquipped(uuid)
+    if REPLICATE then
+        NetworkHandler.Send("Swap", {
+            fromType = fromType, fromSlot = fromSlot,
+            toType = toType, toSlot = toSlot
+        })
     end
 end
 
-function Controller.SetEquipped(uuid: string?)
-    -- Optimistic
-    Store.EquippedUUID:set(uuid)
+--// ACTION: EQUIP
+function Controller.HandleEquipped(uuid:string?, REPLICATE:boolean)
+    -- If targeting an empty slot (nil uuid)
+    if uuid == nil then
+        -- If we are currently holding something, unequip it
+        if _peek(Store.EquippedUUID) ~= nil then
+            Controller.SetUnequipped(REPLICATE)
+        end
+        return
+    end
+
+    if _peek(Store.EquippedUUID) == uuid then
+        Controller.SetUnequipped(REPLICATE)
+    else
+        Controller.SetEquipped(uuid, REPLICATE)
+    end
 end
 
-function Controller.SetUnequipped()
+function Controller.SetEquipped(uuid: string, REPLICATE:boolean)
+    Store.EquippedUUID:set(uuid)
+    
+    
+    -- Notify server
+    local slotType, slotIndex = Store:FindSlotByUUID(uuid)
+    if slotType and slotIndex and REPLICATE then
+        NetworkHandler.Send("Equip", { slotType = slotType, slot = slotIndex })
+    end
+end
+
+function Controller.SetUnequipped(REPLICATE:boolean)
     Store.EquippedUUID:set(nil)
+    if REPLICATE then NetworkHandler.Send("Unequip", {}) end
 end
 
 return Controller

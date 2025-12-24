@@ -74,11 +74,12 @@
     Metadata: { [<span class="keyword">string</span>]: <span class="keyword">any</span> }?
 }
 
-<span class="keyword">export type</span> PlayerSettings <span class="operator">=</span> {
-    Limit: <span class="keyword">number</span>,             <span class="comment">-- Weight limit (0 = infinite)</span>
-    CanStack: <span class="keyword">boolean</span>,         <span class="comment">-- Enable/disable stacking</span>
-    MaxStackSize: <span class="keyword">number</span>,      <span class="comment">-- Max items per stack</span>
-    MaxHotbarSlots: <span class="keyword">number</span>,    <span class="comment">-- Hotbar slot count</span>
+export type PlayerSettings = {
+    Limit: number,             -- Weight limit (0 = infinite)
+    CanStack: boolean,         -- Enable/disable stacking
+    MaxStackSize: number,      -- Max items per stack
+    MaxHotbarSlots: number,    -- Hotbar slot count
+    UiType: string,            -- Interface version to load
 }
 
 <span class="keyword">export type</span> InventoryStateType <span class="operator">=</span> {

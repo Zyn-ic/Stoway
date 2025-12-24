@@ -46,18 +46,19 @@ function StackChecker.CanStack(item1: any, item2: any): boolean
 	return true
 end
 
---// Attempt to stack amount into existing items, returns amount stacked
-function StackChecker.TryStack(state: any, itemId: string, amount: number, metadata: any?): number
+--// Attempt to stack amount into existing items, returns amount stacked and updated items
+function StackChecker.TryStack(state: any, itemId: string, amount: number, metadata: any?): (number, {[string]: number})
 	-- Check per-player CanStack setting
 	if not state.Settings.CanStack then
-		return 0
+		return 0, {}
 	end
 	
 	local totalStacked = 0
+	local updatedItems = {}
 	local existingUUIDs = state.ItemsByID[itemId]
 	
 	if not existingUUIDs then
-		return 0
+		return 0, {}
 	end
 	
 	local newItemProxy = { Id = itemId, Metadata = metadata or {} }
@@ -74,6 +75,7 @@ function StackChecker.TryStack(state: any, itemId: string, amount: number, metad
 				existingItem.Amount += toAdd
 				amount -= toAdd
 				totalStacked += toAdd
+				updatedItems[uuid] = existingItem.Amount
 				
 				-- Update weight for stacked amount
 				LimitChecker.AddWeight(state, toAdd)
@@ -81,7 +83,7 @@ function StackChecker.TryStack(state: any, itemId: string, amount: number, metad
 		end
 	end
 	
-	return totalStacked
+	return totalStacked, updatedItems
 end
 
 return StackChecker

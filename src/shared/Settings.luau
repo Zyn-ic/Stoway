@@ -16,6 +16,7 @@ Settings.Hotbar = {
 Settings.Storage = {
 	Limit = 15,             -- Total weight limit (Hotbar + Storage combined)
 	CanStack = true,
+	Sorting = true,
 	MaxStackSize = 5,
 	SortOrder = "None" -- Name, Rarity, ItemType, None
 }
@@ -29,13 +30,23 @@ Settings.Stacking = {
 		["Legendary"] = true,
 		["Mythic"] = true,
 		["Special"] = true,
-	}
+	},
+
+	Rarity = true
 }
 
 --// Gameplay Settings
 Settings.Gameplay = {
 	Droppable = true,
 	DropDistance = 10,
+}
+
+Settings.DifferentUIs = {
+	Default = {
+		FolderName = "StowayGui",
+		GuiName = "Stoway",
+		HookPresetName = "DefaultHooks"
+	}
 }
 
 return Settings

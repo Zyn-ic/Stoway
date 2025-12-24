@@ -95,10 +95,32 @@ end
 function Store:GetDroppableStatus(uuid:string) : boolean | nil
     local item = Store:DoesItemExist(uuid)
     if item then
-        return item.Droppable     
+        return item.Metadata.Droppable     
     end
 
     return nil
+end
+
+function Store:FindSlotByUUID(uuid: string): (string?, number?)
+    if not uuid then return nil, nil end
+    
+    -- Check Hotbar first
+    local hotbar = peek(Store.Hotbar)
+    for slotIndex, slotUUID in pairs(hotbar) do
+        if slotUUID == uuid then
+            return "Hotbar", slotIndex
+        end
+    end
+    
+    -- Check Storage
+    local storage = peek(Store.Storage)
+    for slotIndex, slotUUID in ipairs(storage) do
+        if slotUUID == uuid then
+            return "Storage", slotIndex
+        end
+    end
+    
+    return nil, nil
 end
 
 return Store

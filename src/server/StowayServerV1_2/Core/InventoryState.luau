@@ -22,6 +22,7 @@ export type PlayerSettings = {
 	MaxStackSize: number,      -- Max items per stack
 	MaxHotbarSlots: number,    -- Number of hotbar slots
 	Droppable: boolean,        -- Allow dropping
+	UiType: string, 		   -- Interface version to load (default, admin, mod, developer, content, spec, etc)
 }
 
 export type InventoryStateType = {
@@ -45,14 +46,16 @@ function InventoryState.new(player: Player): InventoryStateType
 	self.Storage = {}
 	self.EquippedItemUUID = nil
 	self.Weight = 0
+	self.died = false
 	
 	-- Per-player settings (defaults from Config)
 	self.Settings = {
-		Droppable = Settings.Storage.Droppable,
+		Droppable = Settings.Gameplay.Droppable,
 		Limit = Settings.Storage.Limit,
 		CanStack = Settings.Storage.CanStack,
 		MaxStackSize = Settings.Storage.MaxStackSize,
 		MaxHotbarSlots = Settings.Hotbar.MaxSlots,
+		UiType = "Default"
 	}
 	
 	return self

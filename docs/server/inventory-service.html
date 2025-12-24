@@ -111,6 +111,11 @@
                         <td>Update item metadata (delta sync).</td>
                     </tr>
                     <tr>
+                        <td><span class="method-name">ReloadClient</span> <span class="tag tag-new">NEW</span></td>
+                        <td><span class="param-type">player, config</span></td>
+                        <td>Triggers a client-side UI/Hook reload. Config: <code>{ configSettingName, RefreshData }</code></td>
+                    </tr>
+                    <tr>
                         <td><span class="method-name">GetState</span></td>
                         <td><span class="param-type">player</span></td>
                         <td>Get player's inventory state.</td>
@@ -137,8 +142,8 @@ InventoryService.<span class="function">AddToBackpack</span>(player, <span class
 
         <section>
             <div class="section-header">
-                <h2>Network Protocol (Anti-Exploit)</h2>
-                <p>Single unified remote with per-player operation lock</p>
+                <h2>Network Protocol</h2>
+                <p>Bidirectional communication standards</p>
             </div>
 
             <div class="warning-box">
@@ -152,11 +157,16 @@ InventoryService.<span class="function">AddToBackpack</span>(player, <span class
                 </ul>
             </div>
 
-            <table class="api-table" style="margin-top: 2rem;">
+            <h3 style="margin-top: 2.5rem; margin-bottom: 1rem; color: var(--text-primary);">1. Client Requests (Input)</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                Sent via <code class="inline-code">InventoryAction</code> RemoteEvent.
+            </p>
+
+            <table class="api-table">
                 <thead>
                     <tr>
                         <th>Operation</th>
-                        <th>Args Table</th>
+                        <th>Arguments (Table)</th>
                         <th>Description</th>
                     </tr>
                 </thead>
@@ -164,53 +174,110 @@ InventoryService.<span class="function">AddToBackpack</span>(player, <span class
                     <tr>
                         <td><span class="method-name">"Swap"</span></td>
                         <td><span class="param-type">{ fromType, fromSlot, toType, toSlot }</span></td>
-                        <td>Swap two slots</td>
-                    </tr>
-                    <tr>
-                        <td><span class="method-name">"Equip"</span></td>
-                        <td><span class="param-type">{ slotType?, slot }</span></td>
-                        <td>Equip from slot</td>
-                    </tr>
-                    <tr>
-                        <td><span class="method-name">"Unequip"</span></td>
-                        <td><span class="param-type">{}</span></td>
-                        <td>Unequip current</td>
-                    </tr>
-                    <tr>
-                        <td><span class="method-name">"Remove"</span></td>
-                        <td><span class="param-type">{ uuid, amount? }</span></td>
-                        <td>Remove item</td>
-                    </tr>
-                    <tr>
-                        <td><span class="method-name">"Drop"</span></td>
-                        <td><span class="param-type">{ slotType, slot }</span></td>
-                        <td>Drop item</td>
+                        <td>Swap item locations. Validates ownership and bounds.</td>
                     </tr>
                     <tr>
                         <td><span class="method-name">"Stack"</span></td>
                         <td><span class="param-type">{ fromType, fromSlot, toType, toSlot }</span></td>
-                        <td>Stack two items</td>
+                        <td>Merge stack from source to target.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"Equip"</span></td>
+                        <td><span class="param-type">{ slotType?, slot }</span></td>
+                        <td>Equip item. <code class="inline-code">slotType</code> defaults to "Hotbar".</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"Unequip"</span></td>
+                        <td><span class="param-type">{}</span></td>
+                        <td>Unequip currently held item.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"Remove"</span></td>
+                        <td><span class="param-type">{ uuid, amount? }</span></td>
+                        <td>Delete item. Removes entire stack if amount is nil.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"Drop"</span></td>
+                        <td><span class="param-type">{ slotType, slot }</span></td>
+                        <td>Drop item into the world (spawns pickup).</td>
                     </tr>
                 </tbody>
             </table>
 
+            <h3 style="margin-top: 2.5rem; margin-bottom: 1rem; color: var(--text-primary);">2. Server Replication (Output)</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                Received via <code class="inline-code">InventoryUpdate</code> RemoteEvent. The server sends delta updates.
+            </p>
+
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Action</th>
+                        <th>Payload Structure</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method-name">"Init"</span></td>
+                        <td><span class="param-type">{ Items, Hotbar, Storage, EquippedUUID }</span></td>
+                        <td>Full state sync. Overwrites local state.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"Add"</span></td>
+                        <td><span class="param-type">{ Slots: [{ UUID, SlotType, Slot, Item }] }</span></td>
+                        <td>List of items added. <code class="inline-code">Item</code> contains full data.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"Remove"</span></td>
+                        <td><span class="param-type">{ UUID, SlotType, Slot }</span></td>
+                        <td>Single item removal from a specific slot.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"Swap"</span></td>
+                        <td><span class="param-type">{ From: {Type, Slot}, To: {Type, Slot} }</span></td>
+                        <td>Confirm swap (Client may predict this).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"Equip"</span></td>
+                        <td><span class="param-type">{ UUID: string? }</span></td>
+                        <td>Update equipped item UUID (or nil).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"UpdateMeta"</span></td>
+                        <td><span class="param-type">{ UUID, Updates: {} }</span></td>
+                        <td>Partial metadata update for an item.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"Reload"</span></td>
+                        <td><span class="param-type">{ UiType, Data? }</span></td>
+                        <td>Instructions to reload UI/Hooks and optional full state resync.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 style="margin-top: 2.5rem; margin-bottom: 1rem; color: var(--text-primary);">3. Initial Sync</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                Sent via <code class="inline-code">AskForStoway</code> RemoteFunction.
+            </p>
             <div class="code-block">
                 <div class="code-header">
-                    <span class="code-title">Client Usage (V1.2)</span>
+                    <span class="code-title">Handshake</span>
                     <span class="code-lang">Luau</span>
                 </div>
-                <pre><code><span class="comment">-- All operations through single RemoteFunction</span>
-<span class="keyword">local</span> Remotes = ReplicatedStorage.Remotes
-<span class="keyword">local</span> result = Remotes.InventoryAction:<span class="function">InvokeServer</span>(<span class="string">"Swap"</span>, {
-    fromType = <span class="string">"Hotbar"</span>, fromSlot = <span class="number">1</span>,
-    toType = <span class="string">"Storage"</span>, toSlot = <span class="number">2</span>
-})
+                <pre><code><span class="comment">-- Client Request</span>
+<span class="keyword">local</span> result = Remotes.AskForStoway:<span class="function">InvokeServer</span>()
 
-<span class="comment">-- Equip</span>
-Remotes.InventoryAction:<span class="function">InvokeServer</span>(<span class="string">"Equip"</span>, { slot = <span class="number">3</span> })
-
-<span class="comment">-- Drop</span>
-Remotes.InventoryAction:<span class="function">InvokeServer</span>(<span class="string">"Drop"</span>, { slotType = <span class="string">"Hotbar"</span>, slot = <span class="number">1</span> })</code></pre>
+<span class="comment">-- Server Response</span>
+{
+    success = <span class="keyword">true</span>,
+    data = {
+        Items = {...},
+        Hotbar = {...},
+        Storage = {...},
+        Settings = {...}
+    }
+}</code></pre>
             </div>
         </section>
 
