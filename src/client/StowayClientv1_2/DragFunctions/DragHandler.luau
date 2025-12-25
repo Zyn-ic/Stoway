@@ -170,6 +170,14 @@ function DragHandler.HideOriginalVisuals()
 		if obj then obj[prop] = value end
 	end
 
+	if DragState.originalFrame:IsA("ImageLabel") then
+		fade(frame:FindFirstChild("slotbutton"), "ImageTransparency", 1)
+		fade(frame:FindFirstChild("slotbutton"), "BackgroundTransparency", 1)
+		fade(frame:FindFirstChild("stackcount"), "TextTransparency", 0.7)
+		fade(frame:FindFirstChild("selecticon"), "ImageTransparency", 1)
+		fade(frame:FindFirstChild("rarityframe"), "ImageTransparency", 1)
+	end
+
 	fade(frame:FindFirstChild("slotbutton"), "ImageTransparency", 1)
 	fade(frame:FindFirstChild("slotbutton"), "BackgroundTransparency", 1)
 	fade(frame:FindFirstChild("stackcount"), "TextTransparency", 0.7)
@@ -189,11 +197,20 @@ function DragHandler.RestoreOriginalVisuals()
 		if obj then obj[prop] = value end
 	end
 
-	restore(frame:FindFirstChild("slotbutton"), "ImageTransparency", 0)
-	restore(frame:FindFirstChild("slotbutton"), "BackgroundTransparency", 0)
-	restore(frame:FindFirstChild("stackcount"), "TextTransparency", 0)
-	restore(frame:FindFirstChild("selecticon"), "ImageTransparency", 0)
-	restore(frame:FindFirstChild("rarityframe"), "BackgroundTransparency", 0.65)
+	if DragState.originalFrame:IsA("Frame") then
+		restore(frame:FindFirstChild("slotbutton"), "ImageTransparency", 0)
+		restore(frame:FindFirstChild("slotbutton"), "BackgroundTransparency", 0)
+		restore(frame:FindFirstChild("stackcount"), "TextTransparency", 0)
+		restore(frame:FindFirstChild("selecticon"), "ImageTransparency", 0)
+		restore(frame:FindFirstChild("rarityframe"), "BackgroundTransparency", 0.65)
+	end
+
+	if DragState.originalFrame:IsA("ImageLabel") then
+		restore(frame:FindFirstChild("slotbutton"), "ImageTransparency", 0)
+		restore(frame:FindFirstChild("stackcount"), "TextTransparency", 0)
+		restore(frame:FindFirstChild("selecticon"), "ImageTransparency", 0)
+		restore(frame:FindFirstChild("rarityframe"), "BackgroundTransparency", 1)
+	end
 end
 
 --// Hit detection
@@ -209,6 +226,11 @@ local function GetHotbarSlotUnderMouse()
 			local slotindex = child.Name:gsub("_", "")
 			return child, tonumber(slotindex)
 		end
+
+		if child:IsA("ImageLabel") and IsMouseInside(DragState.ghostFrame, child) then
+			local slotindex = child.Name:gsub("_", "")
+			return child, tonumber(slotindex)
+		end
 	end
 
 	return nil, nil
@@ -220,6 +242,10 @@ local function GetBackpackSlotUnderMouse()
 
 	for _, child in ipairs(scrolling:GetChildren()) do
 		if child:IsA("Frame") and IsMouseInside(DragState.ghostFrame, child) then
+			return child, tonumber(child.Name)
+		end
+
+		if child:IsA("ImageLabel") and IsMouseInside(DragState.ghostFrame, child) then
 			return child, tonumber(child.Name)
 		end
 	end

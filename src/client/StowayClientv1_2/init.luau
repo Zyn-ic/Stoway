@@ -110,7 +110,6 @@ local function GetSortedIndices(storage: { string }, items: { [string]: any }, s
 end
 
 function BuildHooks(HookPresetName: string?)
-    print(HookManager)
     HookManager:ClearAll()
     if HookPresetName then
         local hookFolder = GUIFOLDER and GUIFOLDER:FindFirstChild("HookFuncs")
@@ -133,7 +132,6 @@ function BuildGui(UIVersion, FolderName, GuiName)
     
 
     GUIFOLDER = GUISTORAGE[UIVersion]:FindFirstChild(FolderName) and GUISTORAGE[UIVersion]:FindFirstChild(FolderName):Clone()
-    print(GUIFOLDER, GUISTORAGE)
     if not GUIFOLDER then return {success = false, reason = `No Folder by the name {FolderName}`} end 
 
     InventoryGui = GUIFOLDER:FindFirstChild(GuiName); 
@@ -141,7 +139,7 @@ function BuildGui(UIVersion, FolderName, GuiName)
 
     return xpcall(
         function ()
-            DraggingGui = GUIFOLDER:FindFirstChild("DraggingGui")
+            DraggingGui = InventoryGui --GUIFOLDER:FindFirstChild("DraggingGui")
             BackpackFrame = InventoryGui.Backpack
             HotbarFrame = InventoryGui.Hotbar
             ScrollingBackpack = BackpackFrame.ScrollingFrame
@@ -324,6 +322,7 @@ function ClientInventoryService.Reload(config: {UiType: string?, Data: any?}?)
     end
     
     -- 6. REBUILD: Reinitialize DragHandler with new references
+    DragHandler.Destroy()
     DragHandler.Init(DraggingGui, HotbarFrame, BackpackFrame, HookManager, SlotFactory.CloneForGhost)
     
     -- 7. BUILD UI
@@ -332,6 +331,7 @@ function ClientInventoryService.Reload(config: {UiType: string?, Data: any?}?)
     
     -- 8. REBIND: Set up keybinds again
     SetUpBinds()
+    --InventoryController.HandleEquipped(Fusion.peek(Store.EquippedUUID), false) 
     
     return {success = true, reason = "[Stoway] Reload complete!"}
 end
@@ -347,7 +347,6 @@ local NetworkHandlers = {
     end,
     
     Add = function(payload)
-        print(payload, (Store:GetState()))
         InventoryController.Add(payload)
     end,
     
@@ -384,6 +383,8 @@ local NetworkHandlers = {
             newItems[payload.UUID] = newItem
             Store.Items:set(newItems)
             Store.Weight:set(payload.NewWeight)
+            local slottype, index = Store:FindSlotByUUID(payload.UUID)
+            HookManager:Fire("OnItemAdd", slottype, index)
         end
     end,
 
@@ -420,6 +421,7 @@ end
 function ClientInventoryService.Init()
     -- 1. Load Data and Build base UI
     LoadInitialData()
+    InventoryController.Init(HookManager)
 
     -- 2. Build rest of the UI
     StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)

@@ -74,7 +74,7 @@ end
 
 function Replicator.SendUpdateMeta(player: Player, uuid: string, updates: { [string]: any }, newWeight)
 	local payload = Actions.UpdateMeta(uuid, updates, newWeight)
-	Replicator.Send(player, Actions.Types.RELOAD, payload)
+	Replicator.Send(player, Actions.Types.UPDATE_META, payload)
 end
 
 --// Initial Sync Request Handling

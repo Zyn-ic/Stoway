@@ -48,7 +48,7 @@ local function OnPlayerAdded(player: Player)
 		char:FindFirstChildWhichIsA("Humanoid").Died:Once(function() state.died = true end)
 
 		if state.died then
-			InventoryService.ReloadClient(player, {configSettingName = "Default", RefreshData = false})
+			InventoryService.ReloadClient(player, {configSettingName = state.Settings.UiType, RefreshData = false})
 
 			if state.EquippedItemUUID then 
 				local slotType, index = SlotManager.FindSlotByUUID(state, state.EquippedItemUUID)
@@ -168,7 +168,7 @@ function InventoryService.DropItem(player: Player, slotType: string, slot: numbe
 	local result = DropOperation.Execute(state, player, slotType, slot)
 	
 	if result.success and REPLICATE then
-		Replicator.SendInit(player, state)
+		Replicator.SendRemove(player, slotType, slot, result.Id)
 	end
 	
 	return result
@@ -206,18 +206,8 @@ function InventoryService.ReloadClient(player: Player, config: { configSettingNa
 	if not state then return { success = false, reason = "NO_INVENTORY" } end
 	if not UiType then return { success = false, reason = `NO UI CALLED {config.configSettingName}`} end
 	
-	local data = nil
-	if config.RefreshData then
-		data = {
-			Items = state.Items,
-			Hotbar = state.Hotbar,
-			Storage = state.Storage,
-			EquippedUUID = state.EquippedItemUUID,
-			Settings = state.Settings
-		}
-	end
-	
-	Replicator.SendReload(player, config.configSettingName, data)
+	state.Settings.UiType = config.configSettingName
+	Replicator.SendReload(player, config.configSettingName, state)
 	return { success = true }
 end
 

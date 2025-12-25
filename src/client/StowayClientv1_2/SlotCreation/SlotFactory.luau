@@ -46,6 +46,8 @@ function SlotFactory.Create(Scope: any, props: SlotProps)
 	local rarityframe = templateSlot:FindFirstChild("rarityframe") :: Frame
 
 	local scope = Scope:deriveScope()
+	local IsActiveHover = false
+	table.insert(scope, IsActiveHover)
 	table.insert(scope, templateSlot)
 
 	
@@ -118,6 +120,23 @@ function SlotFactory.Create(Scope: any, props: SlotProps)
 				props.hookManager:Fire("OnSlotClick", props.SlotType, props.SlotIndex, scope.peek(slotUUID))
 			end
 		end)
+
+        slotbutton.MouseEnter:Connect(function()
+            if props.hookManager and not IsActiveHover then
+				-- Safely traverse parent hierarchy to find hotbardeco
+				local admindecoration = nil
+				if props.Parent.Name == "Hotbar" then
+					admindecoration = props.Parent.Parent and props.Parent.Parent:FindFirstChild("hotbardeco")
+				else
+					admindecoration = props.Parent.Parent and props.Parent.Parent.Parent and props.Parent.Parent.Parent:FindFirstChild("hotbardeco")
+				end
+				
+				IsActiveHover = true
+                props.hookManager:Fire("OnSlotHover", admindecoration or slotbutton)
+				task.wait(0.25)
+				IsActiveHover = false
+			end
+		end)
 	end
 
 	--// Hydrate stack count
@@ -143,34 +162,38 @@ function SlotFactory.Create(Scope: any, props: SlotProps)
 		scope:Hydrate(selecticon) {
 			Visible = isEquipped,
 		}
-		
-		--// Observer for equip/unequip hooks
-		if props.hookManager then
-			scope:Observer(isEquipped):onChange(function()
-				local nowEquipped = scope.peek(isEquipped)
-				local uuid = scope.peek(slotUUID)
-				if nowEquipped and not scope.peek(InventoryStore.EquippedUUID) then
-					props.hookManager:Fire("OnEquip", props.SlotType, props.SlotIndex, uuid)
-				elseif not nowEquipped and scope.peek(InventoryStore.EquippedUUID) then
-					props.hookManager:Fire("OnUnequip", props.SlotType, props.SlotIndex, uuid)
-				end
-			end)
-		end
 	end
 
 	--// Hydrate rarity frame
 	if rarityframe then
 		if Settings.Stacking.Rarity then
-			scope:Hydrate(rarityframe) {
-				BackgroundColor3 = scope:Computed(function(use)
-					local item = use(currentItem)
-					if item and item.Metadata and item.Metadata.Rarity then
-						return RarityValues.rarityColors[item.Metadata.Rarity] or Color3.new(0.4, 0.4, 0.4)
-					end
-					return Color3.new(0.4, 0.4, 0.4)
-				end),
-				Visible = hasItem,
-			}
+			if rarityframe:IsA("Frame") then
+				scope:Hydrate(rarityframe) {
+					BackgroundColor3 = scope:Computed(function(use)
+						local item = use(currentItem)
+						if item and item.Metadata and item.Metadata.Rarity then
+							return RarityValues.rarityColors[item.Metadata.Rarity] or Color3.new(0.4, 0.4, 0.4)
+						end
+						return Color3.new(0.4, 0.4, 0.4)
+					end),
+					
+					Visible = hasItem,
+				}
+			end
+
+			if rarityframe:IsA("ImageLabel") then
+				scope:Hydrate(rarityframe) {
+					ImageColor3 = scope:Computed(function(use)
+						local item = use(currentItem)
+						if item and item.Metadata and item.Metadata.Rarity then
+							return RarityValues.rarityColors[item.Metadata.Rarity] or Color3.new(0.4, 0.4, 0.4)
+						end
+						return Color3.new(0.4, 0.4, 0.4)
+					end),
+				
+					Visible = hasItem,
+				}
+			end
 		else
 			rarityframe.Visible = false
 		end
@@ -186,15 +209,20 @@ function SlotFactory.CloneForGhost(originalFrame: Frame): Frame
 
 	--// Hide keybind on ghost
 	local slotnumber = ghost:FindFirstChild("slotnumber")
+	local keybindbackground = ghost:FindFirstChild("keybindbackground")
 	if slotnumber then
 		slotnumber.Visible = false
 	end
+	if keybindbackground then
+		keybindbackground.Visible = false
+	end
 
 	--// Ensure all visual components show the current state
-	local slotbutton = ghost:FindFirstChild("slotbutton")
-	if slotbutton then
-		slotbutton.ZIndex = 10
-	end
+	ghost.ZIndex = 10
+	-- local slotbutton = ghost:FindFirstChild("slotbutton")
+	-- if slotbutton then
+	-- 	slotbutton.ZIndex = 10
+	-- end
 
 	--// Ghost inherits all visual states (equipped icon, rarity, image, etc.)
 	--// No need to modify - the Clone() captures current state

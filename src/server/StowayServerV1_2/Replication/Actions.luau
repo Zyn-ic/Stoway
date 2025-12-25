@@ -21,7 +21,8 @@ function Actions.Init(state: any)
 		Items = state.Items,
 		Hotbar = state.Hotbar,
 		Storage = state.Storage,
-		EquippedUUID = state.EquippedItemUUID
+		EquippedUUID = state.EquippedItemUUID,
+		Settings = state.Settings
 	}
 end
 

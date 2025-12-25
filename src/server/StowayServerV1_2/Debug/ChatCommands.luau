@@ -260,7 +260,31 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 			print("/set_limit [n]      - Set weight limit")
 			print("/set_max_stack [n]  - Set max stack size")
 			print("/set_hotbar_slots [n] - Set hotbar slot count")
+			print("/setui [uitype]     - Change UI type and reload client")
 			print("═══════════════════════════════════════════════════════════════")
+		
+		--// ═══════════════════════════════════════════════════════════════════
+		--// SET UI TYPE (RELOAD CLIENT)
+		--// ═══════════════════════════════════════════════════════════════════
+		
+		elseif cmd == "/setui" then
+			-- /setui [uitype]
+			local uiType = args[2]
+			if uiType then
+				local result = InventoryService.ReloadClient(player, {
+					configSettingName = uiType,
+					RefreshData = true
+				})
+				
+				if result.success then
+					print("[SetUI] Reloading client with UI type:", uiType)
+				else
+					print("[SetUI] ERROR:", result.reason)
+				end
+			else
+				print("Usage: /setui [uitype]")
+				print("  Example: /setui Default")
+			end
 		end
 	end)
 	

@@ -46,6 +46,12 @@ Settings.DifferentUIs = {
 		FolderName = "StowayGui",
 		GuiName = "Stoway",
 		HookPresetName = "DefaultHooks"
+	},
+	
+	Admin = {
+		FolderName = "StowayAdmin",
+		GuiName = "AdminGui",
+		HookPresetName = "AdminHooks"
 	}
 }
 

@@ -54,7 +54,6 @@ function SwapOperation.Execute(state: any, from: SlotRef, to: SlotRef): SwapResu
 	-- Get items
 	local fromUUID = SlotManager.GetUUIDFromSlot(state, from.type, from.slot)
 	local toUUID = SlotManager.GetUUIDFromSlot(state, to.type, to.slot)
-	print(toUUID, fromUUID)
 	
 	-- Execute based on combination
 	if from.type == "Hotbar" and to.type == "Hotbar" then
@@ -70,14 +69,12 @@ function SwapOperation.Execute(state: any, from: SlotRef, to: SlotRef): SwapResu
 	elseif from.type == "Hotbar" and to.type == "Storage" then
 		-- Hotbar → Storage
 		if toUUID then
-			print(toUUID, fromUUID)
 			-- Both exist: Swap
 			state.Hotbar[from.slot] = toUUID
 			state.Storage[to.slot] = fromUUID
 		else
 			-- Storage slot empty: Append to storage
 			if fromUUID then
-				print(toUUID, fromUUID)
 				table.insert(state.Storage, fromUUID)
 				state.Hotbar[from.slot] = nil
 			end

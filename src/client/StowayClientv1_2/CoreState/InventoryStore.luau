@@ -24,7 +24,7 @@ function Store.Init(initialData)
     Store.Items:set(initialData.Items or {})
     Store.Hotbar:set(initialData.Hotbar or {})
     Store.Storage:set(initialData.Storage or {})
-    Store.EquippedUUID:set(initialData.EquippedUUID)
+    Store.EquippedUUID:set(initialData.EquippedUUID or initialData.EquippedItemUUID)
     Store.Weight:set(initialData.Weight or 0)
     Store.Settings:set(initialData.Settings or {})
 end

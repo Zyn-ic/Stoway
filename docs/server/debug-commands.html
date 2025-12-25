@@ -273,6 +273,77 @@ Storage -- Dynamic array, indices start at 1</pre>
 /add Sword 5        -- 3 go to hotbar, 2 to storage</pre>
             </div>
         </section>
+
+        <section style="margin-top: 2rem;">
+            <div class="section-header">
+                <h2>UI Reload</h2>
+                <p>Dynamically switch UI types and trigger full client reload</p>
+            </div>
+
+            <div class="module-card">
+                <div class="module-header">
+                    <div class="module-icon">🔄</div>
+                    <div class="module-title">
+                        <h3>/setui</h3>
+                        <p>Change UI type and reload client interface</p>
+                    </div>
+                </div>
+                <p style="color: var(--text-secondary);">
+                    Changes the player's UI type setting and triggers a full client reload with fresh inventory data.
+                    This allows you to swap between different UI implementations (e.g., Default → Mod) on the fly.
+                </p>
+                <div class="code-block" style="margin-top: 1rem;">
+                    <div class="code-header">
+                        <span class="code-title">Usage</span>
+                    </div>
+                    <pre>/setui [uitype]
+
+Example:
+/setui Default     -- Reload with Default UI
+/setui Mod         -- Reload with Mod UI (if configured)</pre>
+                </div>
+
+                <div class="warning-box" style="margin-top: 1rem;">
+                    <strong>📝 Configuration Required</strong>
+                    <p style="margin-top: 0.5rem;">
+                        UI types must be defined in <code class="inline-code">Settings.DifferentUIs</code>:
+                    </p>
+                    <div class="code-block" style="margin-top: 0.5rem;">
+                        <div class="code-header">
+                            <span class="code-title">Settings.luau</span>
+                        </div>
+                        <pre>Settings.DifferentUIs = {
+    Default = {
+        FolderName = "StowayGui",
+        GuiName = "Stoway",
+        HookPresetName = "DefaultHooks"
+    },
+    Mod = {
+        FolderName = "ModStowayGui",
+        GuiName = "ModStoway",
+        HookPresetName = "ModHooks"
+    }
+}</pre>
+                    </div>
+                </div>
+
+                <div class="code-block" style="margin-top: 1rem;">
+                    <div class="code-header">
+                        <span class="code-title">How It Works</span>
+                    </div>
+                    <pre>1. Sets player's Settings.UiType to specified type
+2. Calls InventoryService.ReloadClient() with fresh data
+3. Client destroys current UI and scopes
+4. Client loads new GUI folder from configuration
+5. Client rebuilds hotbar/storage with new hooks
+6. Client rebinds all keybindings
+
+✅ Use Case: Testing different UI themes or mod interfaces
+✅ Maintains inventory state during reload
+✅ Applies new hooks and visual styles</pre>
+                </div>
+            </div>
+        </section>
     </main>
 </body>
 

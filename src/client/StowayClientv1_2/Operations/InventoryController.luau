@@ -8,6 +8,11 @@ local GlobalSettings = require(ReplicatedStorage.Shared.Settings)
 local _peek = Fusion.peek
 
 local Controller = {}
+local HookManager = nil
+
+function Controller.Init(hooks)
+    HookManager = hooks
+end
 
 --// Helper to safely get data
 
@@ -53,6 +58,10 @@ function Controller.Add(payload)
                 table.insert(storage, data.Slot, data.UUID)
             end
         end
+
+        if HookManager then
+            HookManager:Fire("OnItemAdd", data.SlotType, data.Slot)
+        end
     end
 
     Store.Items:set(items)
@@ -90,7 +99,10 @@ function Controller.AddToBackpack(fromType: string, fromIndex: number, REPLICATE
             toType = "Storage", toSlot = #storage
         })
         end
-        print("Moved item to backpack end")
+        
+        if HookManager then
+             HookManager:Fire("OnSwap", fromType, fromIndex)
+        end
     end
 end
 
@@ -143,6 +155,10 @@ function Controller.Remove(slotType: string, slotIndex: number, REPLICATE:boolea
             Store.Storage:set(newStorage)
             Store.Weight:set(newWeight)
         end
+    end
+
+    if uuidToRemove and HookManager then
+        HookManager:Fire("OnItemRemove", slotType, slotIndex)
     end
 
     --// CLEANUP: Unequip if holding that item
@@ -223,6 +239,10 @@ function Controller.Swap(fromType: string, fromSlot: number, toType: string, toS
             toType = toType, toSlot = toSlot
         })
     end
+
+    if HookManager then
+        HookManager:Fire("OnSwap", fromType, fromSlot) 
+    end
 end
 
 --// ACTION: EQUIP
@@ -252,11 +272,24 @@ function Controller.SetEquipped(uuid: string, REPLICATE:boolean)
     if slotType and slotIndex and REPLICATE then
         NetworkHandler.Send("Equip", { slotType = slotType, slot = slotIndex })
     end
+
+    if HookManager and slotType and slotIndex then
+        HookManager:Fire("OnEquip", slotType, slotIndex, uuid)
+    end
 end
 
 function Controller.SetUnequipped(REPLICATE:boolean)
+    -- Capture previous equipped before clearing
+    local prevUUID = _peek(Store.EquippedUUID)
     Store.EquippedUUID:set(nil)
     if REPLICATE then NetworkHandler.Send("Unequip", {}) end
+
+    if HookManager and prevUUID then
+        local slotType, slotIndex = Store:FindSlotByUUID(prevUUID)
+        if slotType and slotIndex then
+            HookManager:Fire("OnUnequip", slotType, slotIndex, prevUUID)
+        end
+    end
 end
 
 return Controller
