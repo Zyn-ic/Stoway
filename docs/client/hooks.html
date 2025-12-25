@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hooks - Stoway Client</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="icon" href="../assets/Logo.png" />
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <nav class="nav">
+        <a href="../index.html" class="nav-logo">
+            <img src="../assets/Logo.png" alt="Stoway">
+            <h1>Stoway</h1>
+        </a>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Documentation</div>
+            <a href="../index.html" class="nav-link">Home</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Backend</div>
+            <a href="../server/index.html" class="nav-link">Server Overview</a>
+            <a href="../server/inventory-service.html" class="nav-link">InventoryService</a>
+            <a href="../server/inventory-data.html" class="nav-link">InventoryData</a>
+            <a href="../server/utils.html" class="nav-link">Utilities</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Frontend</div>
+            <a href="index.html" class="nav-link">Client Overview</a>
+            <a href="hooks.html" class="nav-link active">Hook System</a>
+            <a href="state.html" class="nav-link">Core State</a>
+            <a href="operations.html" class="nav-link">Operations</a>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="breadcrumb">
+            <a href="../index.html">Docs</a>
+            <span>/</span>
+            <a href="index.html">Client</a>
+            <span>/</span>
+            <span class="current">Hooks</span>
+        </div>
+
+        <section>
+            <div class="section-header">
+                <h2>Hook Presets</h2>
+                <p>Modular hook configurations</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                To keep your codebase clean and allow for dynamic swapping (e.g., changing UI themes or game modes),
+                hooks should be stored in ModuleScripts within a folder named <code>HookFuncs</code> in
+                <code>ReplicatedStorage</code>.
+            </p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Example Preset Module</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- ReplicatedStorage/HookFuncs/DefaultHooks.luau</span>
+<span class="keyword">return</span> {
+    OnSlotClick = <span class="keyword">function</span>(slotType, index, uuid)
+        <span class="comment">-- Your custom click logic</span>
+        <span class="function">print</span>(<span class="string">"Clicked "</span> .. slotType .. <span class="string">" #"</span> .. index)
+    end,
+    
+    OnDragStart = <span class="keyword">function</span>(type, index)
+        <span class="comment">-- Play sound</span>
+        SoundService.Drag:<span class="function">Play</span>()
+    end
+}</code></pre>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                These presets can then be loaded dynamically by the server using the <code class="inline-code">ReloadClient</code> API.
+            </p>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Manual Registration</h2>
+                <p>Registering hooks via code</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                The client exposes a <code>Hooks</code> manager that allows you to listen to specific inventory events.
+                This is useful for adding sound effects, custom UI feedback, analytics, or triggering other game systems.
+            </p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Registering a Hook</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="keyword">local</span> Client = <span class="function">require</span>(path.to.StowayClient)
+
+<span class="comment">-- Register a sound effect on click</span>
+Client.Hooks:<span class="function">Register</span>(<span class="string">"OnSlotClick"</span>, <span class="keyword">function</span>(slotType, index, uuid)
+    SoundService.Click:<span class="function">Play</span>()
+    <span class="function">print</span>(<span class="string">"Clicked "</span> .. slotType .. <span class="string">" #"</span> .. index)
+<span class="keyword">end</span>)</code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Available Hooks</h2>
+                <p>List of all supported events</p>
+            </div>
+
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Hook Name</th>
+                        <th>Arguments</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method-name">OnSlotClick</span></td>
+                        <td><span class="param-type">type, index, uuid</span></td>
+                        <td>Fired when a slot is clicked. Useful for custom equip logic or SFX.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">OnDragStart</span></td>
+                        <td><span class="param-type">type, index</span></td>
+                        <td>Fired when the user starts dragging an item.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">OnDragEnd</span></td>
+                        <td><span class="param-type">srcType, srcIndex, destType, destIndex</span></td>
+                        <td>Fired when a drag completes (Swap or Drop).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">OnEquip</span></td>
+                        <td><span class="param-type">type, index, uuid</span></td>
+                        <td>Fired when an item is equipped.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">OnUnequip</span></td>
+                        <td><span class="param-type">type, index, uuid</span></td>
+                        <td>Fired when an item is unequipped.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>HookManager API</h2>
+                <p>Methods for managing hooks</p>
+            </div>
+
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method-name">Register(name, callback)</span></td>
+                        <td>Add a listener to a specific hook event.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">Unregister(name, callback)</span></td>
+                        <td>Remove a specific listener.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">Clear(name)</span></td>
+                        <td>Remove all listeners for a specific hook event.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">ClearAll()</span></td>
+                        <td>Remove listeners for ALL events.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </main>
+</body>
+
+</html>

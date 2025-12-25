@@ -14,88 +14,14 @@ export type ItemData = {
 	Rarity: string?,
 	Droppable: boolean?,
 	Type: string, -- e.g., "Weapon", "Potion", "Resource"
-	-- No ToolRef here; the slot will hold the ToolRef and this ItemData as Properties
 }
 
--- Represents the content of a single slot in Hotbar or Backpack_Data
-export type SlotContents = {
-	ToolRef: Tool, -- Direct reference to the Tool instance
-	Properties: ItemData, -- Stoway's tracked properties for this tool
+export type DragStateTable = {
+	ID: number,
+	SourceSlot: any,
+	MouseOffset: Vector2
 }
 
-export type PlayerSchema = {
-	Hotbar: { SlotContents? }, -- Array of optional SlotContents
-	Backpack_Data: { SlotContents? }?, -- Our data array for backpack items (if CarryingType is Backpack)
-	Inventory_Data: { SlotContents? }?, -- Our data array for inventory items (if CarryingType is Inventory)
-	-- Note: For "Inventory" type, ToolRef might point to ServerStorage initially
-}
 
-export type Settings = {
-	HotbarSettings : {HotbarType:string, MaxSlots:number},
-	BackpackSettings : {CarryingType:string, Limit:number, Sorting:boolean},
-	CanStack:boolean,
-	MaxStackCount:number,
-	RarityCheck:boolean,
-	Droppable:boolean
-}
-
-export type Stoway = {
-	PrivateJanitor: any,
-	Settings: Settings,
-
-    InventoryFolder : Folder,
-    HotBarFolder :Folder,
-    BackpackFolder : Folder
-}
-
-export type API = {
-	GetSettings: (Player)->(Settings),
-	GetStoway: (Player)->(Stoway),
-	SendStowayorSettings: (Player, string)->(Stoway | Settings | nil),
-	Init: (Context)->();
-}
-
-export type Actions = {
-	CreateHotbarValues : (Stoway)->(),
-	Clear: (Stoway)->(),
-	ShiftBackpackValuesDown: (ObjectValue, Player)->(),
-	AddNewBackpackValue: (Tool, Player)->(),
-	FindSuitableHotbarSlot: (Tool, Player)->(),
-	UpdatePlayerTools: (Player)->(),
-	SwapSlots: (Player, ObjectValue, ObjectValue, boolean)->(),
-	MoveToEndofBackpack: (ObjectValue, Player)->(),
-	Init: (Context)->();
-}
-
-export type Remotes = {
-	OnAskForStoway: (Player, string)->(),
-	OnUnEquip: (Player)->(),
-	OnEquipTool: (Player, Tool)->(),
-	OnDropTool: (Player, Tool)->(),
-	Init: (Context)->();
-}
-
-export type Utils = {
-	canAcceptWeight: (Stoway, number)->(),
-	FindEmptySlot: ({ObjectValue}, number)->(),
-	FindSameSlotType: ({ObjectValue}, Tool)->(),
-	ValidateTool: (Player, Tool)->(),
-	ValidateSlot: (ObjectValue, Stoway)->(),
-	getTools: (Folder, Model)->(),
-	FindValueFromTool: (Tool, Player)->(),
-	Init: (Context)->();
-}
-
-export type Context = {
-    PlayerStoways: {[Player]: Stoway},
-	Janitor: any?,
-    Settings : Settings,
-    -- Pass the modules themselves so they can call each other's functions
-    API: API,
-    Actions: Actions,
-    --Events: ModuleScript,
-    Utils: Utils,
-    Remotes: Remotes
-}
 
 return Types

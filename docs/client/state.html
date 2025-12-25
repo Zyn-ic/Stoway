@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Core State - Stoway Client</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="icon" href="../assets/Logo.png" />
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <nav class="nav">
+        <a href="../index.html" class="nav-logo">
+            <img src="../assets/Logo.png" alt="Stoway">
+            <h1>Stoway</h1>
+        </a>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Documentation</div>
+            <a href="../index.html" class="nav-link">Home</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Backend</div>
+            <a href="../server/index.html" class="nav-link">Server Overview</a>
+            <a href="../server/inventory-service.html" class="nav-link">InventoryService</a>
+            <a href="../server/inventory-data.html" class="nav-link">InventoryData</a>
+            <a href="../server/utils.html" class="nav-link">Utilities</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Frontend</div>
+            <a href="index.html" class="nav-link">Client Overview</a>
+            <a href="hooks.html" class="nav-link">Hook System</a>
+            <a href="state.html" class="nav-link active">Core State</a>
+            <a href="operations.html" class="nav-link">Operations</a>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="breadcrumb">
+            <a href="../index.html">Docs</a>
+            <span>/</span>
+            <a href="index.html">Client</a>
+            <span>/</span>
+            <span class="current">Core State</span>
+        </div>
+
+        <section>
+            <div class="section-header">
+                <h2>InventoryStore</h2>
+                <p>Reactive state management powered by Fusion</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                The client uses a single source of truth in <code>InventoryStore.luau</code>. This module holds the entire inventory state (Items, Hotbar, Storage, Settings) wrapped in Fusion State Objects. UI components observe these objects and update automatically when data changes.
+            </p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Accessing State</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="keyword">local</span> Store = <span class="function">require</span>(Client.CoreState.InventoryStore)
+<span class="keyword">local</span> Fusion = <span class="function">require</span>(Packages.Fusion)
+<span class="keyword">local</span> peek = Fusion.peek
+
+<span class="comment">-- Get instantaneous state</span>
+<span class="keyword">local</span> state = Store:<span class="function">GetState</span>()
+<span class="function">print</span>(<span class="string">"Equipped UUID:"</span>, state.Equipped)
+<span class="function">print</span>(<span class="string">"Total Weight:"</span>, peek(Store.Weight))
+
+<span class="comment">-- Observe changes (in a Fusion scope)</span>
+scope:<span class="function">Observer</span>(Store.Weight):<span class="function">onChange</span>(<span class="keyword">function</span>()
+    <span class="function">print</span>(<span class="string">"Weight changed to:"</span>, peek(Store.Weight))
+<span class="keyword">end</span>)</code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>State Atoms</h2>
+                <p>The core reactive values</p>
+            </div>
+
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Atom</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method-name">Items</span></td>
+                        <td><span class="param-type">{ [uuid]: ItemData }</span></td>
+                        <td>Dictionary of all item data (Name, Amount, Metadata).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">Hotbar</span></td>
+                        <td><span class="param-type">{ [1-9]: uuid }</span></td>
+                        <td>Static slots mapping index to item UUID.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">Storage</span></td>
+                        <td><span class="param-type">{ uuid }</span></td>
+                        <td>Packed array of item UUIDs in storage.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">EquippedUUID</span></td>
+                        <td><span class="param-type">string?</span></td>
+                        <td>The UUID of the currently equipped item.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">Weight</span></td>
+                        <td><span class="param-type">number</span></td>
+                        <td>Current total weight of the inventory.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">Settings</span></td>
+                        <td><span class="param-type">table</span></td>
+                        <td>Client copy of player-specific settings (Limit, etc.). Controls conditional UI rendering (e.g., hiding weight labels or stack counts).</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Helper Methods</h2>
+                <p>Convenience functions for data access</p>
+            </div>
+
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Returns</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method-name">GetState()</span></td>
+                        <td><span class="param-type">table</span></td>
+                        <td>Returns a snapshot of the current state (unwrapped).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">GetUUidFromIndex(index, type)</span></td>
+                        <td><span class="param-type">string?</span></td>
+                        <td>Safe lookup for UUID given a slot index and type.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">DoesItemExist(uuid)</span></td>
+                        <td><span class="param-type">ItemData?</span></td>
+                        <td>Returns item data if it exists, nil otherwise.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </main>
+</body>
+
+</html>

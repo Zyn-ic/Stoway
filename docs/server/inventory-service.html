@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InventoryService V1.2 - Stoway Docs</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="icon" href="../assets/Logo.png" />
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <nav class="nav">
+        <a href="../index.html" class="nav-logo">
+            <img src="../assets/Logo.png" alt="Stoway">
+            <h1>Stoway</h1>
+        </a>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Documentation</div>
+            <a href="../index.html" class="nav-link">Home</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Backend V1.2</div>
+            <a href="index.html" class="nav-link">Server Overview</a>
+            <a href="inventory-service.html" class="nav-link active">InventoryService</a>
+            <a href="inventory-data.html" class="nav-link">InventoryState</a>
+            <a href="utils.html" class="nav-link">Utilities</a>
+            <a href="debug-commands.html" class="nav-link">Debug Commands</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Frontend</div>
+            <a href="../client/index.html" class="nav-link">Client Overview</a>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="breadcrumb">
+            <a href="../index.html">Docs</a>
+            <span>/</span>
+            <a href="index.html">Server</a>
+            <span>/</span>
+            <span class="current">InventoryService V1.2</span>
+        </div>
+
+        <section>
+            <div class="section-header">
+                <h2>Server API</h2>
+                <p>All available methods for inventory management</p>
+            </div>
+
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Parameters</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method-name">AddItem</span></td>
+                        <td><span class="param-type">player, itemId, amount, metadata?</span></td>
+                        <td>Add to hotbar first, then storage. Auto-stacks.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">AddToBackpack</span> <span class="tag tag-new">NEW</span></td>
+                        <td><span class="param-type">player, itemId, amount?, metadata?</span></td>
+                        <td>Add directly to storage (bypasses hotbar).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">RemoveItem</span></td>
+                        <td><span class="param-type">player, uuid, amount?</span></td>
+                        <td>Remove item by UUID. Partial removal supported.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">SwapSlots</span></td>
+                        <td><span class="param-type">player, fromType, fromSlot, toType, toSlot</span></td>
+                        <td>Swap any two slots (Hotbar/Storage).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">StackTwoSlots</span> <span class="tag tag-new">NEW</span></td>
+                        <td><span class="param-type">player, fromType, fromSlot, toType, toSlot</span></td>
+                        <td>Merge two stacks (rarely needed - add auto-stacks).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">EquipSlot</span></td>
+                        <td><span class="param-type">player, slotType, slot</span></td>
+                        <td>Equip item from Hotbar or Storage.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">UnequipSlot</span></td>
+                        <td><span class="param-type">player</span></td>
+                        <td>Unequip current tool.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">DropItem</span></td>
+                        <td><span class="param-type">player, slotType, slot</span></td>
+                        <td>Drop item into world.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">UpdateMetadata</span></td>
+                        <td><span class="param-type">player, uuid, updates</span></td>
+                        <td>Update item metadata (delta sync).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">ReloadClient</span> <span class="tag tag-new">NEW</span></td>
+                        <td><span class="param-type">player, config</span></td>
+                        <td>Triggers a client-side UI/Hook reload. Config: <code>{ configSettingName, RefreshData }</code></td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">GetState</span></td>
+                        <td><span class="param-type">player</span></td>
+                        <td>Get player's inventory state.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Server Usage Example</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- Initialize</span>
+<span class="keyword">local</span> InventoryService = <span class="function">require</span>(game.ServerScriptService.StowayServerV1_2)
+InventoryService.<span class="function">Init</span>()
+
+<span class="comment">-- Add items</span>
+InventoryService.<span class="function">AddItem</span>(player, <span class="string">"Sword"</span>, <span class="number">1</span>)
+
+<span class="comment">-- Add directly to backpack</span>
+InventoryService.<span class="function">AddToBackpack</span>(player, <span class="string">"Potion"</span>, <span class="number">5</span>)</code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Network Protocol</h2>
+                <p>Bidirectional communication standards</p>
+            </div>
+
+            <div class="warning-box">
+                <strong>🔒 Anti-Exploit Features:</strong>
+                <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                    <li>Per-player operation lock prevents remote spam</li>
+                    <li>Spammed calls return <code
+                            class="inline-code">{ success = false, reason = "OPERATION_IN_PROGRESS" }</code></li>
+                    <li>Lock auto-releases on completion (success or error)</li>
+                    <li>pcall wrapper prevents server crashes</li>
+                </ul>
+            </div>
+
+            <h3 style="margin-top: 2.5rem; margin-bottom: 1rem; color: var(--text-primary);">1. Client Requests (Input)</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                Sent via <code class="inline-code">InventoryAction</code> RemoteEvent.
+            </p>
+
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Operation</th>
+                        <th>Arguments (Table)</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method-name">"Swap"</span></td>
+                        <td><span class="param-type">{ fromType, fromSlot, toType, toSlot }</span></td>
+                        <td>Swap item locations. Validates ownership and bounds.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"Stack"</span></td>
+                        <td><span class="param-type">{ fromType, fromSlot, toType, toSlot }</span></td>
+                        <td>Merge stack from source to target.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"Equip"</span></td>
+                        <td><span class="param-type">{ slotType?, slot }</span></td>
+                        <td>Equip item. <code class="inline-code">slotType</code> defaults to "Hotbar".</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"Unequip"</span></td>
+                        <td><span class="param-type">{}</span></td>
+                        <td>Unequip currently held item.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"Remove"</span></td>
+                        <td><span class="param-type">{ uuid, amount? }</span></td>
+                        <td>Delete item. Removes entire stack if amount is nil.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"Drop"</span></td>
+                        <td><span class="param-type">{ slotType, slot }</span></td>
+                        <td>Drop item into the world (spawns pickup).</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 style="margin-top: 2.5rem; margin-bottom: 1rem; color: var(--text-primary);">2. Server Replication (Output)</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                Received via <code class="inline-code">InventoryUpdate</code> RemoteEvent. The server sends delta updates.
+            </p>
+
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Action</th>
+                        <th>Payload Structure</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method-name">"Init"</span></td>
+                        <td><span class="param-type">{ Items, Hotbar, Storage, EquippedUUID }</span></td>
+                        <td>Full state sync. Overwrites local state.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"Add"</span></td>
+                        <td><span class="param-type">{ Slots: [{ UUID, SlotType, Slot, Item }] }</span></td>
+                        <td>List of items added. <code class="inline-code">Item</code> contains full data.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"Remove"</span></td>
+                        <td><span class="param-type">{ UUID, SlotType, Slot }</span></td>
+                        <td>Single item removal from a specific slot.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"Swap"</span></td>
+                        <td><span class="param-type">{ From: {Type, Slot}, To: {Type, Slot} }</span></td>
+                        <td>Confirm swap (Client may predict this).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"Equip"</span></td>
+                        <td><span class="param-type">{ UUID: string? }</span></td>
+                        <td>Update equipped item UUID (or nil).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"UpdateMeta"</span></td>
+                        <td><span class="param-type">{ UUID, Updates: {} }</span></td>
+                        <td>Partial metadata update for an item.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">"Reload"</span></td>
+                        <td><span class="param-type">{ UiType, Data? }</span></td>
+                        <td>Instructions to reload UI/Hooks and optional full state resync.</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3 style="margin-top: 2.5rem; margin-bottom: 1rem; color: var(--text-primary);">3. Initial Sync</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                Sent via <code class="inline-code">AskForStoway</code> RemoteFunction.
+            </p>
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Handshake</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- Client Request</span>
+<span class="keyword">local</span> result = Remotes.AskForStoway:<span class="function">InvokeServer</span>()
+
+<span class="comment">-- Server Response</span>
+{
+    success = <span class="keyword">true</span>,
+    data = {
+        Items = {...},
+        Hotbar = {...},
+        Storage = {...},
+        Settings = {...}
+    }
+}</code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Per-Player Settings</h2>
+                <p>Runtime-configurable settings stored in state.Settings</p>
+            </div>
+
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Setting</th>
+                        <th>Default</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method-name">Limit</span></td>
+                        <td><span class="param-type">15</span></td>
+                        <td>Weight limit (0 = infinite)</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">CanStack</span></td>
+                        <td><span class="param-type">true</span></td>
+                        <td>Enable/disable stacking</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">MaxStackSize</span></td>
+                        <td><span class="param-type">5</span></td>
+                        <td>Max items per stack</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">MaxHotbarSlots</span></td>
+                        <td><span class="param-type">9</span></td>
+                        <td>Hotbar slot count</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Debug Commands</h2>
+                <p>Test commands (remove in production!)</p>
+            </div>
+
+            <div class="warning-box">
+                <strong>⚠️ Remove <code class="inline-code">Debug/ChatCommands.luau</code> in production!</strong>
+                <span>These commands bypass normal validation.</span>
+            </div>
+
+            <table class="api-table" style="margin-top: 1rem;">
+                <thead>
+                    <tr>
+                        <th>Command</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>/inv</code></td>
+                        <td>Display inventory state</td>
+                    </tr>
+                    <tr>
+                        <td><code>/add [id] [amt?]</code></td>
+                        <td>Add item (hotbar first)</td>
+                    </tr>
+                    <tr>
+                        <td><code>/addback [id] [amt?]</code></td>
+                        <td>Add directly to backpack</td>
+                    </tr>
+                    <tr>
+                        <td><code>/remove [uuid] [amt?]</code></td>
+                        <td>Remove item by UUID</td>
+                    </tr>
+                    <tr>
+                        <td><code>/swap [t1] [s1] [t2] [s2]</code></td>
+                        <td>Swap slots</td>
+                    </tr>
+                    <tr>
+                        <td><code>/stack [t1] [s1] [t2] [s2]</code></td>
+                        <td>Stack items together</td>
+                    </tr>
+                    <tr>
+                        <td><code>/equip [slot]</code></td>
+                        <td>Equip from hotbar</td>
+                    </tr>
+                    <tr>
+                        <td><code>/unequip</code></td>
+                        <td>Unequip current</td>
+                    </tr>
+                    <tr>
+                        <td><code>/drop [type] [slot]</code></td>
+                        <td>Drop item</td>
+                    </tr>
+                    <tr>
+                        <td><code>/clear</code></td>
+                        <td>Clear inventory</td>
+                    </tr>
+                    <tr>
+                        <td><code>/toggle_stack</code></td>
+                        <td>Toggle stacking</td>
+                    </tr>
+                    <tr>
+                        <td><code>/set_limit [n]</code></td>
+                        <td>Set weight limit</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+    </main>
+</body>
+
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operations - Stoway Client</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="icon" href="../assets/Logo.png" />
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <nav class="nav">
+        <a href="../index.html" class="nav-logo">
+            <img src="../assets/Logo.png" alt="Stoway">
+            <h1>Stoway</h1>
+        </a>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Documentation</div>
+            <a href="../index.html" class="nav-link">Home</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Backend</div>
+            <a href="../server/index.html" class="nav-link">Server Overview</a>
+            <a href="../server/inventory-service.html" class="nav-link">InventoryService</a>
+            <a href="../server/inventory-data.html" class="nav-link">InventoryData</a>
+            <a href="../server/utils.html" class="nav-link">Utilities</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Frontend</div>
+            <a href="index.html" class="nav-link">Client Overview</a>
+            <a href="hooks.html" class="nav-link">Hook System</a>
+            <a href="state.html" class="nav-link">Core State</a>
+            <a href="operations.html" class="nav-link active">Operations</a>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="breadcrumb">
+            <a href="../index.html">Docs</a>
+            <span>/</span>
+            <a href="index.html">Client</a>
+            <span>/</span>
+            <span class="current">Operations</span>
+        </div>
+
+        <section>
+            <div class="section-header">
+                <h2>InventoryController</h2>
+                <p>Safe actions and server communication</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 2rem;">
+                The <code>InventoryController</code> handles all logical operations on the client. It updates the local state optimistically where possible and communicates with the server via the <code>InventoryAction</code> RemoteFunction.
+            </p>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>API Methods</h2>
+                <p>Main interaction points</p>
+            </div>
+
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method-name">Add(payload)</span></td>
+                        <td>Called by the server (Replication) to add items. Updates local state.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">Remove(type, index)</span></td>
+                        <td>Removes an item from a slot locally. Hotbar uses soft delete (nil), Storage uses hard delete (shift).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">Swap(fromType, fromSlot, toType, toSlot)</span></td>
+                        <td>Swaps two items locally and fires "Swap" to server. Handles all cross-container logic (Storage->Hotbar, etc.).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">Drop(type, index)</span></td>
+                        <td>Calls <code>Remove</code> locally and fires "Drop" to server.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">HandleEquipped(uuid)</span></td>
+                        <td>Toggles equip state. If already equipped, unequip. If different, equip new.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">ReloadHotbar()</span></td>
+                        <td>Re-renders the hotbar UI. Useful after changing settings or hooks.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Reloading Hotbar</h2>
+                <p>Dynamic UI updates</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                The client supports reloading the hotbar UI. This is useful if you need to refresh the UI after applying new
+                client-specific hooks or changing layout settings at runtime.
+            </p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Reloading Hotbar</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="keyword">local</span> Client = <span class="function">require</span>(path.to.StowayClient)
+
+<span class="comment">-- Re-renders the hotbar (cleans up old Fusion scopes)</span>
+Client.<span class="function">ReloadHotbar</span>()</code></pre>
+            </div>
+            
+            <div class="warning-box">
+                <strong>💡 Tip:</strong>
+                <span>New hooks registered via <code>Client.Hooks:Register()</code> are automatically picked up by existing slots, but reloading ensures a clean state if you are modifying slot creation logic or visual settings.</span>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Drag & Drop Logic</h2>
+                <p>How interactions are handled</p>
+            </div>
+            
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                The <code>DragHandler</code> module manages the visual aspect of dragging. When a drag ends, it calculates the drop target and invokes <code>InventoryController.Swap</code> or <code>InventoryController.Drop</code>.
+            </p>
+        </section>
+    </main>
+</body>
+
+</html>

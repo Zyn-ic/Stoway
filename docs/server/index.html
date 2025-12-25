@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Overview V1.2 - Stoway Docs</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="icon" href="../assets/Logo.png" />
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <nav class="nav">
+        <a href="../index.html" class="nav-logo">
+            <img src="../assets/Logo.png" alt="Stoway">
+            <h1>Stoway</h1>
+        </a>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Documentation</div>
+            <a href="../index.html" class="nav-link">Home</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Backend V1.2</div>
+            <a href="index.html" class="nav-link active">Server Overview</a>
+            <a href="inventory-service.html" class="nav-link">InventoryService</a>
+            <a href="inventory-data.html" class="nav-link">InventoryState</a>
+            <a href="utils.html" class="nav-link">Utilities</a>
+            <a href="debug-commands.html" class="nav-link">Debug Commands</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Frontend</div>
+            <a href="../client/index.html" class="nav-link">Client Overview</a>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="breadcrumb">
+            <a href="../index.html">Docs</a>
+            <span>/</span>
+            <span class="current">Server V1.2</span>
+        </div>
+
+        <section class="hero" style="padding: 2rem;">
+            <h1 style="font-size: 2.5rem;">Server Backend V1.2</h1>
+            <p>Modular, server-authoritative inventory with per-player settings and anti-exploit protection</p>
+        </section>
+
+        <div class="section-cards" style="margin-top: 2rem;">
+            <a href="inventory-service.html" class="section-card">
+                <div class="section-card-icon">⚙️</div>
+                <h3>InventoryService</h3>
+                <p>Central service with unified network protocol and operation lock.</p>
+                <span class="arrow">→</span>
+            </a>
+
+            <a href="inventory-data.html" class="section-card">
+                <div class="section-card-icon">📊</div>
+                <h3>InventoryState</h3>
+                <p>Per-player data with O(1) lookups and runtime-configurable settings.</p>
+                <span class="arrow">→</span>
+            </a>
+
+            <a href="utils.html" class="section-card">
+                <div class="section-card-icon">🔧</div>
+                <h3>Utilities</h3>
+                <p>SlotManager, LimitChecker, StackChecker, MetadataParser, ItemSpawner.</p>
+                <span class="arrow">→</span>
+            </a>
+        </div>
+
+        <section style="margin-top: 4rem;">
+            <div class="section-header">
+                <h2>Architecture V1.2</h2>
+                <p>Modular directory structure</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Directory Structure</span>
+                    <span class="code-lang">Tree</span>
+                </div>
+                <pre>src/server/StowayServerV1_2/
+├── init.luau                    # Entry + API + Network
+├── Config/Settings.luau         # Global defaults
+├── Core/
+│   ├── InventoryState.luau      # Data + per-player settings
+│   ├── SlotManager.luau         # Static Hotbar / Dynamic Storage
+│   └── LimitChecker.luau        # Weight validation
+├── Operations/
+│   ├── AddOperation.luau        # Limit → Stack → Slot
+│   ├── RemoveOperation.luau     # Validate → Reduce/Destroy
+│   ├── SwapOperation.luau       # All swap combinations
+│   ├── EquipOperation.luau      # Equip/Unequip
+│   └── DropOperation.luau       # Unequip → Remove → Spawn
+├── Replication/
+│   ├── Actions.luau             # Payload builders
+│   └── Replicator.luau          # Delta dispatcher
+├── Utils/                       # UUID, MetadataParser, StackChecker
+├── Debug/ChatCommands.luau      # ⚠️ REMOVE IN PRODUCTION
+└── World/ItemSpawner.luau       # Physical tools</pre>
+            </div>
+        </section>
+
+        <section style="margin-top: 4rem;">
+            <div class="section-header">
+                <h2>Data Flow</h2>
+                <p>How requests are processed</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Request Flow (V1.2)</span>
+                    <span class="code-lang">Diagram</span>
+                </div>
+                <pre>Client → InventoryAction (RemoteFunction) → Operation Lock Check
+    ↓
+InventoryService → Operation Module → InventoryState
+    ↓
+Replicator.Send*() → InventoryUpdate (RemoteEvent) → Client</pre>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-top: 1rem;">
+                All client requests go through a single <code class="inline-code">InventoryAction</code> RemoteFunction
+                with per-player operation locking. This prevents remote spam exploits.
+            </p>
+        </section>
+
+        <section style="margin-top: 4rem;">
+            <div class="section-header">
+                <h2>Key V1.2 Features</h2>
+            </div>
+
+            <ul style="color: var(--text-secondary); margin-left: 1.5rem; list-style-type: disc;">
+                <li><strong>Per-Player Settings:</strong> Limit, CanStack, MaxStackSize, MaxHotbarSlots</li>
+                <li><strong>Anti-Exploit:</strong> Single remote + per-player operation lock</li>
+                <li><strong>UUID-Based Equip:</strong> Equipment follows item, not slot</li>
+                <li><strong>Dynamic Storage:</strong> Packed array with auto-shift on removal</li>
+                <li><strong>Delta Replication:</strong> Minimal network payloads</li>
+                <li><strong>Debug Commands:</strong> /add, /swap, /equip, /clear, etc.</li>
+            </ul>
+        </section>
+    </main>
+</body>
+
+</html>

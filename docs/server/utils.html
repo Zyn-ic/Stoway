@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Utilities - Stoway Docs</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="icon" href="../assets/Logo.png" />
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <nav class="nav">
+        <a href="../index.html" class="nav-logo">
+            <img src="../assets/Logo.png" alt="Stoway">
+            <h1>Stoway</h1>
+        </a>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Documentation</div>
+            <a href="../index.html" class="nav-link">Home</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Backend</div>
+            <a href="index.html" class="nav-link">Server Overview</a>
+            <a href="inventory-service.html" class="nav-link">InventoryService</a>
+            <a href="inventory-data.html" class="nav-link">InventoryData</a>
+            <a href="utils.html" class="nav-link active">Utilities</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Frontend</div>
+            <a href="../client/index.html" class="nav-link">Client Overview</a>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="breadcrumb">
+            <a href="../index.html">Docs</a>
+            <span>/</span>
+            <a href="index.html">Server</a>
+            <span>/</span>
+            <span class="current">Utilities</span>
+        </div>
+
+        <section>
+            <div class="section-header">
+                <h2>InventoryUtils</h2>
+                <p>Stateless helper functions for inventory operations</p>
+            </div>
+
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Function</th>
+                        <th>Returns</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method-name">GenerateUUID()</span></td>
+                        <td><span class="param-type">string</span></td>
+                        <td>Generates unique identifier for item instances using HttpService</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">CanStack(item1, item2, checkRarity)</span></td>
+                        <td><span class="param-type">boolean</span></td>
+                        <td>Checks if two items can stack based on ID and metadata equality</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">FindEmptySlot(slots, maxSlots)</span></td>
+                        <td><span class="param-type">number?</span></td>
+                        <td>Returns first empty slot index (1-based) or nil if full</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">ParseToolMetadata(tool)</span> <span
+                                class="tag tag-new">NEW</span></td>
+                        <td><span class="param-type">table?</span></td>
+                        <td>Extracts all Attributes from a Tool for persistence</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="module-card">
+                <div class="module-header">
+                    <div class="module-icon">📊</div>
+                    <div class="module-title">
+                        <h3>CanStack Deep Dive</h3>
+                        <p>How stacking eligibility is determined</p>
+                    </div>
+                </div>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-title">Stack Check Logic</span>
+                        <span class="code-lang">Pseudocode</span>
+                    </div>
+                    <pre>1. Check ID match: item1.Id == item2.Id
+2. <strong>Strict Check:</strong> Name, Rarity, and Type MUST match exactly
+3. <strong>Blacklist:</strong> Check Settings.RarityBlacklist (e.g. Legendary)
+   - If blacklisted, return false
+4. Return true if all checks pass</pre>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>ItemSpawner</h2>
+                <p>Physical tool instantiation and world interaction</p>
+            </div>
+
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Function</th>
+                        <th>Returns</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method-name">SpawnTool(player, itemId, metadata?)</span></td>
+                        <td><span class="param-type">Tool?</span></td>
+                        <td>Clones tool from ServerStorage, applies metadata as Attributes <span
+                                class="tag tag-safety">Character Check</span></td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">DespawnTool(player, tool)</span></td>
+                        <td><span class="param-type">void</span></td>
+                        <td>Destroys a tool if it belongs to the player's character</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">DropTool(player, itemId, amount, metadata?)</span></td>
+                        <td><span class="param-type">void</span></td>
+                        <td>Creates a pickup in the world at DropDistance from player</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="module-card">
+                <div class="module-header">
+                    <div class="module-icon">⚔️</div>
+                    <div class="module-title">
+                        <h3>SpawnTool Flow</h3>
+                        <p>How tools are instantiated on equip</p>
+                    </div>
+                </div>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-title">Spawn Flow</span>
+                        <span class="code-lang">Pseudocode</span>
+                    </div>
+                    <pre>1. Check player.Character exists (safety)
+2. Find tool template in ServerStorage.Tools[itemId]
+3. Clone template
+4. Apply metadata as Attributes via SetAttribute()
+5. Parent clone to player.Character
+6. Return tool instance</pre>
+                </div>
+
+                <div class="warning-box">
+                    <strong>⚠️ Safety Note:</strong>
+                    <span>SpawnTool includes a character existence check to prevent errors when players die during
+                        equip.</span>
+                </div>
+            </div>
+        </section>
+    </main>
+</body>
+
+</html>
