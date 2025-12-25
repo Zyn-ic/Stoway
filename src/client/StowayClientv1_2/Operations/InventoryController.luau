@@ -108,17 +108,8 @@ end
 
 function Controller.Remove(slotType: string, slotIndex: number, REPLICATE:boolean)
     local state = Store:GetState()
-    local uuid = Store:GetUUidFromIndex(slotIndex, slotType)
     local uuidToRemove = nil
-
-    -- Check Settings: First check per-player settings, fallback to global
-    local playerSettings = _peek(Store.Settings)
-    local isDroppable = playerSettings.Gameplay and playerSettings.Gameplay.Droppable
-    if isDroppable == nil then isDroppable = GlobalSettings.Gameplay.Droppable end
-    
-    if not isDroppable then return uuidToRemove end
-    if not Store:GetDroppableStatus(uuid) then return uuidToRemove end
-    
+    local uuid = Store:GetUUidFromIndex(slotIndex, slotType)
     --// MODE 1: HOTBAR (Soft Delete)
     -- We want the slot to stay, but the item to vanish.
     -- We do NOT use table.remove, because that would shift Hotbar Slot 2 to Slot 1.
@@ -186,14 +177,27 @@ function Controller.Remove(slotType: string, slotIndex: number, REPLICATE:boolea
 end
 
 function Controller.Drop(slotType: string, slotIndex: number, REPLICATE:boolean)
+    -- Check Settings: First check per-player settings, fallback to global
+    local uuid = Store:GetUUidFromIndex(slotIndex, slotType)
+    if not Store:GetDroppableStatus(uuid) then return nil end
+    local playerSettings = _peek(Store.Settings)
+    local isDroppable = playerSettings.Gameplay and playerSettings.Gameplay.Droppable
+    if isDroppable == nil then isDroppable = GlobalSettings.Gameplay.Droppable end
+    
+    if not isDroppable then return nil end
+
     local droppedUUID = Controller.Remove(slotType, slotIndex, REPLICATE)
-    if droppedUUID then
+    if droppedUUID and REPLICATE then
         NetworkHandler.Send("Drop", {
             slotType = slotType,
             slot = slotIndex,
             uuid = droppedUUID
         })
+
+        return droppedUUID
     end
+    
+    return nil
 end
 
 --// ACTION: SWAP
