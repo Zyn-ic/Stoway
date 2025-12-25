@@ -1,150 +1,122 @@
-# Stoway - Advanced Roblox Inventory System 🎒✨
+# Stoway - Advanced Roblox Inventory System (V1.2) 🎒✨
 <img src="pics/Logo.png" alt="Stoway Logo" width="120" align = "left" style="margin-right:15px"/> 
 
 <div style="display: flex; flex-direction: column; gap: 2px;">
-<p> <strong>Stoway</strong> is a flexible and feature-rich inventory and hotbar system designed for Roblox experiences. It provides developers with a robust framework to manage player items, offering deep customization for various gameplay needs, from simple backpacks to complex, data-driven inventories. Please consider going to the <a href="https://github.com/Zyn-ic/Stoway/releases">latest release</a> and downloading it there if you want a view at a basic set up.</p>
+<p> <strong>Stoway</strong> is a robust, data-driven inventory and hotbar system designed for Roblox experiences. Built with performance and flexibility in mind, it uses <strong>Fusion</strong> for reactive UI updates and a smart <strong>Delta Replication</strong> system to minimize network traffic. Whether you need a simple RPG backpack or a complex survival inventory, Stoway provides the solid foundation you need. Please consider going to the <a href="https://github.com/Zyn-ic/Stoway/releases">latest release</a> and downloading it there.</p>
 </div>
 
 <br>
 
 ## 📖 Table of Contents
 
-- [Stoway - Advanced Roblox Inventory System 🎒✨](#stoway---advanced-roblox-inventory-system-)
+- [Stoway - Advanced Roblox Inventory System (V1.2) 🎒✨](#stoway---advanced-roblox-inventory-system-v12-)
   - [📖 Table of Contents](#-table-of-contents)
   - [🌟 Core Features ](#-core-features-)
     - [🔥 Hotbar ](#-hotbar-)
-    - [🎒 Backpack / Inventory ](#-backpack--inventory-)
-    - [⚙️ Extra Functionalities ](#️-extra-functionalities-)
+    - [🎒 Backpack / Storage ](#-backpack--storage-)
+    - [⚙️ Advanced Systems ](#️-advanced-systems-)
   - [🚀 Getting Started ](#-getting-started-)
   - [🛠️ Configuration ](#️-configuration-)
+  - [💬 Debug Commands ](#-debug-commands-)
 - [Credits](#credits)
 
 <br>
 
 ## 🌟 Core Features <a name="core-features"></a>
 
-Stoway aims to provide a comprehensive set of features to cover all your inventory needs.
-
 ### 🔥 Hotbar <a name="hotbar"></a>
+* **🖐️ Drag & Drop:** Smooth, glitch-free dragging between Hotbar and Storage.
+* **⚡ Static Slots:** Fixed number of hotbar slots (e.g., 1-9) for consistent keybinding.
+* **⌨️ Keybinds:** Built-in support for equipping items via number keys.
 
-The hotbar is designed for quick access and intuitive item management.
+### 🎒 Backpack / Storage <a name="backpack-storage"></a>
+* **💾 Data-Driven:** Items are stored as pure data (UUIDs), not physical Instances. Physical tools are only spawned when equipped.
+* **📚 Stacking:** Fully customizable stacking logic. Define max stack sizes globally or per-item.
+* **⚖️ Weight System:** Optional weight/capacity limits (set specific limits or allow infinite storage).
+* **🔍 Sorting & Filtering:** Built-in support for sorting by Rarity, Name, or ItemType, plus real-time search filtering.
 
-* **🖐️ Drag & Drop UI:** Seamlessly move items within the hotbar and between the hotbar and backpack.
-* **🔁 Swappable Slots:** Easily swap the contents of two slots by dragging one onto another.
-* **📚 Stacking:** Configure items to stack, with customizable maximum stack sizes per item type or globally.
-* **💾 Persistence Options (Savable):**
-    * **Always Save:** Item data in hotbar slots persists through death and across sessions.
-    * **Session/Life Specific:** If disabled, hotbar can be configured to reset upon player death or when they leave the game.
-* **↔️ Static or Dynamic Display:**
-    * **Static:** A fixed number of hotbar slots are always visible.
-    * **Dynamic:** The hotbar can visually expand or shrink to only show slots that contain items.
-
----
-
-### 🎒 Backpack / Inventory <a name="backpack-inventory"></a>
-
-The backpack serves as the main storage, with flexible operational modes.
-
-* **📦 Dual Mode Operation:**
-    * **`Backpack Mode`**: All tool instances (both hotbar and backpack items) are physically stored in the player's Roblox `Backpack` instance. Stoway manages their organization and data.
-    * **`Inventory Mode`**: Only tools equipped or on the hotbar are in the player's Roblox `Backpack` instance. Other items are managed as data by Stoway on the server, allowing for larger and more abstract storage.
-* **⚖️ Item Limit:** Set a total carrying capacity (e.g., by weight or item count) that considers items in both the hotbar and the backpack. `0` can signify an infinite limit.
-* **🖐️ Drag & Drop UI:** Intuitive drag and drop functionality within the backpack interface.
-* **🔄 Hotbar <-> Backpack Swapping:** Drag an item from the hotbar to a backpack slot (or vice-versa) will swap positions.
-* **📊 Sorting:** Option to implement sorting functionality for the backpack based on specific categories (e.g., item type, rarity, name).
-
----
-
-### ⚙️ Extra Functionalities <a name="extra-functionalities"></a>
-
-Enhance player interaction and item management with these powerful extras.
-
-* **⌨️ Bind Key Actions:**
-    * Select a slot/item in the hotbar or backpack.
-    * Press a predefined key (e.g., `Backspace`, `Delete`, `E`).
-    * Trigger custom functions like deleting, selling, dropping, or using the item.
-* **✨ Bound Visual Functions (On Select):**
-    * Purely for cosmetics and visual feedback.
-    * When a slot/item is selected, automatically run a function without needing an additional key press.
-    * Use cases: Tweening the selected slot's color, showing a `ViewportFrame` preview of the item, displaying item stats, etc.
-* **💧 Droppable Items:**
-    * Option to designate items as droppable.
-    * Drag a slot/item to a specific "droppable UI frame" or a droppable position on the 2d Interface.
-    * Dropping resets the slot to empty or removes the visual slot if the hotbar/backpack is dynamic.
-* **💎 Rarity Check & Display:**
-    * If enabled, Stoway can check for a "Rarity" attribute on tools.
-    * Apply a corresponding color or visual indicator to a designated "rarity frame" or element within the item's UI display.
+### ⚙️ Advanced Systems <a name="advanced-systems"></a>
+* **⚛️ Reactive UI (Fusion):** Uses the Fusion library for highly performant, state-driven UI updates. Zero polling.
+* **📡 Delta Replication:** The server only sends *changes* to the client, ensuring minimal network usage even with large inventories.
+* **🎨 UI Skins:** Support for multiple UI layouts/skins (e.g., "Default", "Admin", "Trader") that can be switched on the fly.
+* **💎 Rarity Support:** Integrated rarity system with color-coded borders and sorting priority.
+* **💧 Droppable Items:** Configurable logic for dropping items into the world.
 
 <br>
 
 ## 🚀 Getting Started <a name="getting-started"></a>
 
-Setting up Stoway in your Roblox game is straightforward:
-
-1.  📥 **Download:** Grab the latest release from the [Releases](https://github.com/Zyn-ic/Stoway/releases) page (or clone the repository).
-2.  📦 **Import:** Import the `.rbxm` model file into Roblox Studio.
-3.  📁 **Placement:**
-    * Place the `StowayServer` ModuleScript (and its children like `Settings`) into `ServerScriptService` (e.g., `ServerScriptService.Stoway.StowayServer`).
-    * Place shared modules like `Types` into `ReplicatedStorage` (e.g., `ReplicatedStorage.Shared.Types`).
-    * Place the `StowayClient` ModuleScript (and its children) into
-    `StarterPlayerScripts` (e.g `StarterPlayerScripts.Stoway.StowayClient`).
-    * Ensure any client-side UI and scripts are placed appropriately (e.g., in `StarterGui` `StarterPlayerScripts`, `ReplicatedStorage`).
-4.  ⚙️ **Configure:** Modify the `Settings.lua` module to tailor Stoway to your game's needs (see [Configuration](#️-configuration) below).
-5.  🏁 **Initialize:** In a server-side script (e.g., `ServerScriptService.GameManager`), initialize the system:
+1.  📥 **Download:** Get the latest `.rbxm` from the [Releases](https://github.com/Zyn-ic/Stoway/releases) page.
+2.  📁 **Server Setup:**
+    *   Place `StowayServerV1_2` inside `ServerScriptService`.
+    *   *Recommendation:* Create a folder `ServerScriptService/Stoway` to keep it organized.
+3.  📁 **Client Setup:**
+    *   Place `StowayClientv1_2` inside `StarterPlayerScripts`.
+4.  📁 **Shared Resources:**
+    *   Place the `Shared` folder (containing `Settings`, `Types`, `RarityValues`, `Binds`) into `ReplicatedStorage`.
+5.  📦 **Dependencies:**
+    *   Ensure the `Fusion` library is available in `ReplicatedStorage/Packages` (or adjust the `require` paths in the scripts).
+6.  🏁 **Initialize:**
+    Create a server script to load the system:
     ```lua
-    -- Example: ServerScriptService/GameManager.lua
-    require(game.ServerScriptService.Stoway.StowayServer)
+    local StowayServer = require(game.ServerScriptService.StowayServerV1_2)
+    StowayServer.Init()
     ```
 
 ---
 
 ## 🛠️ Configuration <a name="configuration"></a>
 
-Stoway's behavior is heavily controlled by the `Settings.lua` module. This allows you to easily tweak functionality without digging deep into the core scripts.
+Stoway V1.2 is configured via `ReplicatedStorage/Shared/Settings.luau`.
 
 ```lua
-
--- Example snippet from Settings.lua
-
 local Settings = {}
--- ... Types module requirement ...
 
-Settings.HotbarSettings = {
-    HotbarType = Types.HotbarType.Static, -- "Static" or "Dynamic"
-    MaxSlots = 9
+--// HOTBAR
+Settings.Hotbar = {
+    MaxSlots = 9,       -- Number of static hotbar slots
 }
 
-Settings.BackpackSettings = {
-    CarryingType = Types.CarryingType.Backpack, -- "Backpack" or "Inventory"
-    Limit = 50, -- 0 for infinite
-    Sorting = false -- true to enable sorting logic placeholder
+--// STORAGE & LIMITS
+Settings.Storage = {
+    Limit = 50,         -- Max weight/slots (0 = Infinite)
+    CanStack = true,    -- Enable item stacking
+    MaxStackSize = 64,  -- Default max stack size
+    Sorting = true,     -- Enable sorting logic
+    SortOrder = "Rarity" -- "None", "Name", "Rarity", "ItemType"
 }
 
-Settings.CanStack = true
-Settings.MaxStackCount = 64 -- maximum amount a item can stack to
-
-Settings.RarityCheck = true
-Settings.Droppable = true
-Settings.SaveBackpackandSlotInfo = false -- Toggle data persistence
-
-Settings.Bindkey = {
-    [tostring(Enum.KeyCode.Delete)] = function(slotContents)
-        print(player.Name .. " wants to delete:", slotContents.Properties.Type)
-        --[[ remember this runs on the client so if you want to delete
-        something then you will have to implement it on both sides
-        ]]
-    end
+--// GAMEPLAY
+Settings.Gameplay = {
+    Droppable = true,   -- Allow players to drop items
+    DropDistance = 5,   -- How far items drop
 }
 
-Settings.BindFunction = function(slotContents, slotGuiObject)
-    print("Selected:", slotContents.Properties.Type)
-    -- think of the parameters as anything you want to pass from the frame/button selected on the client
-end
+--// UI SKINS
+Settings.DifferentUIs = {
+    ["Default"] = {
+        FolderName = "DefaultUI",
+        GuiName = "StowayGui",
+        HookPresetName = "DefaultHooks"
+    }
+}
 
 return Settings
 ```
+
 <br>
 
+## 💬 Debug Commands <a name="debug-commands"></a>
+Stoway comes with built-in chat commands for testing (restrict these in production!).
+
+*   `/inv` - Print current inventory state to console.
+*   `/add [itemId] [amount]` - Add an item to your inventory.
+*   `/remove [uuid]` - Remove an item by UUID.
+*   `/clear` - Wipe your inventory.
+*   `/set_limit [n]` - Change your weight limit at runtime.
+*   `/setui [UiType]` - Switch your UI skin (e.g., `/setui Default`).
+
+<br>
 # Credits
 
 1. <img src="https://www.iconpacks.net/icons/2/free-youtube-logo-icon-2431-thumb.png" width=15 height = 15>  [**HowToRoblox**](https://www.youtube.com/watch?v=kqa4u_9mSTQ&list=WL&index=6) - sourced a lot of core mechanics from him for backpack/hotbar.
