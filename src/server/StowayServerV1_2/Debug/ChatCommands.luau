@@ -175,15 +175,17 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 		--// ═══════════════════════════════════════════════════════════════════
 		
 		elseif cmd == "/drop" then
-			-- /drop [type] [slot]
+			-- /drop [type] [slot] [amount?]
 			local slotType = args[2]
 			local slot = tonumber(args[3])
+			local amount = tonumber(args[4])
 			if slotType and slot then
-				local result = InventoryService.DropItem(player, slotType, slot)
-				print("[Drop]", slotType, slot)
+				local result = InventoryService.DropItem(player, slotType, slot, amount, true)
+				print("[Drop]", slotType, slot, amount or "(All)")
 				print("  Success:", result.success)
+				print("  Remaining:", result.remaining or 0)
 			else
-				print("Usage: /drop [Hotbar/Storage] [slot]")
+				print("Usage: /drop [Hotbar/Storage] [slot] [amount?]")
 			end
 		
 		--// ═══════════════════════════════════════════════════════════════════

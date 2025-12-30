@@ -11,11 +11,13 @@ local ItemSpawner = require(script.Parent.Parent.World.ItemSpawner)
 export type DropResult = {
 	success: boolean,
 	reason: string?,
-	droppedItem: any?
+	droppedItem: any?,
+	remaining: number?,
+	UUID: string?
 }
 
 --// Main Execute function
-function DropOperation.Execute(state: any, player: Player, slotType: string, slot: number): DropResult
+function DropOperation.Execute(state: any, player: Player, slotType: string, slot: number, amount: number?): DropResult
 	-- Get item
 	local uuid = SlotManager.GetUUIDFromSlot(state, slotType, slot)
 	if not uuid then
@@ -39,28 +41,35 @@ function DropOperation.Execute(state: any, player: Player, slotType: string, slo
 	local itemId = item.Id
 	local itemAmount = item.Amount
 	local itemMetadata = item.Metadata
+	local dropAmount = amount or itemAmount
+
+	if dropAmount > itemAmount then dropAmount = itemAmount end
+	if dropAmount <= 0 then return {success = false, reason = "INVALID_AMOUNT"} end
 	
 	-- If equipped, unequip first (per spec: equipped items go through unequip flow)
-	if state.EquippedItemUUID == uuid then
+	-- Only unequip if we are dropping the WHOLE item (or at least, the amount that exists)
+	if state.EquippedItemUUID == uuid and (itemAmount - dropAmount) <= 0 then
 		EquipOperation.Unequip(state, player)
 	end
 	
 	-- Remove from inventory
-	local removeResult = RemoveOperation.Execute(state, uuid, itemAmount)
+	local removeResult = RemoveOperation.Execute(state, uuid, dropAmount)
 	if not removeResult.success then
 		return { success = false, reason = removeResult.reason }
 	end
 	
 	-- Spawn in world
-	ItemSpawner.DropTool(player, itemId, itemAmount, itemMetadata)
+	ItemSpawner.DropTool(player, itemId, dropAmount, itemMetadata)
 	
 	return { 
 		success = true, 
 		droppedItem = {
 			Id = itemId,
-			Amount = itemAmount,
+			Amount = dropAmount,
 			Metadata = itemMetadata
-		}
+		},
+		remaining = removeResult.remaining,
+		UUID = uuid
 	}
 end
 

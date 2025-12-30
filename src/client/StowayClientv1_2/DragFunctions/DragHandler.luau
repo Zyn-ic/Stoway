@@ -317,13 +317,13 @@ function DragHandler.EndDrag(--[[, Scope]])
 			warn("append to backpack")
 			InventoryController.AddToBackpack(FromType, index, true)
 		else
-			InventoryController.Drop(FromType, index, true)
+			InventoryController.Drop(FromType, index, nil, true)
 			warn("drop")
 		end
 	end
 
 	if not OverHotbar and not OverBackpack then 
-		InventoryController.Drop(FromType, index, true)
+		InventoryController.Drop(FromType, index, nil, true)
 		warn("drop")
 	end
 

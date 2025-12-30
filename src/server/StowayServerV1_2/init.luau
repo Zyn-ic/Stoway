@@ -165,14 +165,18 @@ function InventoryService.UnequipSlot(player: Player, REPLICATE: boolean)
 	return result
 end
 
-function InventoryService.DropItem(player: Player, slotType: string, slot: number, REPLICATE: boolean)
+function InventoryService.DropItem(player: Player, slotType: string, slot: number, amount: number?, REPLICATE: boolean)
 	local state = PlayerInventories[player]
 	if not state then return { success = false, reason = "NO_INVENTORY" } end
 	
-	local result = DropOperation.Execute(state, player, slotType, slot)
+	local result = DropOperation.Execute(state, player, slotType, slot, amount)
 	
 	if result.success and REPLICATE then
-		Replicator.SendRemove(player, slotType, slot, result.Id)
+		if result.remaining and result.remaining > 0 then
+			Replicator.SendUpdateMeta(player, result.UUID, { Amount = result.remaining }, state.Weight)
+		else
+			Replicator.SendRemove(player, slotType, slot, result.UUID)
+		end
 	end
 	
 	return result
@@ -394,7 +398,7 @@ local OperationHandlers = {
 		return InventoryService.RemoveItem(player, args.uuid, args.amount, false)
 	end,
 	[Operations.DROP] = function(player, args)
-		return InventoryService.DropItem(player, args.slotType, args.slot, false)
+		return InventoryService.DropItem(player, args.slotType, args.slot, args.amount, false)
 	end,
 	[Operations.STACK] = function(player, args)
 		return InventoryService.StackTwoSlots(player, args.fromType, args.fromSlot, args.toType, args.toSlot, false)

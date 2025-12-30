@@ -176,9 +176,10 @@ function Controller.Remove(slotType: string, slotIndex: number, REPLICATE:boolea
     return uuidToRemove
 end
 
-function Controller.Drop(slotType: string, slotIndex: number, REPLICATE:boolean)
+function Controller.Drop(slotType: string, slotIndex: number, amount: number?, REPLICATE:boolean)
     -- Check Settings: First check per-player settings, fallback to global
     local uuid = Store:GetUUidFromIndex(slotIndex, slotType)
+    if not uuid then return nil end
     if not Store:GetDroppableStatus(uuid) then return nil end
     local playerSettings = _peek(Store.Settings)
     local isDroppable = playerSettings.Gameplay and playerSettings.Gameplay.Droppable
@@ -186,15 +187,41 @@ function Controller.Drop(slotType: string, slotIndex: number, REPLICATE:boolean)
     
     if not isDroppable then return nil end
 
-    local droppedUUID = Controller.Remove(slotType, slotIndex, REPLICATE)
-    if droppedUUID and REPLICATE then
-        NetworkHandler.Send("Drop", {
-            slotType = slotType,
-            slot = slotIndex,
-            uuid = droppedUUID
-        })
+    local currentAmount = Store:GetWeightOfUuid(uuid) or 0
+    local dropAmount = amount or currentAmount
+    if dropAmount > currentAmount then dropAmount = currentAmount end
 
-        return droppedUUID
+    -- Partial Drop
+    if dropAmount < currentAmount then
+        if REPLICATE then
+            -- Optimistic Update
+            local items = table.clone(_peek(Store.Items))
+            local item = table.clone(items[uuid])
+            item.Amount = item.Amount - dropAmount
+            items[uuid] = item
+            Store.Items:set(items)
+            Store.Weight:set(_peek(Store.Weight) - dropAmount)
+            
+            NetworkHandler.Send("Drop", {
+                slotType = slotType,
+                slot = slotIndex,
+                amount = dropAmount
+            })
+        end
+        return uuid
+    else
+        -- Full Drop
+        local droppedUUID = Controller.Remove(slotType, slotIndex, REPLICATE)
+        if droppedUUID and REPLICATE then
+            NetworkHandler.Send("Drop", {
+                slotType = slotType,
+                slot = slotIndex,
+                uuid = droppedUUID,
+                amount = dropAmount
+            })
+
+            return droppedUUID
+        end
     end
     
     return nil
