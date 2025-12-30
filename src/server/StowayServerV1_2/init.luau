@@ -113,8 +113,12 @@ function InventoryService.RemoveItem(player: Player, uuid: string, amount: numbe
 	local slotType, slot = SlotManager.FindSlotByUUID(state, uuid)
 	local result = RemoveOperation.Execute(state, uuid, amount)
 	
-	if result.success and slotType and slot and REPLICATE then
-		Replicator.SendRemove(player, slotType, slot, uuid)
+	if result.success and REPLICATE then
+		if result.remaining and result.remaining > 0 then
+			Replicator.SendUpdateMeta(player, uuid, { Amount = result.remaining }, state.Weight)
+		elseif slotType and slot then
+			Replicator.SendRemove(player, slotType, slot, uuid)
+		end
 	end
 	
 	return result

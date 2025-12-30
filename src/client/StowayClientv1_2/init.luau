@@ -23,9 +23,9 @@ local NetworkHandler = require(script.NetworkFunctions.NetworkHandler)
 local GetStowayFromServer = ReplicatedStorage:WaitForChild("Remotes").AskForStoway :: RemoteFunction
 
 -- CONSTANTS
-local HotbarScope = nil 
-local StorageScope = nil 
-local Player = Players.LocalPlayer :: Player 
+local HotbarScope = nil
+local StorageScope = nil
+local Player = Players.LocalPlayer :: Player
 local GUISTORAGE = ReplicatedStorage:FindFirstChild("Gui") -- change to your folder name
 local GUIFOLDER : Folder
 
@@ -46,13 +46,13 @@ end
 
 function ClientInventoryService.ToggleBackpack(_actionName, inputState, _inputObject)
 	if inputState and inputState ~= Enum.UserInputState.Begin then return end
-    BackpackFrame.Visible = not BackpackFrame.Visible 
+    BackpackFrame.Visible = not BackpackFrame.Visible
 end
 
 function ClientInventoryService.BindKeyBinds(actionNamePrefix, _slotfolder)
 	local currentSettings = Fusion.peek(Store.Settings)
 	if not currentSettings or not currentSettings.MaxHotbarSlots then return end
-	
+
 	for i = 1, currentSettings.MaxHotbarSlots do
 		local bindData = Binds.KeyBinds[i]
 		if not bindData then break end
@@ -78,16 +78,16 @@ local function GetSortedIndices(storage: { string }, items: { [string]: any }, s
 	for i = 1, #storage do
 		table.insert(indices, i)
 	end
-	
+
 	if not sortOrder or sortOrder == "None" then
 		return indices
 	end
-	
+
 	table.sort(indices, function(a, b)
 		local itemA = items[storage[a]]
 		local itemB = items[storage[b]]
 		if not itemA or not itemB then return a < b end
-		
+
 		if sortOrder == "Name" then
 			return itemA.Id < itemB.Id
 		elseif sortOrder == "Rarity" then
@@ -105,7 +105,7 @@ local function GetSortedIndices(storage: { string }, items: { [string]: any }, s
 		end
 		return a < b
 	end)
-	
+
 	return indices
 end
 
@@ -129,12 +129,12 @@ end
 
 function BuildGui(UIVersion, FolderName, GuiName)
     if not GuiName then return {success = false, reason = `GUI NAME IS BLANK`} end
-    
+
 
     GUIFOLDER = GUISTORAGE[UIVersion]:FindFirstChild(FolderName) and GUISTORAGE[UIVersion]:FindFirstChild(FolderName):Clone()
-    if not GUIFOLDER then return {success = false, reason = `No Folder by the name {FolderName}`} end 
+    if not GUIFOLDER then return {success = false, reason = `No Folder by the name {FolderName}`} end
 
-    InventoryGui = GUIFOLDER:FindFirstChild(GuiName); 
+    InventoryGui = GUIFOLDER:FindFirstChild(GuiName);
     if not InventoryGui then return {success = false, reason = `No GUI BY THAT NAME -> {GuiName}`} end
 
     return xpcall(
@@ -148,12 +148,11 @@ function BuildGui(UIVersion, FolderName, GuiName)
 
             GUIFOLDER.Parent = Player.PlayerGui
             return {success = true, reason = ""}
-        end, 
+        end,
 
         function (err)
             return {success = false, reason = err}
         end)
-   
 end
 
 function BuildHotbar()
@@ -194,7 +193,7 @@ function BuildStorage()
     end
 
 	if WeightLabel then
-		if Settings.Storage.Limit and Settings.Storage.Limit > 0 then 
+		if Settings.Storage.Limit and Settings.Storage.Limit > 0 then
 			StorageScope:Hydrate(WeightLabel) {
 				Text = StorageScope:Computed(function(use)
 					local weight = use(Store.Weight)
@@ -230,10 +229,10 @@ function BuildStorage()
             local storage = use(Store.Storage)
             local items = use(Store.Items)
             local sortOrder = Settings.Storage.SortOrder or "None"
-            
+
             local lookup = {}
             local sortedIndices = GetSortedIndices(storage, items, sortOrder)
-            
+
             for rank, originalIndex in ipairs(sortedIndices) do
                 lookup[originalIndex] = rank
             end
@@ -244,9 +243,9 @@ function BuildStorage()
     -- 3. Static Slot Creation
     -- We track raw Storage so slots are only created/deleted on Add/Remove
 
-    
+
     StorageScope:ForPairs(Store.Storage, function(_use, scope, storageIndex, uuid)
-                                          
+
         local slotFrame = SlotFactory.Create(scope, {
             SlotIndex = storageIndex,
             SlotType = "Storage",
@@ -265,10 +264,10 @@ function BuildStorage()
                 Visible = scope:Computed(function(use)
                     local search = use(SearchText)
                     if search == "" then return true end
-                    
+
                     local item = use(Store.Items)[uuid]
                     if not item then return false end
-                    
+
                     return item.Id:lower():find(search, 1, true) ~= nil
                 end),
 
@@ -282,22 +281,21 @@ function BuildStorage()
 
         return storageIndex, slotFrame
     end)
-
 end
 
 function ClientInventoryService.Reload(config: {UiType: string?, Data: any?}?)
     if not config then return {success = false, reason = "No CONFIG SENT"} end
-    local uiType : {FolderName: string, GuiName: string, HookPresetName: string} | nil = config.UiType and Settings.DifferentUIs[config.UiType] 
+    local uiType : {FolderName: string, GuiName: string, HookPresetName: string} | nil = config.UiType and Settings.DifferentUIs[config.UiType]
     if not uiType then return {success = false, reason = "Cannot load data without the type of ui to show"} end
 
     print("[Stoway] Reloading inventory system...")
-    
+
     -- 1. DESTROY: Unbind all hotkey actions
     for i = 1, 10 do
         ContextActionService:UnbindAction("HotbarSlot" .. tostring(i))
     end
     ContextActionService:UnbindAction("toggle_backpack")
-    
+
     -- 2. CLEANUP: Destroy Fusion scopes (UI cleanup)
     if HotbarScope then
         HotbarScope:doCleanup()
@@ -307,7 +305,7 @@ function ClientInventoryService.Reload(config: {UiType: string?, Data: any?}?)
         StorageScope:doCleanup()
         StorageScope = nil
     end
-    
+
 
     -- 3. GUI REFERENCES: Reload UI references (new GUI if provided)
     if GUIFOLDER then GUIFOLDER:Destroy() end
@@ -315,24 +313,24 @@ function ClientInventoryService.Reload(config: {UiType: string?, Data: any?}?)
 
     -- 4. HOOKS: Clear old hooks and load new preset (from Name)
     BuildHooks(uiType.HookPresetName)
-    
+
     -- 5. DATA: Re-initialize store if new data provided
     if config ~= nil and config.Data ~= nil then
         Store.Init(config.Data)
     end
-    
+
     -- 6. REBUILD: Reinitialize DragHandler with new references
     DragHandler.Destroy()
     DragHandler.Init(DraggingGui, HotbarFrame, BackpackFrame, HookManager, SlotFactory.CloneForGhost)
-    
+
     -- 7. BUILD UI
     BuildHotbar()
     BuildStorage()
-    
+
     -- 8. REBIND: Set up keybinds again
     SetUpBinds()
-    --InventoryController.HandleEquipped(Fusion.peek(Store.EquippedUUID), false) 
-    
+    --InventoryController.HandleEquipped(Fusion.peek(Store.EquippedUUID), false)
+
     return {success = true, reason = "[Stoway] Reload complete!"}
 end
 
@@ -340,31 +338,31 @@ local NetworkHandlers = {
     Init = function(payload)
         Store.Init(payload)
     end,
-    
+
     Correction = function(payload)
         -- Server sent a correction, re-sync state
         Store.Init(payload)
     end,
-    
+
     Add = function(payload)
         InventoryController.Add(payload)
     end,
-    
+
     Remove = function(payload)
         -- Server removed an item, sync locally
         InventoryController.Remove(payload.SlotType, payload.Slot, false)
     end,
-    
+
     Swap = function(payload)
         -- Server confirmed swap (client already applied optimistically)
         -- Could use for rollback if needed
         InventoryController.Swap(payload.From.Type, payload.From.Slot, payload.To.Type, payload.To.Slot, false)
     end,
-    
+
     Equip = function(payload)
         InventoryController.SetEquipped(payload.UUID, false)
     end,
-    
+
     UpdateMeta = function(payload)
         -- Update item metadata
         local items = Fusion.peek(Store.Items)
@@ -391,7 +389,7 @@ local NetworkHandlers = {
     UpdateSettings = function(payload)
         Store.Settings:set(payload)
     end,
-    
+
     Reload = function(payload)
         -- Server triggered reload (e.g., player became mod)
         -- payload.GuiName: Name of new GUI to load from ReplicatedStorage
@@ -404,17 +402,17 @@ local NetworkHandlers = {
 function LoadInitialData()
     local ReturnData = GetStowayFromServer:InvokeServer()
     local uiType : {FolderName: string, GuiName: string, HookPresetName: string} | nil = ReturnData.data.Settings.UiType and Settings.DifferentUIs[ReturnData.data.Settings.UiType]
-    
+
     if not ReturnData.success then return warn(ReturnData.reason) end
     if not uiType then return warn("Cannot load data without the type of ui to show") end
-    
+
     Store.Init(ReturnData.data)
 
     BuildGui(ReturnData.data.Settings.UiType, uiType.FolderName, uiType.GuiName)
     BuildHooks(uiType.HookPresetName)
-    
+
     -- Wire up NetworkHandler with our handlers (like server pattern)
-    
+
     return true
 end
 
@@ -432,7 +430,6 @@ function ClientInventoryService.Init()
     BuildStorage()
     SetUpBinds()
     NetworkHandler.Init(NetworkHandlers)
-    
 end
 
 ClientInventoryService.Hooks = HookManager
