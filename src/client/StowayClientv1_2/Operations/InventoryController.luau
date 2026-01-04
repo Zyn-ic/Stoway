@@ -37,7 +37,7 @@ function Controller.Add(payload)
     local items = table.clone(_peek(Store.Items))
     local hotbar = table.clone(_peek(Store.Hotbar))
     local storage = table.clone(_peek(Store.Storage))
-    
+
     local weightChange = 0
 
     for _, data in ipairs(payload.Slots) do
@@ -45,7 +45,7 @@ function Controller.Add(payload)
         if items[data.UUID] then return end
         items[data.UUID] = data.Item
         weightChange += data.Item.Amount or 1
-        
+
         -- 2. Place it in the correct container
         if data.SlotType == "Hotbar" then
             -- For Hotbar, we target a specific index (1-9) e.g
@@ -67,7 +67,7 @@ function Controller.Add(payload)
     Store.Items:set(items)
     Store.Hotbar:set(hotbar)
     Store.Storage:set(storage)
-    
+
     Store.Weight:set(_peek(Store.Weight) + weightChange)
 end
 
@@ -75,7 +75,7 @@ function Controller.AddToBackpack(fromType: string, fromIndex: number, REPLICATE
     local state = Store:GetState()
     local hotbar = table.clone(state.Hotbar)
     local storage = table.clone(state.Storage)
-    
+
     -- 1. Get the UUID from the source
     local uuidToMove = hotbar[fromIndex]
     if not uuidToMove then return end
@@ -85,21 +85,21 @@ function Controller.AddToBackpack(fromType: string, fromIndex: number, REPLICATE
     if fromType == "Hotbar" then
         -- Clear the source slot
         hotbar[fromIndex] = nil
-        
+
         -- Append to the end of storage
         table.insert(storage, uuidToMove)
-        
+
         -- Update State (Triggers Fusion UI)
         Store.Hotbar:set(hotbar)
         Store.Storage:set(storage)
-        
+
         if REPLICATE then
             NetworkHandler.Send("Swap", {
             fromType = fromType, fromSlot = fromIndex,
             toType = "Storage", toSlot = #storage
         })
         end
-        
+
         if HookManager then
              HookManager:Fire("OnSwap", fromType, fromIndex)
         end
@@ -118,7 +118,7 @@ function Controller.Remove(slotType: string, slotIndex: number, REPLICATE:boolea
         local newItems = table.clone(state.Items)
         local newWeight = _peek(Store.Weight) - Store:GetWeightOfUuid(uuid)
         uuidToRemove = newHotbar[slotIndex]
-        
+
         if uuidToRemove then
             newHotbar[slotIndex] = nil -- Just clear the value
             newItems[uuidToRemove] = nil
@@ -126,7 +126,7 @@ function Controller.Remove(slotType: string, slotIndex: number, REPLICATE:boolea
             Store.Hotbar:set(newHotbar)
             Store.Weight:set(newWeight)
         end
-        
+
     --// MODE 2: STORAGE (Hard Delete)
     -- We want the slot frame to be destroyed.
     -- We USE table.remove. This shrinks the array size.
@@ -136,11 +136,11 @@ function Controller.Remove(slotType: string, slotIndex: number, REPLICATE:boolea
         local newWeight = _peek(Store.Weight) - Store:GetWeightOfUuid(uuid)
         uuidToRemove = newStorage[slotIndex]
         Store.Weight:set(newWeight)
-        
+
         if uuidToRemove then
             -- This shifts all items down. Index 5 becomes Index 4.
             -- The total count decreases by 1.
-            table.remove(newStorage, slotIndex) 
+            table.remove(newStorage, slotIndex)
             newItems[uuidToRemove] = nil
             Store.Items:set(newItems)
             Store.Storage:set(newStorage)
@@ -164,7 +164,7 @@ function Controller.Remove(slotType: string, slotIndex: number, REPLICATE:boolea
     --         local gui = game.Players.LocalPlayer.PlayerGui:FindFirstChild("StowayGui").Stoway
     --         local backpackframe = gui.Backpack.ScrollingFrame
     --         local frame = backpackframe:FindFirstChild(tostring(CreateSlotFrameName(slotIndex)))
-            
+
     --         -- extra clean up just incase but the scope should cleanup
     --         if frame then
     --             Scope:doCleanup()
@@ -184,7 +184,7 @@ function Controller.Drop(slotType: string, slotIndex: number, amount: number?, R
     local playerSettings = _peek(Store.Settings)
     local isDroppable = playerSettings.Gameplay and playerSettings.Gameplay.Droppable
     if isDroppable == nil then isDroppable = GlobalSettings.Gameplay.Droppable end
-    
+
     if not isDroppable then return nil end
 
     local currentAmount = Store:GetWeightOfUuid(uuid) or 0
@@ -201,7 +201,7 @@ function Controller.Drop(slotType: string, slotIndex: number, amount: number?, R
             items[uuid] = item
             Store.Items:set(items)
             Store.Weight:set(_peek(Store.Weight) - dropAmount)
-            
+
             NetworkHandler.Send("Drop", {
                 slotType = slotType,
                 slot = slotIndex,
@@ -223,7 +223,7 @@ function Controller.Drop(slotType: string, slotIndex: number, amount: number?, R
             return droppedUUID
         end
     end
-    
+
     return nil
 end
 
@@ -232,9 +232,9 @@ function Controller.Swap(fromType: string, fromSlot: number, toType: string, toS
     local state = Store:GetState()
     local newHotbar = table.clone(state.Hotbar)
     local newStorage = table.clone(state.Storage)
-    
+
     local function getRef(t) return t == "Hotbar" and newHotbar or newStorage end
-    
+
     local ListA = getRef(fromType)
     local ListB = getRef(toType)
 
@@ -242,18 +242,18 @@ function Controller.Swap(fromType: string, fromSlot: number, toType: string, toS
     local ListBValue = ListB[toSlot]
 
     --// LOGIC: If moving from Storage to Hotbar
-    if fromType == "Storage" and toType == "Hotbar" then
+    if fromType == "Storage" and toType == "Hotbar" and not newHotbar[toSlot] then
         -- 1. Put the storage item into the hotbar
         newHotbar[toSlot] = ListAValue
         -- 2. Remove the item from storage (shifting indices)
         table.remove(newStorage, fromSlot)
-    
+
     --// LOGIC: If moving from Hotbar to Storage (Empty Slot)
     elseif fromType == "Hotbar" and toType == "Storage" and ListBValue == nil then
         newHotbar[fromSlot] = nil
         table.insert(newStorage, ListAValue)
         -- No cleanup needed for Hotbar source, it just becomes invisible
-        
+
     else
         -- Standard swap for Hotbar <-> Hotbar or Storage <-> Storage
         ListA[fromSlot] = ListBValue
@@ -263,7 +263,7 @@ function Controller.Swap(fromType: string, fromSlot: number, toType: string, toS
     -- Update Stores
     Store.Hotbar:set(newHotbar)
     Store.Storage:set(newStorage)
-    
+
     if REPLICATE then
         NetworkHandler.Send("Swap", {
             fromType = fromType, fromSlot = fromSlot,
@@ -272,7 +272,7 @@ function Controller.Swap(fromType: string, fromSlot: number, toType: string, toS
     end
 
     if HookManager then
-        HookManager:Fire("OnSwap", fromType, fromSlot) 
+        HookManager:Fire("OnSwap", fromType, fromSlot)
     end
 end
 
@@ -296,8 +296,8 @@ end
 
 function Controller.SetEquipped(uuid: string, REPLICATE:boolean)
     Store.EquippedUUID:set(uuid)
-    
-    
+
+
     -- Notify server
     local slotType, slotIndex = Store:FindSlotByUUID(uuid)
     if slotType and slotIndex and REPLICATE then

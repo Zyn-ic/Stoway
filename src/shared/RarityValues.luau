@@ -16,6 +16,12 @@ rarities.RaritySortOrder = {
     ["common"] = 5
 }
 
+rarities.ItemTypeColor = {
+    ["consumable"] = Color3.fromRGB(169, 169, 169),
+    ["weapon"] = Color3.fromRGB(115,147,179),
+    ["material"] = Color3.fromRGB(255,255,255)
+}
+
 -- Same concept for ItemType
 rarities.ItemTypeSortOrder = {
     ["weapon"] = 1,
