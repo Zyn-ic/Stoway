@@ -13,6 +13,7 @@ local CloneForGhost = nil
 
 local DragState = {
 	isDragging = false,
+	enabled = false,
 	sourceType = nil,
 	sourceSlot = nil,
 	originalFrame = nil,
@@ -51,8 +52,16 @@ function DragHandler.GetDragState() : {isDragging : boolean,sourceType :any ,sou
 	return DragState
 end
 
+function DragHandler.SetEnabled(state: boolean)
+	DragState.enabled = state
+	if not state and DragState.isDragging then
+		DragHandler.Destroy()
+	end
+end
+
 --// Start drag
 function DragHandler.StartDrag(slotType: string, slotIndex: number, originalFrame: Frame, FullData--[[, Scope]])
+    if not DragState.enabled then return end
     if DragState.isDragging then return end
 
 	-- Validate slot has item
@@ -348,9 +357,12 @@ function DragHandler.Reset()
 	if DragState.ghostFrame then
 		DragState.ghostFrame:Destroy()
 	end
+    
+    local currentEnabled = DragState.enabled
 
 	DragState = {
 		isDragging = false,
+		enabled = currentEnabled,
 		sourceType = nil,
 		sourceSlot = nil,
 		originalFrame = nil,

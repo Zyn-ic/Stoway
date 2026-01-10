@@ -15,19 +15,21 @@ local HOOK_TYPES = {
 	OnItemAdd = "OnItemAdd",
 	OnItemRemove = "OnItemRemove",
 	OnSwap = "OnSwap",
+	OnSelect = "OnSelect",
+	OnDeselect = "OnDeselect",
 }
 
 
 --// Create a new HookManager instance for a UI skin
 function HookManager.new(): HookManager
 	local self = setmetatable({}, HookManager)
-	
+
 	self._hooks = {}
 
 	for _, hookName in pairs(HOOK_TYPES) do
 		self._hooks[hookName] = {}
 	end
-	
+
 	return self
 end
 
@@ -44,7 +46,7 @@ end
 function HookManager:Unregister(hookName: string, callback: (...any) -> ())
 	local list = self._hooks[hookName]
 	if not list then return end
-	
+
 	for i, cb in ipairs(list) do
 		if cb == callback then
 			table.remove(list, i)
@@ -71,7 +73,7 @@ end
 function HookManager:Fire(hookName: string, ...: any)
 	local list = self._hooks[hookName]
 	if not list then return end
-	
+
 	for _, callback in ipairs(list) do
 		task.spawn(callback, ...)
 	end

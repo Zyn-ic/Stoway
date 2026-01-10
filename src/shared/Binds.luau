@@ -2,6 +2,27 @@
 
 local Binds = {}
 
+-- Helper function to apply binds to an action
+-- Usage: Binds.ApplyToAction(action, Binds.Global.InventoryActions.Swap)
+-- Or:   Binds.ApplyToAction(action, Binds.Global.InventoryActions.Swap, "Console") -- Console only
+function Binds.ApplyToAction(action, bindConfig, inputType: ("PC" | "Console")?)
+    if not action or not bindConfig then return end
+
+    local function applyBinds(binds)
+        if not binds then return end
+        for _, b in ipairs(binds) do
+            action:AddBind(b.Main, unpack(b.Modifiers or {}))
+        end
+    end
+
+    if inputType then
+        applyBinds(bindConfig[inputType])
+    else
+        applyBinds(bindConfig.PC)
+        applyBinds(bindConfig.Console)
+    end
+end
+
 -- Hotbar Slots Configuration
 -- PC: Standard number keys
 -- Console: Combo binds (e.g., R1 + Button)
@@ -62,7 +83,29 @@ Binds.HotbarSlots = {
 Binds.Global = {
     Backpack = {
         PC = { {Main = Enum.KeyCode.Tab}, {Main = Enum.KeyCode.B} },
-        Console = { {Main = Enum.KeyCode.ButtonSelect}, {Main = Enum.KeyCode.DPadLeft} }
+        Console = { {Main = Enum.KeyCode.DPadLeft} }
+    },
+    SwitchMode = {
+        PC = { {Main = Enum.KeyCode.M} }, -- Testing bind
+        Console = { {Main = Enum.KeyCode.ButtonL3} } -- Long press logic
+    },
+    InventoryActions = {
+        Swap = {
+            Console = { {Main = Enum.KeyCode.ButtonY} }
+        },
+        Drop = {
+            Console = { {Main = Enum.KeyCode.ButtonX} }
+        },
+        QuickMove = {
+            Console = { {Main = Enum.KeyCode.ButtonL1}, Modifiers = {Enum.KeyCode.ButtonR1} }
+        },
+        Cancel = {
+            Console = { {Main = Enum.KeyCode.ButtonB} }
+        }
+    },
+    DropActions = {
+        Increase = { Console = { {Main = Enum.KeyCode.DPadUp} } },
+        Decrease = { Console = { {Main = Enum.KeyCode.DPadDown} } },
     }
 }
 

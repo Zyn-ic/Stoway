@@ -121,22 +121,41 @@ function SlotFactory.Create(Scope: any, props: SlotProps)
 			end
 		end)
 
-        slotbutton.MouseEnter:Connect(function()
+		slotbutton.MouseEnter:Connect(function()
             if props.hookManager and not IsActiveHover then
-				-- Safely traverse parent hierarchy to find hotbardeco
-				local admindecoration = nil
-				if props.Parent.Name == "Hotbar" then
-					admindecoration = props.Parent.Parent and props.Parent.Parent:FindFirstChild("hotbardeco")
-				else
-					admindecoration = props.Parent.Parent and props.Parent.Parent.Parent and props.Parent.Parent.Parent:FindFirstChild("hotbardeco")
-				end
-
 				IsActiveHover = true
-                props.hookManager:Fire("OnSlotHover", admindecoration or slotbutton)
+                props.hookManager:Fire("OnSlotHover", slotbutton, props.SlotType, props.SlotIndex)
 				task.wait(0.25)
 				IsActiveHover = false
 			end
 		end)
+
+        --// Custom Gamepad Selection Highlight
+        local cursorTemplate = nil
+        if props.GuiFOLDER and props.GuiFOLDER:FindFirstChild("Slot") then
+            cursorTemplate = props.GuiFOLDER.Slot:FindFirstChild("SelectionCursor")
+        end
+
+        if cursorTemplate then
+            slotbutton.SelectionImageObject = cursorTemplate
+        else
+            -- Fallback
+            local cursor = Instance.new("Frame")
+            cursor.Name = "SelectionCursor"
+            cursor.Size = UDim2.fromScale(1, 1)
+            cursor.BackgroundTransparency = 1
+            cursor.Visible = false 
+            cursor.Parent = slotbutton
+            
+            local stroke = Instance.new("UIStroke")
+            stroke.Name = "CursorStroke"
+            stroke.Color = Color3.fromRGB(255, 255, 255)
+            stroke.Thickness = 3
+            stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            stroke.Parent = cursor
+            
+            slotbutton.SelectionImageObject = cursor
+        end
 	end
 
 	--// Hydrate stack count

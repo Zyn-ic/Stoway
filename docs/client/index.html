@@ -91,6 +91,12 @@
                 </div>
                 <pre>src/client/StowayClientv1_2/
 ├── init.luau                    # Entry Point (ClientInventoryService)
+├── Input/
+│   ├── InputManager.luau        # Input Contexts & Binds
+│   ├── InteractionManager.luau  # Hybrid Input Switching (Mouse vs Gamepad)
+│   ├── ConsoleModeManager.luau  # Console State Machine (Combat vs Inventory)
+│   ├── SelectionManager.luau    # Gamepad Selection Logic
+│   └── ConsoleDropUI.luau       # Dynamic Drop Menu (Templated)
 ├── CoreState/
 │   └── InventoryStore.luau      # Fusion State (Items, Hotbar, Storage)
 ├── Hook/
@@ -100,10 +106,35 @@
 ├── DragFunctions/
 │   └── DragHandler.luau         # Drag & Drop Logic
 ├── SlotCreation/
-│   └── SlotFactory.luau         # Slot UI Component
+│   └── SlotFactory.luau         # Slot UI Component (Skin-Agnostic)
 └── NetworkFunctions/
     └── NetworkHandler.luau      # Server Sync</pre>
             </div>
+        </section>
+
+        <section style="margin-top: 4rem;">
+            <div class="section-header">
+                <h2>Hybrid Input System</h2>
+                <p>Seamless switching between input methods</p>
+            </div>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                V1.2 introduces a robust hybrid input system managed by <code>InteractionManager</code>. It automatically monitors <code>UserInputService.PreferredInput</code> to switch modes dynamically:
+            </p>
+            <ul style="color: var(--text-secondary); margin-left: 2rem; margin-bottom: 2rem;">
+                <li><strong>Mouse/Touch:</strong> Enables full <code>DragHandler</code> functionality for traditional drag-and-drop inventory management.</li>
+                <li><strong>Gamepad:</strong> Activates <code>ConsoleModeManager</code>, disabling drag-and-drop in favor of a state-based selection system.</li>
+            </ul>
+
+            <div class="section-header">
+                <h3>Console Modes</h3>
+            </div>
+            <p style="color: var(--text-secondary);">
+                When in Gamepad mode, the system operates in two distinct states, toggleable via a long-press (default L3):
+            </p>
+            <ul style="color: var(--text-secondary); margin-left: 2rem;">
+                <li><strong>⚔️ Combat Mode:</strong> Inventory interaction is disabled. All inputs trigger character actions (attacks, skills).</li>
+                <li><strong>🎒 Inventory Mode:</strong> Character controls are suppressed. D-Pad and Buttons navigate the UI, select slots, and perform context actions (Swap, Drop, Quick Move).</li>
+            </ul>
         </section>
     </main>
 </body>

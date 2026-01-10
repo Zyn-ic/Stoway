@@ -17,6 +17,9 @@ local Store = require(script.CoreState.InventoryStore)
 local SlotFactory = require(script.SlotCreation.SlotFactory)
 local NetworkHandler = require(script.NetworkFunctions.NetworkHandler)
 local InputManager = require(script.Input.InputManager)
+local SelectionManager = require(script.Input.SelectionManager)
+local InteractionManager = require(script.Input.InteractionManager)
+local ConsoleDropUI = require(script.Input.ConsoleDropUI)
 
 
 -- BindableEvents
@@ -139,11 +142,12 @@ function BuildGui(UIVersion, FolderName, GuiName)
     if not GuiName then return {success = false, reason = `GUI NAME IS BLANK`} end
 
 
-    GUIFOLDER = GUISTORAGE[UIVersion]:FindFirstChild(FolderName) and GUISTORAGE[UIVersion]:FindFirstChild(FolderName):Clone()
+    GUIFOLDER = GUISTORAGE[UIVersion]:FindFirstChild(FolderName) --and GUISTORAGE[UIVersion]:FindFirstChild(FolderName):Clone()
     if not GUIFOLDER then return {success = false, reason = `No Folder by the name {FolderName}`} end
 
     InventoryGui = GUIFOLDER:FindFirstChild(GuiName);
     if not InventoryGui then return {success = false, reason = `No GUI BY THAT NAME -> {GuiName}`} end
+    InventoryGui = InventoryGui:Clone()
 
     return xpcall(
         function ()
@@ -154,7 +158,17 @@ function BuildGui(UIVersion, FolderName, GuiName)
             SearchFilter = BackpackFrame.SearchFilter
             WeightLabel = BackpackFrame.Weight
 
-            GUIFOLDER.Parent = Player.PlayerGui
+            InventoryGui.Parent = Player.PlayerGui
+
+            -- Setup Dynamic Drop Menu Template
+            local slotFolder = GUIFOLDER:FindFirstChild("Slot")
+            if slotFolder then
+                local dropTemplate = slotFolder:FindFirstChild("DropMenu")
+                if dropTemplate then
+                    ConsoleDropUI.SetTemplate(dropTemplate)
+                end
+            end
+
             return {success = true, reason = ""}
         end,
 
@@ -299,6 +313,9 @@ function ClientInventoryService.Reload(config: {UiType: string?, Data: any?}?)
     print("[Stoway] Reloading inventory system...")
 
     -- 1. DESTROY: Unbind all hotkey actions (Handled by SetUpBinds cleanup)
+    InputManager.Destroy()
+    InteractionManager.Destroy()
+    SelectionManager.Destroy()
 
     -- 2. CLEANUP: Destroy Fusion scopes (UI cleanup)
     if HotbarScope then
@@ -312,7 +329,7 @@ function ClientInventoryService.Reload(config: {UiType: string?, Data: any?}?)
 
 
     -- 3. GUI REFERENCES: Reload UI references (new GUI if provided)
-    if GUIFOLDER then GUIFOLDER:Destroy() end
+    if InventoryGui then InventoryGui:Destroy(); InventoryGui = nil end
     BuildGui(config.UiType, uiType.FolderName, uiType.GuiName)
 
     -- 4. HOOKS: Clear old hooks and load new preset (from Name)
@@ -326,6 +343,9 @@ function ClientInventoryService.Reload(config: {UiType: string?, Data: any?}?)
     -- 6. REBUILD: Reinitialize DragHandler with new references
     DragHandler.Destroy()
     DragHandler.Init(DraggingGui, HotbarFrame, BackpackFrame, HookManager, SlotFactory.CloneForGhost)
+
+    InteractionManager.Init(DragHandler)
+    SelectionManager.Init(HotbarFrame, BackpackFrame, HookManager)
 
     -- 7. BUILD UI
     BuildHotbar()
@@ -430,6 +450,10 @@ function ClientInventoryService.Init()
     StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
 
     DragHandler.Init(DraggingGui, HotbarFrame, BackpackFrame, HookManager, SlotFactory.CloneForGhost)
+
+    InteractionManager.Init(DragHandler)
+    SelectionManager.Init(HotbarFrame, BackpackFrame, HookManager)
+
     BuildHotbar()
     BuildStorage()
     SetUpBinds()

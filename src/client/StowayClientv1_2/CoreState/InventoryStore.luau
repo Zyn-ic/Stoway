@@ -123,4 +123,39 @@ function Store:FindSlotByUUID(uuid: string): (string?, number?)
     return nil, nil
 end
 
+-- Get item data from a specific slot
+function Store:GetItemFromSlot(slotType: string, slotIndex: number)
+    local uuid = Store:GetUUidFromIndex(slotIndex, slotType)
+    if not uuid then return nil end
+    return peek(Store.Items)[uuid]
+end
+
+-- Get max hotbar slots from settings
+function Store:GetMaxHotbarSlots(): number
+    local settings = peek(Store.Settings)
+    return (settings and settings.MaxHotbarSlots) or 10
+end
+
+-- Find first empty hotbar slot
+function Store:FindFirstEmptyHotbarSlot(): number?
+    local hotbar = peek(Store.Hotbar)
+    local items = peek(Store.Items)
+    local maxSlots = Store:GetMaxHotbarSlots()
+    
+    for i = 1, maxSlots do
+        local uuid = hotbar[i]
+        if not uuid or not items[uuid] then
+            return i
+        end
+    end
+    
+    return nil -- Hotbar full
+end
+
+-- Find first available storage slot (next index)
+function Store:FindFirstEmptyStorageSlot(): number
+    local storage = peek(Store.Storage)
+    return #storage + 1
+end
+
 return Store
