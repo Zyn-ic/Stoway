@@ -1,95 +1,105 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Client Overview V2 - Stoway Docs</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="../css/styles.css" />
+        <link rel="icon" href="../assets/Logo.png" />
+    </head>
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Client Overview V1.2 - Stoway Docs</title>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="../css/styles.css">
-    <link rel="icon" href="../assets/Logo.png" />
-</head>
+    <body>
+        <div class="bg-gradient"></div>
 
-<body>
-    <div class="bg-gradient"></div>
-
-    <nav class="nav">
-        <a href="../index.html" class="nav-logo">
-            <img src="../assets/Logo.png" alt="Stoway">
-            <h1>Stoway</h1>
-        </a>
-
-        <div class="nav-section">
-            <div class="nav-section-title">Documentation</div>
-            <a href="../index.html" class="nav-link">Home</a>
-        </div>
-
-        <div class="nav-section">
-            <div class="nav-section-title">Backend</div>
-            <a href="../server/index.html" class="nav-link">Server Overview</a>
-            <a href="../server/inventory-service.html" class="nav-link">InventoryService</a>
-            <a href="../server/inventory-data.html" class="nav-link">InventoryData</a>
-            <a href="../server/utils.html" class="nav-link">Utilities</a>
-        </div>
-
-        <div class="nav-section">
-            <div class="nav-section-title">Frontend</div>
-            <a href="index.html" class="nav-link active">Client Overview</a>
-            <a href="hooks.html" class="nav-link">Hook System</a>
-            <a href="state.html" class="nav-link">Core State</a>
-            <a href="operations.html" class="nav-link">Operations</a>
-        </div>
-    </nav>
-
-    <main class="main">
-        <div class="breadcrumb">
-            <a href="../index.html">Docs</a>
-            <span>/</span>
-            <span class="current">Client V1.2</span>
-        </div>
-
-        <section class="hero" style="padding: 2rem;">
-            <h1 style="font-size: 2.5rem;">Client Frontend V1.2</h1>
-            <p>Reactive UI built with Fusion, featuring a robust Hook system and Drag-and-Drop.</p>
-        </section>
-
-        <div class="section-cards" style="margin-top: 2rem;">
-            <a href="hooks.html" class="section-card">
-                <div class="section-card-icon">🪝</div>
-                <h3>Hook System</h3>
-                <p>Event-driven customization for slot interactions.</p>
-                <span class="arrow">→</span>
+        <nav class="nav">
+            <a href="../index.html" class="nav-logo">
+                <img src="../assets/Logo.png" alt="Stoway" />
+                <h1>Stoway</h1>
             </a>
 
-            <a href="state.html" class="section-card">
-                <div class="section-card-icon">🧠</div>
-                <h3>Core State</h3>
-                <p>Reactive InventoryStore powered by Fusion.</p>
-                <span class="arrow">→</span>
-            </a>
-
-            <a href="operations.html" class="section-card">
-                <div class="section-card-icon">🎮</div>
-                <h3>Operations</h3>
-                <p>InventoryController for safe server actions.</p>
-                <span class="arrow">→</span>
-            </a>
-        </div>
-
-        <section style="margin-top: 4rem;">
-            <div class="section-header">
-                <h2>Architecture</h2>
-                <p>Client-side structure</p>
+            <div class="nav-section">
+                <div class="nav-section-title">Documentation</div>
+                <a href="../index.html" class="nav-link">Home</a>
             </div>
 
-            <div class="code-block">
-                <div class="code-header">
-                    <span class="code-title">Directory Structure</span>
-                    <span class="code-lang">Tree</span>
+            <div class="nav-section">
+                <div class="nav-section-title">Backend</div>
+                <a href="../server/index.html" class="nav-link"
+                    >Server Overview</a
+                >
+                <a href="../server/inventory-service.html" class="nav-link"
+                    >InventoryService</a
+                >
+                <a href="../server/inventory-data.html" class="nav-link"
+                    >InventoryData</a
+                >
+                <a href="../server/utils.html" class="nav-link">Utilities</a>
+            </div>
+
+            <div class="nav-section">
+                <div class="nav-section-title">Frontend</div>
+                <a href="index.html" class="nav-link active">Client Overview</a>
+                <a href="hooks.html" class="nav-link">Hook System</a>
+                <a href="state.html" class="nav-link">Core State</a>
+                <a href="operations.html" class="nav-link">Operations</a>
+            </div>
+        </nav>
+
+        <main class="main">
+            <div class="breadcrumb">
+                <a href="../index.html">Docs</a>
+                <span>/</span>
+                <span class="current">Client V2</span>
+            </div>
+
+            <section class="hero" style="padding: 2rem">
+                <h1 style="font-size: 2.5rem">Client Frontend V2</h1>
+                <p>
+                    Reactive UI built with Fusion, featuring a robust Hook
+                    system and Drag-and-Drop.
+                </p>
+            </section>
+
+            <div class="section-cards" style="margin-top: 2rem">
+                <a href="hooks.html" class="section-card">
+                    <div class="section-card-icon">🪝</div>
+                    <h3>Hook System</h3>
+                    <p>Event-driven customization for slot interactions.</p>
+                    <span class="arrow">→</span>
+                </a>
+
+                <a href="state.html" class="section-card">
+                    <div class="section-card-icon">🧠</div>
+                    <h3>Core State</h3>
+                    <p>Reactive InventoryStore powered by Fusion.</p>
+                    <span class="arrow">→</span>
+                </a>
+
+                <a href="operations.html" class="section-card">
+                    <div class="section-card-icon">🎮</div>
+                    <h3>Operations</h3>
+                    <p>InventoryController for safe server actions.</p>
+                    <span class="arrow">→</span>
+                </a>
+            </div>
+
+            <section style="margin-top: 4rem">
+                <div class="section-header">
+                    <h2>Architecture</h2>
+                    <p>Client-side structure</p>
                 </div>
-                <pre>src/client/StowayClientv1_2/
+
+                <div class="code-block">
+                    <div class="code-header">
+                        <span class="code-title">Directory Structure</span>
+                        <span class="code-lang">Tree</span>
+                    </div>
+                    <pre>
+src/client/StowayClientv1_2/
 ├── init.luau                    # Entry Point (ClientInventoryService)
 ├── Input/
 │   ├── InputManager.luau        # Input Contexts & Binds
@@ -108,35 +118,62 @@
 ├── SlotCreation/
 │   └── SlotFactory.luau         # Slot UI Component (Skin-Agnostic)
 └── NetworkFunctions/
-    └── NetworkHandler.luau      # Server Sync</pre>
-            </div>
-        </section>
+    └── NetworkHandler.luau      # Server Sync</pre
+                    >
+                </div>
+            </section>
 
-        <section style="margin-top: 4rem;">
-            <div class="section-header">
-                <h2>Hybrid Input System</h2>
-                <p>Seamless switching between input methods</p>
-            </div>
-            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
-                V1.2 introduces a robust hybrid input system managed by <code>InteractionManager</code>. It automatically monitors <code>UserInputService.PreferredInput</code> to switch modes dynamically:
-            </p>
-            <ul style="color: var(--text-secondary); margin-left: 2rem; margin-bottom: 2rem;">
-                <li><strong>Mouse/Touch:</strong> Enables full <code>DragHandler</code> functionality for traditional drag-and-drop inventory management.</li>
-                <li><strong>Gamepad:</strong> Activates <code>ConsoleModeManager</code>, disabling drag-and-drop in favor of a state-based selection system.</li>
-            </ul>
+            <section style="margin-top: 4rem">
+                <div class="section-header">
+                    <h2>Hybrid Input System</h2>
+                    <p>Seamless switching between input methods</p>
+                </div>
+                <p style="color: var(--text-secondary); margin-bottom: 1rem">
+                    Client V2 introduces a robust hybrid input system managed by
+                    <code>InteractionManager</code>. It automatically monitors
+                    <code>UserInputService.PreferredInput</code> to switch modes
+                    dynamically:
+                </p>
+                <ul
+                    style="
+                        color: var(--text-secondary);
+                        margin-left: 2rem;
+                        margin-bottom: 2rem;
+                    "
+                >
+                    <li>
+                        <strong>Mouse/Touch:</strong> Enables full
+                        <code>DragHandler</code> functionality for traditional
+                        drag-and-drop inventory management.
+                    </li>
+                    <li>
+                        <strong>Gamepad:</strong> Activates
+                        <code>ConsoleModeManager</code>, disabling drag-and-drop
+                        in favor of a state-based selection system.
+                    </li>
+                </ul>
 
-            <div class="section-header">
-                <h3>Console Modes</h3>
-            </div>
-            <p style="color: var(--text-secondary);">
-                When in Gamepad mode, the system operates in two distinct states, toggleable via a long-press (default L3):
-            </p>
-            <ul style="color: var(--text-secondary); margin-left: 2rem;">
-                <li><strong>⚔️ Combat Mode:</strong> Inventory interaction is disabled. All inputs trigger character actions (attacks, skills).</li>
-                <li><strong>🎒 Inventory Mode:</strong> Character controls are suppressed. D-Pad and Buttons navigate the UI, select slots, and perform context actions (Swap, Drop, Quick Move).</li>
-            </ul>
-        </section>
-    </main>
-</body>
-
+                <div class="section-header">
+                    <h3>Console Modes</h3>
+                </div>
+                <p style="color: var(--text-secondary)">
+                    When in Gamepad mode, the system operates in two distinct
+                    states, toggleable via a long-press (default L3):
+                </p>
+                <ul style="color: var(--text-secondary); margin-left: 2rem">
+                    <li>
+                        <strong>⚔️ Combat Mode:</strong> Inventory interaction
+                        is disabled. All inputs trigger character actions
+                        (attacks, skills).
+                    </li>
+                    <li>
+                        <strong>🎒 Inventory Mode:</strong> Character controls
+                        are suppressed. D-Pad and Buttons navigate the UI,
+                        select slots, and perform context actions (Swap, Drop,
+                        Quick Move).
+                    </li>
+                </ul>
+            </section>
+        </main>
+    </body>
 </html>
