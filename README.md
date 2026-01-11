@@ -1,4 +1,4 @@
-# Stoway - Advanced Roblox Inventory System (V1.2) 🎒✨
+# Stoway - Advanced Roblox Inventory System (V2.3.6) 🎒✨
 <img src="pics/Logo.png" alt="Stoway Logo" width="120" align = "left" style="margin-right:15px"/> 
 
 <div style="display: flex; flex-direction: column; gap: 2px;">
@@ -9,7 +9,7 @@
 
 ## 📖 Table of Contents
 
-- [Stoway - Advanced Roblox Inventory System (V1.2) 🎒✨](#stoway---advanced-roblox-inventory-system-v12-)
+- [Stoway - Advanced Roblox Inventory System (V2.3.6) 🎒✨](#stoway---advanced-roblox-inventory-system-v236-)
   - [📖 Table of Contents](#-table-of-contents)
   - [🌟 Core Features ](#-core-features-)
     - [🔥 Hotbar ](#-hotbar-)
@@ -38,6 +38,7 @@
 ### ⚙️ Advanced Systems <a name="advanced-systems"></a>
 * **⚛️ Reactive UI (Fusion):** Uses the Fusion library for highly performant, state-driven UI updates. Zero polling.
 * **📡 Delta Replication:** The server only sends *changes* to the client, ensuring minimal network usage even with large inventories.
+* **🎮 Console Support:** Full gamepad support with dedicated console navigation, selection management, and drop UI.
 * **🎨 UI Skins:** Support for multiple UI layouts/skins (e.g., "Default", "Admin", "Trader") that can be switched on the fly.
 * **💎 Rarity Support:** Integrated rarity system with color-coded borders and sorting priority.
 * **💧 Droppable Items:** Configurable logic for dropping items into the world.
@@ -67,7 +68,7 @@
 
 ## 🛠️ Configuration <a name="configuration"></a>
 
-Stoway V1.2 is configured via `ReplicatedStorage/Shared/Settings.luau`.
+Stoway V2.3.6 is configured via `ReplicatedStorage/Shared/Settings.luau`.
 
 ```lua
 local Settings = {}
