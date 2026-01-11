@@ -13,6 +13,7 @@ local CloneForGhost = nil
 
 local DragState = {
 	isDragging = false,
+	enabled = false,
 	sourceType = nil,
 	sourceSlot = nil,
 	originalFrame = nil,
@@ -51,10 +52,18 @@ function DragHandler.GetDragState() : {isDragging : boolean,sourceType :any ,sou
 	return DragState
 end
 
+function DragHandler.SetEnabled(state: boolean)
+	DragState.enabled = state
+	if not state and DragState.isDragging then
+		DragHandler.Destroy()
+	end
+end
+
 --// Start drag
 function DragHandler.StartDrag(slotType: string, slotIndex: number, originalFrame: Frame, FullData--[[, Scope]])
+    if not DragState.enabled then return end
     if DragState.isDragging then return end
-    
+
 	-- Validate slot has item
 	local uuid
 	if slotType == "Hotbar" then
@@ -62,28 +71,28 @@ function DragHandler.StartDrag(slotType: string, slotIndex: number, originalFram
 	else
 		uuid = peek(FullData).Storage[slotIndex]
 	end
-	
+
 	if not uuid then return end
-	
+
 	local items = peek(FullData).Items
 	if not items[uuid] then return end
-    
+
     DragState.originalFrame = originalFrame
     DragState.sourceType = slotType
     DragState.sourceSlot = slotIndex
-    
+
     -- Store the starting position to check threshold
     local startPosition = GetGuiMousePosition()
-    
+
     -- Clone ghost immediately but don't parent yet
     local ghost = CloneForGhost(originalFrame)
-    
+
     checkConnection = UserInputService.InputChanged:Connect(function(input)
         if input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
 
         local currentPosition = GetGuiMousePosition()
         local distance = (currentPosition - startPosition).Magnitude
-        
+
         if distance >= DragThreshold then
             if checkConnection then
                 checkConnection:Disconnect()
@@ -93,7 +102,7 @@ function DragHandler.StartDrag(slotType: string, slotIndex: number, originalFram
             DragHandler.CreateGhost(originalFrame, currentPosition, ghost)
         end
     end)
-    
+
     releaseConnection = UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
              DragHandler.EndDrag(--[[, Scope]])
@@ -105,51 +114,51 @@ end
 function DragHandler.CreateGhost(originalFrame: Frame, currentMousePos: Vector2, ghost: Frame)
     if not DraggingGui then return end
     if DragState.ghostFrame then return end
-    
+
     DragState.isDragging = true
-    
+
     local screenSize = DraggingGui.AbsoluteSize
     local frameSize = originalFrame.AbsoluteSize
     local framePos = originalFrame.AbsolutePosition
-    
+
     -- 1. CALCULATE OFFSET: How far is the mouse from the top-left of the button?
     -- We use currentMousePos (where the mouse is NOW) vs the Frame's static position
     DragState.mouseOffset = currentMousePos - framePos
-    
+
     -- 2. SETUP GHOST SIZE
     ghost.Size = UDim2.fromScale(frameSize.X / screenSize.X, frameSize.Y / screenSize.Y)
     ghost.AnchorPoint = Vector2.new(0, 0) -- Ensure AnchorPoint is TopLeft for this math to work
-    
+
     -- 3. INITIAL POSITION
     -- Target Pixel X = Mouse X - Offset X
     local targetX = currentMousePos.X - DragState.mouseOffset.X
     local targetY = currentMousePos.Y - DragState.mouseOffset.Y
-    
+
     ghost.Position = UDim2.fromScale(targetX / screenSize.X, targetY / screenSize.Y)
     ghost.Parent = DraggingGui
-    
+
     DragState.ghostFrame = ghost
-    
+
     DragHandler.HideOriginalVisuals()
-    
+
     if hookManager then
         hookManager:Fire("OnDragStart", DragState.sourceType, DragState.sourceSlot)
     end
-    
+
     -- 4. UPDATE LOOP (RunService is smoother than InputChanged for dragging)
     dragConnection = RunService.RenderStepped:Connect(function()
-        if not DragState.ghostFrame then 
+        if not DragState.ghostFrame then
             DragHandler.EndDrag()
-            return 
+            return
         end
-        
+
         local mousePos = GetGuiMousePosition()
         local scrSize = DraggingGui.AbsoluteSize
-        
+
         -- Apply the offset we calculated earlier
         local newX = mousePos.X - DragState.mouseOffset.X
         local newY = mousePos.Y - DragState.mouseOffset.Y
-        
+
         DragState.ghostFrame.Position = UDim2.fromScale(
             newX / scrSize.X,
             newY / scrSize.Y
@@ -202,7 +211,7 @@ function DragHandler.RestoreOriginalVisuals()
 		restore(frame:FindFirstChild("slotbutton"), "BackgroundTransparency", 0)
 		restore(frame:FindFirstChild("stackcount"), "TextTransparency", 0)
 		restore(frame:FindFirstChild("selecticon"), "ImageTransparency", 0)
-		restore(frame:FindFirstChild("rarityframe"), "BackgroundTransparency", 0.65)
+		restore(frame:FindFirstChild("rarityframe"), "BackgroundTransparency", 1)
 	end
 
 	if DragState.originalFrame:IsA("ImageLabel") then
@@ -276,13 +285,13 @@ function DragHandler.EndDrag(--[[, Scope]])
 	local targetSlot
 	local FromType =  DragState.originalFrame.Parent.Name == "Hotbar" and "Hotbar" or "Storage"
 	local FromSlot: Frame = DragState.originalFrame
-	local index 
-	-- local index2 
+	local index
+	-- local index2
 
 	if FromSlot then FromSlot.Name:gsub("_", ""); index = tonumber(FromSlot.Name) end
 	-- if targetSlot then targetSlot.Name:gsub("_", ""); index2 = tonumber(targetSlot.Name) end
-	
-	
+
+
 
 	if hotbarSlot and hotbarIndex and hotbarSlot ~= FromSlot then
 		--swap
@@ -322,7 +331,7 @@ function DragHandler.EndDrag(--[[, Scope]])
 		end
 	end
 
-	if not OverHotbar and not OverBackpack then 
+	if not OverHotbar and not OverBackpack then
 		InventoryController.Drop(FromType, index, nil, true)
 		warn("drop")
 	end
@@ -348,9 +357,12 @@ function DragHandler.Reset()
 	if DragState.ghostFrame then
 		DragState.ghostFrame:Destroy()
 	end
+    
+    local currentEnabled = DragState.enabled
 
 	DragState = {
 		isDragging = false,
+		enabled = currentEnabled,
 		sourceType = nil,
 		sourceSlot = nil,
 		originalFrame = nil,

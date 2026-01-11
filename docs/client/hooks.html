@@ -154,6 +154,36 @@ Client.Hooks:<span class="function">Register</span>(<span class="string">"OnSlot
                         <td><span class="param-type">type, index, uuid</span></td>
                         <td>Fired when an item is unequipped.</td>
                     </tr>
+                    <tr>
+                        <td><span class="method-name">OnSlotHover</span></td>
+                        <td><span class="param-type">slotButton, type, index</span></td>
+                        <td>Fired when mouse enters a slot. Receives the specific button and context for animation logic.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">OnSelect</span></td>
+                        <td><span class="param-type">frame</span></td>
+                        <td>Fired when a slot is selected via Gamepad/Console (for custom highlighting).</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">OnDeselect</span></td>
+                        <td><span class="param-type">frame</span></td>
+                        <td>Fired when a slot is deselected via Gamepad/Console.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">OnItemAdd</span></td>
+                        <td><span class="param-type">type, index</span></td>
+                        <td>Fired when a new item is added to a slot.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">OnItemRemove</span></td>
+                        <td><span class="param-type">type, index</span></td>
+                        <td>Fired when an item is removed from a slot.</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">OnSwap</span></td>
+                        <td><span class="param-type">type, index</span></td>
+                        <td>Fired when two items are swapped.</td>
+                    </tr>
                 </tbody>
             </table>
         </section>

@@ -1,7 +1,6 @@
 -- src/client/StowayClientV1_2/ClientInventoryService.luau
 
 --modules
-local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
@@ -17,6 +16,10 @@ local Settings = require(ReplicatedStorage.Shared.Settings)
 local Store = require(script.CoreState.InventoryStore)
 local SlotFactory = require(script.SlotCreation.SlotFactory)
 local NetworkHandler = require(script.NetworkFunctions.NetworkHandler)
+local InputManager = require(script.Input.InputManager)
+local SelectionManager = require(script.Input.SelectionManager)
+local InteractionManager = require(script.Input.InteractionManager)
+local ConsoleDropUI = require(script.Input.ConsoleDropUI)
 
 
 -- BindableEvents
@@ -38,37 +41,45 @@ local ScrollingBackpack : ScrollingFrame --= BackpackFrame.ScrollingFrame :: Scr
 local SearchFilter      : TextBox --= BackpackFrame.SearchFilter :: TextBox
 local WeightLabel       : TextLabel --= BackpackFrame.Weight :: TextLabel
 
+local InputConnections = {}
 
 function SetUpBinds()
-	ContextActionService:BindAction("toggle_backpack", ClientInventoryService.ToggleBackpack, false, unpack(Binds.BackpackBinds))
-	ClientInventoryService.BindKeyBinds("HotbarSlot", nil)
-end
+    -- Clear old connections
+    for _, conn in ipairs(InputConnections) do
+        conn:Disconnect()
+    end
+    table.clear(InputConnections)
 
-function ClientInventoryService.ToggleBackpack(_actionName, inputState, _inputObject)
-	if inputState and inputState ~= Enum.UserInputState.Begin then return end
-    BackpackFrame.Visible = not BackpackFrame.Visible
-end
+    InputManager.Init()
 
-function ClientInventoryService.BindKeyBinds(actionNamePrefix, _slotfolder)
+    -- Backpack
+    if InputManager.BackpackAction then
+        local bpConn = InputManager.BackpackAction.Activated:Connect(function(active, pressed)
+            if pressed then
+                if BackpackFrame then BackpackFrame.Visible = not BackpackFrame.Visible end
+            end
+        end)
+        table.insert(InputConnections, bpConn)
+    end
+
 	local currentSettings = Fusion.peek(Store.Settings)
-	if not currentSettings or not currentSettings.MaxHotbarSlots then return end
+	local maxSlots = currentSettings and currentSettings.MaxHotbarSlots or 10
 
-	for i = 1, currentSettings.MaxHotbarSlots do
-		local bindData = Binds.KeyBinds[i]
-		if not bindData then break end
-
-		local function EquipThisSlot(_actionName, inputState, _inputObject)
-			if inputState ~= Enum.UserInputState.Begin then return end
-			InventoryController.HandleEquipped(Store:GetUUidFromIndex(i, "Hotbar"), true)
-		end
-
-		local actionName = actionNamePrefix .. tostring(i)
-		ContextActionService:BindAction(actionName, EquipThisSlot, false, unpack(bindData.Keys))
+	for i = 1, maxSlots do
+        local action = InputManager.HotbarActions[i]
+        if action then
+            local conn = action.Activated:Connect(function(active, pressed)
+                if pressed then
+                    InventoryController.HandleEquipped(Store:GetUUidFromIndex(i, "Hotbar"), true)
+                end
+            end)
+             table.insert(InputConnections, conn)
+        end
 	end
 end
 
 local function GetKeybindDisplay(slotIndex: number): string?
-	local bindData = Binds.KeyBinds[slotIndex]
+	local bindData = Binds.HotbarSlots[slotIndex]
 	if not bindData then return nil end
 	return "[" .. bindData.Display .. "]"
 end
@@ -131,11 +142,12 @@ function BuildGui(UIVersion, FolderName, GuiName)
     if not GuiName then return {success = false, reason = `GUI NAME IS BLANK`} end
 
 
-    GUIFOLDER = GUISTORAGE[UIVersion]:FindFirstChild(FolderName) and GUISTORAGE[UIVersion]:FindFirstChild(FolderName):Clone()
+    GUIFOLDER = GUISTORAGE[UIVersion]:FindFirstChild(FolderName) --and GUISTORAGE[UIVersion]:FindFirstChild(FolderName):Clone()
     if not GUIFOLDER then return {success = false, reason = `No Folder by the name {FolderName}`} end
 
     InventoryGui = GUIFOLDER:FindFirstChild(GuiName);
     if not InventoryGui then return {success = false, reason = `No GUI BY THAT NAME -> {GuiName}`} end
+    InventoryGui = InventoryGui:Clone()
 
     return xpcall(
         function ()
@@ -146,7 +158,17 @@ function BuildGui(UIVersion, FolderName, GuiName)
             SearchFilter = BackpackFrame.SearchFilter
             WeightLabel = BackpackFrame.Weight
 
-            GUIFOLDER.Parent = Player.PlayerGui
+            InventoryGui.Parent = Player.PlayerGui
+
+            -- Setup Dynamic Drop Menu Template
+            local slotFolder = GUIFOLDER:FindFirstChild("Slot")
+            if slotFolder then
+                local dropTemplate = slotFolder:FindFirstChild("DropMenu")
+                if dropTemplate then
+                    ConsoleDropUI.SetTemplate(dropTemplate)
+                end
+            end
+
             return {success = true, reason = ""}
         end,
 
@@ -290,11 +312,10 @@ function ClientInventoryService.Reload(config: {UiType: string?, Data: any?}?)
 
     print("[Stoway] Reloading inventory system...")
 
-    -- 1. DESTROY: Unbind all hotkey actions
-    for i = 1, 10 do
-        ContextActionService:UnbindAction("HotbarSlot" .. tostring(i))
-    end
-    ContextActionService:UnbindAction("toggle_backpack")
+    -- 1. DESTROY: Unbind all hotkey actions (Handled by SetUpBinds cleanup)
+    InputManager.Destroy()
+    InteractionManager.Destroy()
+    SelectionManager.Destroy()
 
     -- 2. CLEANUP: Destroy Fusion scopes (UI cleanup)
     if HotbarScope then
@@ -308,7 +329,7 @@ function ClientInventoryService.Reload(config: {UiType: string?, Data: any?}?)
 
 
     -- 3. GUI REFERENCES: Reload UI references (new GUI if provided)
-    if GUIFOLDER then GUIFOLDER:Destroy() end
+    if InventoryGui then InventoryGui:Destroy(); InventoryGui = nil end
     BuildGui(config.UiType, uiType.FolderName, uiType.GuiName)
 
     -- 4. HOOKS: Clear old hooks and load new preset (from Name)
@@ -322,6 +343,9 @@ function ClientInventoryService.Reload(config: {UiType: string?, Data: any?}?)
     -- 6. REBUILD: Reinitialize DragHandler with new references
     DragHandler.Destroy()
     DragHandler.Init(DraggingGui, HotbarFrame, BackpackFrame, HookManager, SlotFactory.CloneForGhost)
+
+    InteractionManager.Init(DragHandler)
+    SelectionManager.Init(HotbarFrame, BackpackFrame, HookManager)
 
     -- 7. BUILD UI
     BuildHotbar()
@@ -426,6 +450,10 @@ function ClientInventoryService.Init()
     StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
 
     DragHandler.Init(DraggingGui, HotbarFrame, BackpackFrame, HookManager, SlotFactory.CloneForGhost)
+
+    InteractionManager.Init(DragHandler)
+    SelectionManager.Init(HotbarFrame, BackpackFrame, HookManager)
+
     BuildHotbar()
     BuildStorage()
     SetUpBinds()

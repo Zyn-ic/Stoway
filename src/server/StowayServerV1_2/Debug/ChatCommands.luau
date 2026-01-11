@@ -8,13 +8,13 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 		local args = string.split(msg, " ")
 		local cmd = string.lower(args[1])
 		local state = InventoryService.GetState(player)
-		
+
 		if not state then return end
-		
+
 		--// ═══════════════════════════════════════════════════════════════════
 		--// INVENTORY DISPLAY
 		--// ═══════════════════════════════════════════════════════════════════
-		
+
 		if cmd == "/inv" then
 			print("═══════════════════════════════════════════════════════════════")
 			print("INVENTORY for " .. player.Name)
@@ -47,11 +47,11 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 				end
 			end
 			print("═══════════════════════════════════════════════════════════════")
-		
+
 		--// ═══════════════════════════════════════════════════════════════════
 		--// ADD ITEM
 		--// ═══════════════════════════════════════════════════════════════════
-		
+
 		elseif cmd == "/add" then
 			-- /add [itemId] [amount?]
 			local itemId = args[2]
@@ -66,7 +66,7 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 			else
 				print("Usage: /add [itemId] [amount?]")
 			end
-		
+
 		elseif cmd == "/addback" then
 			-- /addback [itemId] [amount?] - Add directly to backpack (bypasses hotbar)
 			local itemId = args[2]
@@ -81,7 +81,7 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 			else
 				print("Usage: /addback [itemId] [amount?]")
 			end
-		
+
 		elseif cmd == "/stack" then
 			-- /stack [fromType] [fromSlot] [toType] [toSlot]
 			local fromType = args[2]
@@ -99,11 +99,11 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 			else
 				print("Usage: /stack [Hotbar/Storage] [slot] [Hotbar/Storage] [slot]")
 			end
-		
+
 		--// ═══════════════════════════════════════════════════════════════════
 		--// REMOVE ITEM
 		--// ═══════════════════════════════════════════════════════════════════
-		
+
 		elseif cmd == "/remove" then
 			-- /remove [uuid] [amount?]
 			local uuid = args[2]
@@ -117,11 +117,11 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 			else
 				print("Usage: /remove [uuid] [amount?]")
 			end
-		
+
 		--// ═══════════════════════════════════════════════════════════════════
 		--// SWAP
 		--// ═══════════════════════════════════════════════════════════════════
-		
+
 		elseif cmd == "/swap" then
 			-- /swap [fromType] [fromSlot] [toType] [toSlot]
             -- Normalize types to TitleCase (Hotbar, Storage)
@@ -141,11 +141,11 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 			else
 				print("Usage: /swap [Hotbar/Storage] [slot] [Hotbar/Storage] [slot]")
 			end
-		
+
 		--// ═══════════════════════════════════════════════════════════════════
 		--// EQUIP / UNEQUIP
 		--// ═══════════════════════════════════════════════════════════════════
-		
+
 		elseif cmd == "/equip" then
 			-- /equip [slot] or /equip [type] [slot]
 			local slotType = "Hotbar"
@@ -164,16 +164,16 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 			else
 				print("Usage: /equip [slot] or /equip [type] [slot]")
 			end
-		
+
 		elseif cmd == "/unequip" then
 			local result = InventoryService.UnequipSlot(player, true)
 			print("[Unequip]")
 			print("  Success:", result.success)
-		
+
 		--// ═══════════════════════════════════════════════════════════════════
 		--// DROP
 		--// ═══════════════════════════════════════════════════════════════════
-		
+
 		elseif cmd == "/drop" then
 			-- /drop [type] [slot] [amount?]
 			local slotType = args[2]
@@ -187,16 +187,16 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 			else
 				print("Usage: /drop [Hotbar/Storage] [slot] [amount?]")
 			end
-		
+
 		--// ═══════════════════════════════════════════════════════════════════
 		--// SETTINGS TOGGLE (PER-PLAYER!)
 		--// ═══════════════════════════════════════════════════════════════════
-		
+
 		elseif cmd == "/toggle_stack" then
 			state.Settings.CanStack = not state.Settings.CanStack
 			print("[Settings] CanStack:", state.Settings.CanStack)
             InventoryService.SyncSettings(player)
-		
+
 		elseif cmd == "/toggle_limit" then
 			if state.Settings.Limit == 0 then
 				state.Settings.Limit = 15
@@ -205,29 +205,29 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 			end
 			print("[Settings] Limit:", state.Settings.Limit, "(0 = Infinite)")
             InventoryService.SyncSettings(player)
-		
+
 		elseif cmd == "/set_limit" then
 			local newLimit = tonumber(args[2]) or 15
 			state.Settings.Limit = newLimit
 			print("[Settings] Limit set to:", newLimit)
             InventoryService.SyncSettings(player)
-		
+
 		elseif cmd == "/set_max_stack" then
 			local newMax = tonumber(args[2]) or 5
 			state.Settings.MaxStackSize = newMax
 			print("[Settings] MaxStackSize set to:", newMax)
             InventoryService.SyncSettings(player)
-		
+
 		elseif cmd == "/set_hotbar_slots" then
 			local newSlots = tonumber(args[2]) or 9
 			state.Settings.MaxHotbarSlots = newSlots
 			print("[Settings] MaxHotbarSlots set to:", newSlots)
             InventoryService.SyncSettings(player)
-		
+
 		--// ═══════════════════════════════════════════════════════════════════
 		--// CLEAR INVENTORY
 		--// ═══════════════════════════════════════════════════════════════════
-		
+
 		elseif cmd == "/clear" then
 			local uuidsToRemove = {}
 			for uuid, _ in pairs(state.Items) do
@@ -237,11 +237,11 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 				InventoryService.RemoveItem(player, uuid, nil, true)
 			end
 			print("[Clear] Inventory cleared")
-		
+
 		--// ═══════════════════════════════════════════════════════════════════
 		--// HELP
 		--// ═══════════════════════════════════════════════════════════════════
-		
+
 		elseif cmd == "/help" then
 			print("═══════════════════════════════════════════════════════════════")
 			print("INVENTORY DEBUG COMMANDS")
@@ -254,7 +254,7 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 			print("/stack [t1] [s1] [t2] [s2] - Stack items together")
 			print("/equip [slot]     - Equip from hotbar")
 			print("/unequip          - Unequip current")
-			print("/drop [type] [slot] - Drop item")
+			print("/drop [type] [slot] [amount?] - Drop item")
 			print("/clear            - Clear inventory")
 			print("───────────────────────────────────────────────────────────────")
 			print("/toggle_stack       - Toggle stacking on/off (per-player)")
@@ -264,11 +264,11 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 			print("/set_hotbar_slots [n] - Set hotbar slot count")
 			print("/setui [uitype]     - Change UI type and reload client")
 			print("═══════════════════════════════════════════════════════════════")
-		
+
 		--// ═══════════════════════════════════════════════════════════════════
 		--// SET UI TYPE (RELOAD CLIENT)
 		--// ═══════════════════════════════════════════════════════════════════
-		
+
 		elseif cmd == "/setui" then
 			-- /setui [uitype]
 			local uiType = args[2]
@@ -277,7 +277,7 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 					configSettingName = uiType,
 					RefreshData = true
 				})
-				
+
 				if result.success then
 					print("[SetUI] Reloading client with UI type:", uiType)
 				else
@@ -289,9 +289,8 @@ function ChatCommands.Register(player: Player, InventoryService: any)
 			end
 		end
 	end)
-	
+
 	print("[Debug] Chat commands registered for", player.Name, "- Type /help")
 end
 
 return ChatCommands
-
