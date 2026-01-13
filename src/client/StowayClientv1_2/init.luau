@@ -74,9 +74,9 @@ function SetUpBinds()
         local function updateBackpackStuffVisibility()
             local isMobile = UserInputService.PreferredInput == Enum.PreferredInput.Touch
             local isEnabled = Settings.Storage.BackpackEnabled
-            
+
             BackpackStuff.Visible = isMobile and isEnabled
-            
+
             -- If disabled or not mobile, ensure backpack is closed (optional, but good UX)
             if not (isMobile and isEnabled) and BackpackFrame and BackpackFrame.Visible and UserInputService.PreferredInput == Enum.PreferredInput.Touch then
                 -- BackpackFrame.Visible = false -- Maybe don't force close if opened via other means, but safer to leave alone
@@ -84,7 +84,7 @@ function SetUpBinds()
         end
 
         updateBackpackStuffVisibility()
-        
+
         local prefInputConn = UserInputService:GetPropertyChangedSignal("PreferredInput"):Connect(updateBackpackStuffVisibility)
         table.insert(InputConnections, prefInputConn)
 
