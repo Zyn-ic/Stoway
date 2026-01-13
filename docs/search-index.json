@@ -1,7 +1,7 @@
 {
   "pages": [
     {
-      "path": "index.html",
+      "path": "/index.html",
       "title": "Stoway Documentation",
       "category": "home",
       "tags": ["home", "overview", "introduction", "getting started", "welcome"],
@@ -11,14 +11,14 @@
       ]
     },
     {
-      "path": "quickstart.html",
+      "path": "/quickstart.html",
       "title": "Quick Start",
       "category": "guides",
       "tags": ["quick start", "setup", "installation", "getting started", "beginner", "5 minute"],
       "sections": []
     },
     {
-      "path": "guides/index.html",
+      "path": "/guides/index.html",
       "title": "All Guides",
       "category": "guides",
       "tags": ["guides", "tutorials", "how-to", "learn"],
@@ -29,7 +29,7 @@
       ]
     },
     {
-      "path": "guides/add-server-features.html",
+      "path": "/guides/add-server-features.html",
       "title": "Add Server Features",
       "category": "guides",
       "tags": ["add", "create", "server", "operation", "feature", "extend", "backend", "api", "remote", "intermediate"],
@@ -42,7 +42,7 @@
       ]
     },
     {
-      "path": "guides/settings-configuration.html",
+      "path": "/guides/settings-configuration.html",
       "title": "Settings Configuration",
       "category": "guides",
       "tags": ["settings", "configuration", "global", "per-player", "hotbar", "storage", "vip", "permissions", "beginner"],
@@ -57,105 +57,111 @@
       ]
     },
     {
-      "path": "guides/remove-features.html",
+      "path": "/guides/remove-features.html",
       "title": "Remove Features",
       "category": "guides",
       "tags": ["remove", "disable", "remove", "features", "sorting", "rarity", "death"],
       "sections": []
     },
     {
-      "path": "server/index.html",
+      "path": "/guides/persistence.html",
+      "title": "Add Persistence",
+      "category": "guides",
+      "tags": ["persistence", "save", "load", "datastore", "profilestore", "backup", "restore", "beginner"],
+      "sections": [
+        { "id": "overview", "title": "Overview", "tags": ["steps", "load", "replace", "save"] },
+        { "id": "option-1-profilestore", "title": "Option 1: ProfileStore", "tags": ["profilestore", "recommended", "module"] },
+        { "id": "option-2-datastore", "title": "Option 2: DataStore API", "tags": ["manual", "datastore", "noservice"] },
+        { "id": "template-structure", "title": "What to Save", "tags": ["fields", "items", "hotbar", "storage"] },
+        { "id": "best-practices", "title": "Best Practices", "tags": ["tips", "reliability", "production"] }
+      ]
+    },
+    {
+      "path": "/server/index.html",
       "title": "Server Overview",
       "category": "server",
       "tags": ["server", "backend", "overview", "architecture"],
       "sections": []
     },
     {
-      "path": "server/architecture.html",
+      "path": "/server/architecture.html",
       "title": "Server Architecture",
       "category": "server",
       "tags": ["architecture", "design", "structure", "server", "how it works"],
       "sections": []
     },
     {
-      "path": "server/api-reference.html",
+      "path": "/server/api-reference.html",
       "title": "API Reference",
       "category": "server",
       "tags": ["api", "reference", "methods", "functions", "inventoryservice", "documentation"],
       "sections": []
     },
     {
-      "path": "server/debug-commands.html",
+      "path": "/server/debug-commands.html",
       "title": "Debug Commands",
       "category": "server",
       "tags": ["debug", "chat", "commands", "testing", "gm", "admin"],
       "sections": []
     },
     {
-      "path": "server/inventory-data.html",
+      "path": "/server/inventory-data.html",
       "title": "Inventory Data",
       "category": "server",
       "tags": ["data", "structure", "inventorystate", "state", "items", "hotbar", "storage"],
       "sections": []
     },
     {
-      "path": "server/inventory-service.html",
+      "path": "/server/inventory-service.html",
       "title": "Inventory Service",
       "category": "server",
       "tags": ["service", "inventoryservice", "api", "main"],
       "sections": []
     },
     {
-      "path": "server/utils.html",
+      "path": "/server/utils.html",
       "title": "Utils",
       "category": "server",
       "tags": ["utils", "utilities", "helpers", "uuid", "metadata", "stack"],
       "sections": []
     },
     {
-      "path": "client/index.html",
+      "path": "/client/index.html",
       "title": "Client Overview",
       "category": "client",
       "tags": ["client", "frontend", "overview", "ui", "fusion"],
       "sections": []
     },
     {
-      "path": "client/hooks/index.html",
+      "path": "/client/hooks/index.html",
       "title": "Client Hooks",
       "category": "client",
-      "tags": ["hooks", "events", "customization", "callbacks", "sound", "animation"],
+      "tags": "hooks",
       "sections": []
     },
     {
-      "path": "client/input/index.html",
+      "path": "/client/input/index.html",
       "title": "Input & Console",
       "category": "client",
       "tags": ["input", "controls", "keyboard", "gamepad", "console", "gamepad"],
       "sections": []
     },
     {
-      "path": "client/input/binds-module.html",
+      "path": "/client/input/binds-module.html",
       "title": "Binds Module",
       "category": "client",
       "tags": ["binds", "keybinds", "input", "bindings", "context", "keycode"],
       "sections": []
     },
     {
-      "path": "client/input/console-modes.html",
+      "path": "/client/input/console-modes.html",
       "title": "Console Modes",
       "category": "client",
       "tags": ["console", "gamepad", "modes", "combat", "inventory", "selection"],
       "sections": []
     },
     {
-      "path": "client/hooks/index.html",
-      "title": "Hooks",
-      "category": "client",
-      "tags": ["hooks", "events", "callbacks"],
-      "sections": []
-    },
-    {
-      "path": "templates/index.html",
+      "path": "/templates/index.html",
       "title": "Templates",
       "category": "templates",
       "tags": ["templates", "copy", "paste", "code snippets"],
