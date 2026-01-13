@@ -1,9 +1,11 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- src/server/StowayServerV1.2/Operations/SwapOperation.luau
 -- Handles full Swap logic flow: Validate → Execute (preserve equipped) → Return delta
 -- Uses state.Settings (per-player) for bounds checking
 
 local SwapOperation = {}
 
+local Settings = require(ReplicatedStorage.Shared.Settings)
 local SlotManager = require(script.Parent.Parent.Core.SlotManager)
 
 export type SlotRef = {
@@ -19,27 +21,34 @@ export type SwapResult = {
 --// Validate swap request
 local function ValidateSwap(state: any, from: SlotRef, to: SlotRef): (boolean, string?)
 	local maxHotbar = state.Settings.MaxHotbarSlots
-	
+
+	-- Check if backpack is enabled
+	if not Settings.Storage.BackpackEnabled then
+		if from.type == "Storage" or to.type == "Storage" then
+			return false, "BACKPACK_DISABLED"
+		end
+	end
+
 	-- Validate Hotbar bounds
 	if from.type == "Hotbar" then
 		if from.slot < 1 or from.slot > maxHotbar then
 			return false, "INVALID_FROM_SLOT"
 		end
 	end
-	
+
 	if to.type == "Hotbar" then
 		if to.slot < 1 or to.slot > maxHotbar then
 			return false, "INVALID_TO_SLOT"
 		end
 	end
-	
+
 	-- Storage source MUST exist (can't swap from nothing)
 	if from.type == "Storage" then
 		if not state.Storage[from.slot] then
 			return false, "FROM_SLOT_EMPTY"
 		end
 	end
-	
+
 	return true, nil
 end
 
@@ -50,22 +59,22 @@ function SwapOperation.Execute(state: any, from: SlotRef, to: SlotRef): SwapResu
 	if not valid then
 		return { success = false, reason = reason }
 	end
-	
+
 	-- Get items
 	local fromUUID = SlotManager.GetUUIDFromSlot(state, from.type, from.slot)
 	local toUUID = SlotManager.GetUUIDFromSlot(state, to.type, to.slot)
-	
+
 	-- Execute based on combination
 	if from.type == "Hotbar" and to.type == "Hotbar" then
 		-- Static ↔ Static: Simple swap (holes preserved)
 		state.Hotbar[from.slot] = toUUID
 		state.Hotbar[to.slot] = fromUUID
-		
+
 	elseif from.type == "Storage" and to.type == "Storage" then
 		-- Dynamic ↔ Dynamic: Reorder (both must exist or we'd error above)
 		state.Storage[from.slot] = toUUID
 		state.Storage[to.slot] = fromUUID
-		
+
 	elseif from.type == "Hotbar" and to.type == "Storage" then
 		-- Hotbar → Storage
 		if toUUID then
@@ -79,7 +88,7 @@ function SwapOperation.Execute(state: any, from: SlotRef, to: SlotRef): SwapResu
 				state.Hotbar[from.slot] = nil
 			end
 		end
-		
+
 	elseif from.type == "Storage" and to.type == "Hotbar" then
 		-- Storage → Hotbar
 		if toUUID then
@@ -94,14 +103,14 @@ function SwapOperation.Execute(state: any, from: SlotRef, to: SlotRef): SwapResu
     else
         return { success = false, reason = "INVALID_SLOT_TYPE_COMBINATION" }
 	end
-	
+
 	-- Note: EquippedItemUUID doesn't change - it follows the UUID, not the slot
 	return { success = true }
 end
 
 --// Convenience wrapper with raw parameters
 function SwapOperation.ExecuteRaw(state: any, fromType: string, fromSlot: number, toType: string, toSlot: number): SwapResult
-	return SwapOperation.Execute(state, 
+	return SwapOperation.Execute(state,
 		{ type = fromType :: "Hotbar" | "Storage", slot = fromSlot },
 		{ type = toType :: "Hotbar" | "Storage", slot = toSlot }
 	)

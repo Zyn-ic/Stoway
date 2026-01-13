@@ -88,7 +88,7 @@ function DragHandler.StartDrag(slotType: string, slotIndex: number, originalFram
     local ghost = CloneForGhost(originalFrame)
 
     checkConnection = UserInputService.InputChanged:Connect(function(input)
-        if input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
 
         local currentPosition = GetGuiMousePosition()
         local distance = (currentPosition - startPosition).Magnitude
@@ -104,7 +104,7 @@ function DragHandler.StartDrag(slotType: string, slotIndex: number, originalFram
     end)
 
     releaseConnection = UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
              DragHandler.EndDrag(--[[, Scope]])
         end
     end)

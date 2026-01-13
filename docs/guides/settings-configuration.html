@@ -466,6 +466,129 @@ Binds.HotbarSlots[<span class="number">12</span>] = {
             </div>
         </section>
 
+        <section id="example-strict-slot-limiting">
+            <div class="section-header">
+                <h2>Example: Restricted Slots (Disabled Backpack)</h2>
+                <p>Block specific hotbar slots globally when backpack is disabled</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                This example shows how to prevent items from entering specific slots (e.g., 7 and 8) when the backpack is disabled. We implement this as a <strong>Global Setting</strong> that applies to all players.
+            </p>
+
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Configure Settings</h3>
+                    <p>Define which slots are limited in <code>src/shared/Settings.luau</code>.</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-title">Settings.luau</span>
+                            <span class="code-lang">Luau</span>
+                        </div>
+                        <pre><code>Settings.Hotbar = {
+    MaxSlots = <span class="number">10</span>,
+    <span class="comment">-- Custom table of restricted slots (Global)</span>
+    LimitedSlots = {
+        [<span class="number">7</span>] = <span class="keyword">true</span>,
+        [<span class="number">8</span>] = <span class="keyword">true</span>,
+    }
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Modify AddOperation (Server)</h3>
+                    <p>In <code>src/server/StowayServerV1_2/Operations/AddOperation.luau</code>, require the global settings and check limits.</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-title">AddOperation.luau</span>
+                            <span class="code-lang">Luau</span>
+                        </div>
+                        <pre><code><span class="keyword">local</span> Settings = <span class="function">require</span>(game:GetService(<span class="string">"ReplicatedStorage"</span>).Shared.Settings)
+
+<span class="comment">-- Inside the BackpackDisabled block</span>
+<span class="keyword">if</span> Settings.Storage.BackpackEnabled == <span class="keyword">false</span> <span class="keyword">then</span>
+    <span class="keyword">local</span> emptySlot = SlotManager.<span class="function">FindEmptyHotbarSlot</span>(state)
+
+    <span class="keyword">if</span> emptySlot <span class="keyword">then</span>
+        <span class="comment">-- CHECK: Is this slot limited?</span>
+        <span class="keyword">local</span> limited = Settings.Hotbar.LimitedSlots
+        <span class="keyword">if</span> limited <span class="keyword">and</span> limited[emptySlot] <span class="keyword">then</span>
+            <span class="keyword">return</span> {
+                success = <span class="keyword">false</span>,
+                reason = emptySlot .. <span class="string">" is limited"</span>
+            }
+        <span class="keyword">end</span>
+        <span class="comment">-- ... Standard add logic ...</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span></code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Modify SwapOperation (Server)</h3>
+                    <p>In <code>src/server/StowayServerV1_2/Operations/SwapOperation.luau</code>, prevent swapping into limited slots.</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-title">SwapOperation.luau</span>
+                            <span class="code-lang">Luau</span>
+                        </div>
+                        <pre><code><span class="keyword">local</span> Settings = <span class="function">require</span>(game:GetService(<span class="string">"ReplicatedStorage"</span>).Shared.Settings)
+
+<span class="comment">-- Inside ValidateSwap function</span>
+<span class="keyword">if</span> <span class="keyword">not</span> Settings.Storage.BackpackEnabled <span class="keyword">then</span>
+    <span class="keyword">local</span> limited = Settings.Hotbar.LimitedSlots
+    <span class="keyword">if</span> limited <span class="keyword">then</span>
+        <span class="keyword">if</span> from.type == <span class="string">"Hotbar"</span> <span class="keyword">and</span> limited[from.slot] <span class="keyword">then</span>
+            <span class="keyword">return</span> <span class="keyword">false</span>, from.slot .. <span class="string">" is limited"</span>
+        <span class="keyword">end</span>
+        <span class="keyword">if</span> to.type == <span class="string">"Hotbar"</span> <span class="keyword">and</span> limited[to.slot] <span class="keyword">then</span>
+            <span class="keyword">return</span> <span class="keyword">false</span>, to.slot .. <span class="string">" is limited"</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span></code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3>Modify Client Controller</h3>
+                    <p>In <code>src/client/StowayClientv1_2/Operations/InventoryController.luau</code>, check global settings to block dragging.</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-title">InventoryController.luau</span>
+                            <span class="code-lang">Luau</span>
+                        </div>
+                        <pre><code><span class="keyword">local</span> GlobalSettings = <span class="function">require</span>(ReplicatedStorage.Shared.Settings)
+
+<span class="comment">-- Inside Swap function</span>
+<span class="keyword">if</span> <span class="keyword">not</span> GlobalSettings.Storage.BackpackEnabled <span class="keyword">then</span>
+    <span class="keyword">local</span> limited = GlobalSettings.Hotbar.LimitedSlots
+    <span class="keyword">if</span> limited <span class="keyword">then</span>
+        <span class="keyword">if</span> fromType == <span class="string">"Hotbar"</span> <span class="keyword">and</span> limited[fromSlot] <span class="keyword">then</span>
+            <span class="function">warn</span>(fromSlot .. <span class="string">" is limited"</span>)
+            <span class="keyword">return</span> <span class="string">"Slot is limited"</span>
+        <span class="keyword">end</span>
+        <span class="keyword">if</span> toType == <span class="string">"Hotbar"</span> <span class="keyword">and</span> limited[toSlot] <span class="keyword">then</span>
+            <span class="function">warn</span>(toSlot .. <span class="string">" is limited"</span>)
+            <span class="keyword">return</span> <span class="string">"Slot is limited"</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span></code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <section>
             <div class="section-header">
                 <h2>Settings Reference</h2>
@@ -530,7 +653,7 @@ Binds.HotbarSlots[<span class="number">12</span>] = {
                         <td>Global only</td>
                         <td>string</td>
                         <td>"Static"</td>
-                        <td>&#10006; No</td>
+                        <td>&#10004; Yes</td>
                     </tr>
                     <tr>
                         <td><code>Storage.Sorting</code></td>
@@ -578,7 +701,7 @@ Binds.HotbarSlots[<span class="number">12</span>] = {
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
-        
+
         .layer-card {
             flex: 1;
             background: var(--bg-secondary);
@@ -586,71 +709,71 @@ Binds.HotbarSlots[<span class="number">12</span>] = {
             border-radius: 16px;
             padding: 1.5rem;
         }
-        
+
         .layer-card.global {
             border-color: rgba(196, 167, 125, 0.3);
         }
-        
+
         .layer-card.player {
             border-color: rgba(124, 179, 66, 0.3);
         }
-        
+
         .layer-header {
             display: flex;
             align-items: center;
             gap: 1rem;
             margin-bottom: 1rem;
         }
-        
+
         .layer-icon {
             font-size: 2rem;
         }
-        
+
         .layer-title h3 {
             font-size: 1.1rem;
             font-weight: 600;
             margin-bottom: 0.25rem;
         }
-        
+
         .layer-badge {
             font-size: 0.75rem;
             color: var(--text-muted);
             font-family: 'Fira Code', monospace;
         }
-        
+
         .layer-card > p {
             color: var(--text-secondary);
             font-size: 0.9rem;
             margin-bottom: 1rem;
         }
-        
+
         .layer-features {
             list-style: none;
             padding: 0;
             margin: 0;
         }
-        
+
         .layer-features li {
             padding: 0.35rem 0;
             font-size: 0.85rem;
             color: var(--text-secondary);
             border-bottom: 1px solid var(--border-color);
         }
-        
+
         .layer-features li:last-child {
             border-bottom: none;
         }
-        
+
         .layer-features li::before {
             content: "- ";
             color: var(--text-muted);
         }
-        
+
         .layer-arrow {
             font-size: 2rem;
             color: var(--accent-brown);
         }
-        
+
         .step-card {
             display: flex;
             gap: 1.5rem;
@@ -660,7 +783,7 @@ Binds.HotbarSlots[<span class="number">12</span>] = {
             padding: 1.5rem;
             margin-bottom: 1.5rem;
         }
-        
+
         .step-number {
             width: 40px;
             height: 40px;
@@ -674,18 +797,18 @@ Binds.HotbarSlots[<span class="number">12</span>] = {
             color: var(--bg-primary);
             flex-shrink: 0;
         }
-        
+
         .step-content h3 {
             font-size: 1.1rem;
             font-weight: 600;
             margin-bottom: 0.5rem;
         }
-        
+
         .step-content p {
             color: var(--text-secondary);
             margin-bottom: 1rem;
         }
-        
+
         .settings-table {
             width: 100%;
             border-collapse: collapse;
@@ -695,7 +818,7 @@ Binds.HotbarSlots[<span class="number">12</span>] = {
             overflow: hidden;
             border: 1px solid var(--border-color);
         }
-        
+
         .settings-table th {
             background: var(--bg-tertiary);
             padding: 1rem;
@@ -705,17 +828,17 @@ Binds.HotbarSlots[<span class="number">12</span>] = {
             text-transform: uppercase;
             color: var(--text-muted);
         }
-        
+
         .settings-table td {
             padding: 0.875rem 1rem;
             border-top: 1px solid var(--border-color);
             font-size: 0.9rem;
         }
-        
+
         .settings-table tr:hover td {
             background: rgba(196, 167, 125, 0.05);
         }
-        
+
         .settings-table code {
             background: rgba(196, 167, 125, 0.15);
             padding: 0.2rem 0.5rem;
@@ -723,54 +846,54 @@ Binds.HotbarSlots[<span class="number">12</span>] = {
             font-size: 0.85em;
             color: var(--accent-brown);
         }
-        
+
         .use-case-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 1.5rem;
         }
-        
+
         .use-case-card {
             background: var(--bg-secondary);
             border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 1.5rem;
         }
-        
+
         .use-case-icon {
             font-size: 2rem;
             margin-bottom: 1rem;
         }
-        
+
         .use-case-card h3 {
             font-size: 1rem;
             font-weight: 600;
             margin-bottom: 1rem;
         }
-        
+
         .use-case-card ul {
             list-style: none;
             padding: 0;
             margin: 0;
         }
-        
+
         .use-case-card li {
             padding: 0.5rem 0;
             color: var(--text-secondary);
             font-size: 0.9rem;
             border-bottom: 1px solid var(--border-color);
         }
-        
+
         .use-case-card li:last-child {
             border-bottom: none;
         }
-        
+
         .next-steps-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1rem;
         }
-        
+
         .next-step-card {
             background: linear-gradient(135deg, rgba(37, 32, 25, 0.8), rgba(26, 22, 18, 0.9));
             border: 1px solid var(--border-color);
@@ -780,23 +903,23 @@ Binds.HotbarSlots[<span class="number">12</span>] = {
             color: inherit;
             transition: all 0.3s ease;
         }
-        
+
         .next-step-card:hover {
             transform: translateY(-3px);
             border-color: rgba(196, 167, 125, 0.3);
         }
-        
+
         .next-step-icon {
             font-size: 2rem;
             margin-bottom: 0.75rem;
         }
-        
+
         .next-step-card h4 {
             font-size: 1rem;
             font-weight: 600;
             margin-bottom: 0.25rem;
         }
-        
+
         .next-step-card p {
             color: var(--text-secondary);
             font-size: 0.875rem;

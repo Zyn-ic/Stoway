@@ -1,4 +1,4 @@
-# Stoway - Advanced Roblox Inventory System (V2.3.6) 🎒✨
+# Stoway - Advanced Roblox Inventory System (V2.4.0) 🎒✨
 <img src="pics/Logo.png" alt="Stoway Logo" width="120" align = "left" style="margin-right:15px"/> 
 
 <div style="display: flex; flex-direction: column; gap: 2px;">
@@ -9,7 +9,7 @@
 
 ## 📖 Table of Contents
 
-- [Stoway - Advanced Roblox Inventory System (V2.3.6) 🎒✨](#stoway---advanced-roblox-inventory-system-v236-)
+- [Stoway - Advanced Roblox Inventory System (V2.4.0) 🎒✨](#stoway---advanced-roblox-inventory-system-v236-)
   - [📖 Table of Contents](#-table-of-contents)
   - [🌟 Core Features ](#-core-features-)
     - [🔥 Hotbar ](#-hotbar-)
@@ -70,7 +70,7 @@
 
 ## 🛠️ Configuration <a name="configuration"></a>
 
-Stoway V2.3.6 is configured via `ReplicatedStorage/Shared/Settings.luau`.
+Stoway V2.4.0 is configured via `ReplicatedStorage/Shared/Settings.luau`.
 
 ```lua
 local Settings = {}

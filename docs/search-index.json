@@ -53,6 +53,7 @@
         { "id": "modifying-per-player-settings", "title": "Modify Per-Player Settings", "tags": ["modify", "change", "update"] },
         { "id": "use-cases", "title": "Use Cases", "tags": ["when to use", "examples"] },
         { "id": "example-vip-inventory-bonus", "title": "Example: VIP Bonus", "tags": ["vip", "group", "rank", "example"] },
+        { "id": "example-strict-slot-limiting", "title": "Example: Strict Slot Limiting", "tags": ["limit", "strict", "backpack", "disabled", "swap", "example"] },
         { "id": "adding-more-hotbar-slots", "title": "Adding More Hotbar Slots", "tags": ["hotbar", "slots", "12", "admin", "maxhotbarslots", "binds", "keys"] }
       ]
     },
