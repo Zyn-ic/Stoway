@@ -98,11 +98,11 @@
             </div>
         </section>
 
-        <section>
-            <div class="section-header">
-                <h2>Step 1: Create the Operation Module</h2>
-                <p>Write the core logic for your operation</p>
-            </div>
+            <section id="step-1-create-the-operation-module">
+                <div class="section-header">
+                    <h2>Step 1: Create the Operation Module</h2>
+                    <p>Write the core logic for your operation</p>
+                </div>
 
             <p style="color: var(--text-secondary); margin-bottom: 1rem;">
                 Create a new file in <code>src/server/StowayServerV1_2/Operations/</code>. Use the template below:
@@ -161,11 +161,11 @@
             </div>
         </section>
 
-        <section>
-            <div class="section-header">
-                <h2>Step 2: Add API Method</h2>
-                <p>Expose your operation in InventoryService</p>
-            </div>
+            <section id="step-2-add-api-method">
+                <div class="section-header">
+                    <h2>Step 2: Add API Method</h2>
+                    <p>Expose your operation in InventoryService</p>
+                </div>
 
             <p style="color: var(--text-secondary); margin-bottom: 1rem;">
                 Open <code>src/server/StowayServerV1_2/init.luau</code> and add:
@@ -208,11 +208,11 @@
             </div>
         </section>
 
-        <section>
-            <div class="section-header">
-                <h2>Step 3: Wire to Network Protocol</h2>
-                <p>Allow clients to trigger the operation</p>
-            </div>
+            <section id="step-3-wire-to-network-protocol">
+                <div class="section-header">
+                    <h2>Step 3: Wire to Network Protocol</h2>
+                    <p>Allow clients to trigger the operation</p>
+                </div>
 
             <div class="code-block">
                 <div class="code-header">
@@ -254,11 +254,11 @@
             </div>
         </section>
 
-        <section>
-            <div class="section-header">
-                <h2>Step 4: Add Replication (Optional)</h2>
-                <p>Notify clients of changes</p>
-            </div>
+            <section id="step-4-add-replication-optional">
+                <div class="section-header">
+                    <h2>Step 4: Add Replication (Optional)</h2>
+                    <p>Notify clients of changes</p>
+                </div>
 
             <p style="color: var(--text-secondary); margin-bottom: 1rem;">
                 If your operation changes visible state, add a replication method. See <code>Replicator.luau</code> for patterns:
@@ -281,11 +281,11 @@
             </div>
         </section>
 
-        <section>
-            <div class="section-header">
-                <h2>Example: Craft Operation</h2>
-                <p>Complete working example</p>
-            </div>
+            <section id="example-craft-operation">
+                <div class="section-header">
+                    <h2>Example: Craft Operation</h2>
+                    <p>Complete working example</p>
+                </div>
 
             <p style="color: var(--text-secondary); margin-bottom: 1rem;">
                 Here's a simplified craft operation that consumes ingredients and produces an output item:

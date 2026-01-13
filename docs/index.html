@@ -21,6 +21,11 @@
             <h1>Stoway</h1>
         </a>
 
+        <div class="nav-search">
+            <input type="text" class="nav-search-input" id="docSearch" placeholder="Search docs... (Ctrl+K)">
+            <div class="search-results" id="searchResults"></div>
+        </div>
+
         <div class="nav-section">
             <div class="nav-section-title">Documentation</div>
             <a href="index.html" class="nav-link active">Home</a>
@@ -86,7 +91,7 @@
             </div>
         </section>
 
-        <section>
+        <section id="key-concepts">
             <div class="section-header">
                 <h2>Key Concepts</h2>
                 <p>Understand the core ideas behind Stoway</p>
@@ -137,7 +142,7 @@
             </div>
         </section>
 
-        <section>
+        <section id="project-structure">
             <div class="section-header">
                 <h2>Project Structure</h2>
                 <p>Quick reference to source locations</p>
@@ -193,7 +198,7 @@
             </div>
         </section>
 
-        <section>
+        <section id="popular-topics">
             <div class="section-header">
                 <h2>Popular Topics</h2>
                 <p>Common questions and tasks</p>
@@ -362,6 +367,170 @@
             font-size: 0.875rem;
         }
     </style>
+
+    <script>
+        let searchIndex = null;
+        let searchInput = document.getElementById('docSearch');
+        let searchResults = document.getElementById('searchResults');
+
+        async function loadSearchIndex() {
+            if (!searchIndex) {
+                try {
+                    const response = await fetch('search-index.json');
+                    searchIndex = await response.json();
+                } catch (e) {
+                    console.warn('Could not load search index');
+                }
+            }
+            return searchIndex;
+        }
+
+        function highlightMatch(text, query) {
+            if (!query) return text;
+            const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            return text.replace(regex, '<mark style="background: rgba(196, 167, 125, 0.3); padding: 0 2px; border-radius: 2px;">$1</mark>');
+        }
+
+        function search(query) {
+            if (!searchIndex || !query || query.length < 2) {
+                searchResults.classList.remove('active');
+                return;
+            }
+
+            const results = [];
+            const lowerQuery = query.toLowerCase();
+
+            for (const page of searchIndex.pages) {
+                let pageScore = 0;
+                const pageMatches = [];
+
+                if (page.title.toLowerCase().includes(lowerQuery)) {
+                    pageScore += 10;
+                    pageMatches.push({ field: 'title', score: 10 });
+                }
+                if (page.category.toLowerCase().includes(lowerQuery)) {
+                    pageScore += 5;
+                    pageMatches.push({ field: 'category', score: 5 });
+                }
+                for (const tag of page.tags) {
+                    if (tag.toLowerCase().includes(lowerQuery)) {
+                        pageScore += 3;
+                    }
+                }
+
+                if (pageScore > 0 || query.length >= 3) {
+                    for (const section of page.sections) {
+                        let sectionScore = 0;
+                        const sectionMatches = [];
+
+                        if (section.title.toLowerCase().includes(lowerQuery)) {
+                            sectionScore += 8;
+                            sectionMatches.push({ field: 'title', score: 8 });
+                        }
+                        for (const tag of section.tags || []) {
+                            if (tag.toLowerCase().includes(lowerQuery)) {
+                                sectionScore += 2;
+                            }
+                        }
+
+                        if (sectionScore > 0 || query.length >= 3) {
+                            results.push({
+                                page: page,
+                                section: section,
+                                score: pageScore + sectionScore,
+                                pageMatches: pageMatches,
+                                sectionMatches: sectionMatches
+                            });
+                        }
+                    }
+
+                    if (pageScore > 0) {
+                        results.push({
+                            page: page,
+                            section: null,
+                            score: pageScore,
+                            pageMatches: pageMatches
+                        });
+                    }
+                }
+            }
+
+            results.sort((a, b) => b.score - a.score);
+            displayResults(results.slice(0, 8), query);
+        }
+
+        function displayResults(results, query) {
+            if (results.length === 0) {
+                searchResults.innerHTML = '<div class="search-no-results">No results found</div>';
+                searchResults.classList.add('active');
+                return;
+            }
+
+            let html = '';
+            for (const result of results) {
+                const page = result.page;
+                const section = result.section;
+
+                let href = page.path;
+                let sectionTitle = page.title;
+                let breadcrumbs = page.category.charAt(0).toUpperCase() + page.category.slice(1);
+
+                if (section) {
+                    href += '#' + section.id;
+                    sectionTitle = section.title;
+                    breadcrumbs += ' > ' + page.title;
+                }
+
+                html += `<a href="${href}" class="search-result-item">
+                    <div class="result-title">${highlightMatch(sectionTitle, query)}</div>
+                    <div class="result-section">${breadcrumbs}</div>
+                    <div class="result-tags">`;
+                for (const tag of page.tags.slice(0, 3)) {
+                    html += `<span class="result-tag">${tag}</span>`;
+                }
+                if (section && section.tags) {
+                    for (const tag of section.tags.slice(0, 2)) {
+                        html += `<span class="result-tag">${tag}</span>`;
+                    }
+                }
+                html += `</div></a>`;
+            }
+
+            searchResults.innerHTML = html;
+            searchResults.classList.add('active');
+        }
+
+        function closeSearch() {
+            searchResults.classList.remove('active');
+        }
+
+        searchInput.addEventListener('input', (e) => search(e.target.value));
+        searchInput.addEventListener('focus', () => {
+            if (searchInput.value.length >= 2) {
+                loadSearchIndex().then(() => search(searchInput.value));
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.nav-search')) {
+                closeSearch();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                searchInput.focus();
+                loadSearchIndex();
+            }
+            if (e.key === 'Escape') {
+                closeSearch();
+                searchInput.blur();
+            }
+        });
+
+        loadSearchIndex();
+    </script>
 </body>
 
 </html>
