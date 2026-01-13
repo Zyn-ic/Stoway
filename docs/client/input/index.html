@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Input System - Stoway Docs</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="icon" href="../../assets/Logo.png" />
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <nav class="nav">
+        <a href="../../index.html" class="nav-logo">
+            <img src="../../assets/Logo.png" alt="Stoway">
+            <h1>Stoway</h1>
+        </a>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Documentation</div>
+            <a href="../../index.html" class="nav-link">Home</a>
+            <a href="../../quickstart.html" class="nav-link">Quick Start</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Client</div>
+            <a href="../index.html" class="nav-link">Overview</a>
+            <a href="../hooks/index.html" class="nav-link">Hooks</a>
+            <a href="../gui/index.html" class="nav-link">GUI System</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Input & Console</div>
+            <a href="index.html" class="nav-link active">Input System</a>
+            <a href="interaction-manager.html" class="nav-link">Interaction Manager</a>
+            <a href="console-modes.html" class="nav-link">Console Modes</a>
+            <a href="selection-states.html" class="nav-link">Selection States</a>
+            <a href="binds-module.html" class="nav-link">Binds Module</a>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="breadcrumb">
+            <a href="../../index.html">Docs</a>
+            <span>/</span>
+            <a href="../index.html">Client</a>
+            <span>/</span>
+            <span class="current">Input & Console</span>
+        </div>
+
+        <section class="hero" style="padding: 2rem;">
+            <h1 style="font-size: 2.5rem;">&#127918; Input System</h1>
+            <p>Cross-platform input handling with automatic switching between mouse/touch and gamepad. Features a context-based bind system that prevents conflicts between different modes.</p>
+        </section>
+
+        <div class="section-cards" style="margin-top: 2rem;">
+            <a href="interaction-manager.html" class="section-card">
+                <div class="section-card-icon">&#128205;</div>
+                <h3>Interaction Manager</h3>
+                <p>Automatic input type detection and mode switching.</p>
+                <span class="arrow">&#8594;</span>
+            </a>
+
+            <a href="console-modes.html" class="section-card">
+                <div class="section-card-icon">&#9876;</div>
+                <h3>Console Modes</h3>
+                <p>Combat vs Inventory mode switching and state management.</p>
+                <span class="arrow">&#8594;</span>
+            </a>
+
+            <a href="selection-states.html" class="section-card">
+                <div class="section-card-icon">&#10003;</div>
+                <h3>Selection States</h3>
+                <p>Selection flow for swapping, dropping, and quick moving.</p>
+                <span class="arrow">&#8594;</span>
+            </a>
+
+            <a href="binds-module.html" class="section-card">
+                <div class="section-card-icon">&#128290;</div>
+                <h3>Binds Module</h3>
+                <p>Context-based input system for conflict-free bindings.</p>
+                <span class="arrow">&#8594;</span>
+            </a>
+        </div>
+
+        <section style="margin-top: 4rem;">
+            <div class="section-header">
+                <h2>Architecture Overview</h2>
+                <p>How the input system works together</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Input System Flow</span>
+                    <span class="code-lang">Diagram</span>
+                </div>
+                <pre>UserInputService.PreferredInput
+    |
+    +-- Mouse/Touch
+    |   |
+    |   +-- InteractionManager
+    |       |
+    |       +-- DragHandler.Enabled = true
+    |       +-- ConsoleModeManager.Destroy()
+    |
+    +-- Gamepad
+        |
+        +-- InteractionManager
+            |
+            +-- DragHandler.Enabled = false
+            +-- ConsoleModeManager.Init()
+                |
+                +-- Mode Indicator (HUD badge)
+                |
+                +-- Combat Mode (L3 long press)
+                |   |
+                |   +-- Hotbar binds enabled
+                |   +-- Selection disabled
+                |
+                +-- Inventory Mode
+                    |
+                    +-- SelectionManager.Enabled = true
+                    +-- Selection States: Idle &#8594; Source &#8594; Target/Drop</pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Key Components</h2>
+                <p>Each module's responsibility</p>
+            </div>
+
+            <table class="api-table">
+                <thead>
+                    <tr>
+                        <th>Component</th>
+                        <th>File</th>
+                        <th>Purpose</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="method-name">InputManager</span></td>
+                        <td>InputManager.luau</td>
+                        <td>Creates IllusionIAS contexts and manages bind lifecycle</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">InteractionManager</span></td>
+                        <td>InteractionManager.luau</td>
+                        <td>Detects input type, switches between DragHandler and ConsoleMode</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">ConsoleModeManager</span></td>
+                        <td>ConsoleModeManager.luau</td>
+                        <td>Manages Combat/Inventory modes with visual indicator</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">SelectionManager</span></td>
+                        <td>SelectionManager.luau</td>
+                        <td>Handles slot selection flow for gamepad users</td>
+                    </tr>
+                    <tr>
+                        <td><span class="method-name">Binds</span></td>
+                        <td>Binds.luau</td>
+                        <td>Centralized bind configuration with PC/Console support</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Context System</h2>
+                <p>How IllusionIAS contexts prevent bind conflicts</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                Stoway uses four contexts to organize binds. This allows the same physical key to do different things in different modes:
+            </p>
+
+            <div class="context-grid">
+                <div class="context-card">
+                    <div class="context-header">
+                        <span class="context-name">StowayGlobal</span>
+                    </div>
+                    <p>Always enabled. Contains backpack toggle and mode switch.</p>
+                    <div class="context-binds">
+                        <span class="bind-tag">Tab</span>
+                        <span class="bind-tag">B</span>
+                        <span class="bind-tag">DPadLeft</span>
+                    </div>
+                </div>
+
+                <div class="context-card">
+                    <div class="context-header">
+                        <span class="context-name">StowayCombat</span>
+                    </div>
+                    <p>Enabled in Combat mode. Hotbar slot selection for equipping.</p>
+                    <div class="context-binds">
+                        <span class="bind-tag">1-9</span>
+                        <span class="bind-tag">R1+X</span>
+                        <span class="bind-tag">L1+X</span>
+                    </div>
+                </div>
+
+                <div class="context-card">
+                    <div class="context-header">
+                        <span class="context-name">StowayInventory</span>
+                    </div>
+                    <p>Enabled in Inventory mode. Selection and actions.</p>
+                    <div class="context-binds">
+                        <span class="bind-tag">Y (Swap)</span>
+                        <span class="bind-tag">X (Drop)</span>
+                        <span class="bind-tag">A (QuickMove)</span>
+                        <span class="bind-tag">B (Cancel)</span>
+                    </div>
+                </div>
+
+                <div class="context-card">
+                    <div class="context-header">
+                        <span class="context-name">StowayDrop</span>
+                    </div>
+                    <p>Enabled when dropping. Amount adjustment.</p>
+                    <div class="context-binds">
+                        <span class="bind-tag">DPadUp</span>
+                        <span class="bind-tag">DPadDown</span>
+                    </div>
+                </div>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-top: 1.5rem;">
+                See <a href="binds-module.html" style="color: var(--accent-brown);">Binds Module</a> for detailed configuration.
+            </p>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Console Mode Flow</h2>
+                <p>How gamepad users interact with inventory</p>
+            </div>
+
+            <div class="mode-flow">
+                <div class="mode-node combat">
+                    <div class="mode-icon">&#9876;</div>
+                    <h4>Combat Mode</h4>
+                    <p>Character controls active</p>
+                    <ul>
+                        <li>Hotbar slots work</li>
+                        <li>Inventory closed</li>
+                        <li>Selection disabled</li>
+                    </ul>
+                </div>
+
+                <div class="mode-arrow">
+                    <span>Long Press L3</span>
+                    &#8595;
+                </div>
+
+                <div class="mode-node inventory">
+                    <div class="mode-icon">&#127890;</div>
+                    <h4>Inventory Mode</h4>
+                    <p>UI navigation active</p>
+                    <ul>
+                        <li>D-Pad navigates slots</li>
+                        <li>Y: Swap</li>
+                        <li>X: Drop</li>
+                        <li>A: Quick Move</li>
+                        <li>B: Cancel</li>
+                    </ul>
+                </div>
+
+                <div class="mode-branch">
+                    <div class="branch-label">From Inventory Mode</div>
+                    <div class="branch-options">
+                        <div class="branch-item">
+                            <span>X pressed</span>
+                            &#8594;
+                            <span>Drop Mode</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Customization</h2>
+                <p>Modifying the input system</p>
+            </div>
+
+            <div class="guide-cards">
+                <a href="binds-module.html" class="guide-card">
+                    <div class="guide-badge">Reference</div>
+                    <div class="guide-icon">&#128290;</div>
+                    <h3>Binds Module</h3>
+                    <p>Configure all input bindings in one place.</p>
+                </a>
+
+                <a href="console-modes.html" class="guide-card">
+                    <div class="guide-badge">Reference</div>
+                    <div class="guide-icon">&#9876;</div>
+                    <h3>Console Modes</h3>
+                    <p>Customize mode switching behavior.</p>
+                </a>
+
+                <a href="selection-states.html" class="guide-card">
+                    <div class="guide-badge">Reference</div>
+                    <div class="guide-icon">&#10003;</div>
+                    <h3>Selection States</h3>
+                    <p>Modify selection flow and actions.</p>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <style>
+        .context-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .context-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+        
+        .context-header {
+            margin-bottom: 0.75rem;
+        }
+        
+        .context-name {
+            font-family: 'Fira Code', monospace;
+            font-weight: 600;
+            color: var(--accent-amber);
+            background: rgba(212, 168, 83, 0.15);
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+        
+        .context-card > p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+        
+        .context-binds {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .bind-tag {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-family: 'Fira Code', monospace;
+        }
+        
+        .mode-flow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 2rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+        }
+        
+        .mode-node {
+            text-align: center;
+            padding: 1.5rem 2rem;
+            border-radius: 12px;
+            min-width: 200px;
+        }
+        
+        .mode-node.combat {
+            background: rgba(255, 100, 100, 0.1);
+            border: 1px solid rgba(255, 100, 100, 0.3);
+        }
+        
+        .mode-node.inventory {
+            background: rgba(100, 255, 150, 0.1);
+            border: 1px solid rgba(100, 255, 150, 0.3);
+        }
+        
+        .mode-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .mode-node h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .mode-node p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .mode-node ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            text-align: left;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        .mode-node li {
+            padding: 0.2rem 0;
+        }
+        
+        .mode-arrow {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        
+        .mode-arrow span {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        
+        .mode-arrow::after {
+            content: '';
+            display: block;
+            font-size: 1.5rem;
+        }
+        
+        .mode-branch {
+            width: 100%;
+            max-width: 300px;
+            text-align: center;
+        }
+        
+        .branch-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+        
+        .branch-options {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem;
+        }
+        
+        .branch-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            font-size: 0.85rem;
+        }
+        
+        .branch-item span {
+            color: var(--accent-amber);
+            font-family: 'Fira Code', monospace;
+        }
+    </style>
+</body>
+
+</html>

@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Store = require(script.Parent.Parent.CoreState.InventoryStore)
 local NetworkHandler = require(script.Parent.Parent.NetworkFunctions.NetworkHandler)
 local Fusion = require(ReplicatedStorage.Packages.fusion)
+local Settings = require(ReplicatedStorage.Shared.Settings)
 local GlobalSettings = require(ReplicatedStorage.Shared.Settings)
 local _peek = Fusion.peek
 
@@ -73,6 +74,13 @@ end
 
 function Controller.AddToBackpack(fromType: string, fromIndex: number, REPLICATE:boolean)
     local state = Store:GetState()
+
+    -- Check if backpack is enabled
+    if not Settings.Storage.BackpackEnabled then
+        warn("Cannot add to backpack: Backpack is disabled")
+        return "Backpack is disabled"
+    end
+
     local hotbar = table.clone(state.Hotbar)
     local storage = table.clone(state.Storage)
 
@@ -102,8 +110,11 @@ function Controller.AddToBackpack(fromType: string, fromIndex: number, REPLICATE
 
         if HookManager then
              HookManager:Fire("OnSwap", fromType, fromIndex)
+             return "success"
         end
     end
+
+    return "from type can only be Hotbar"
 end
 
 function Controller.Remove(slotType: string, slotIndex: number, REPLICATE:boolean)
@@ -229,6 +240,14 @@ end
 
 --// ACTION: SWAP
 function Controller.Swap(fromType: string, fromSlot: number, toType: string, toSlot: number, REPLICATE:boolean)
+    -- Check if backpack is enabled if moving to/from storage
+    if not Settings.Storage.BackpackEnabled then
+        if fromType == "Storage" or toType == "Storage" then
+            warn("Cannot swap: Backpack is disabled")
+            return "Backpack is disabled"
+        end
+    end
+
     local state = Store:GetState()
     local newHotbar = table.clone(state.Hotbar)
     local newStorage = table.clone(state.Storage)
@@ -274,6 +293,8 @@ function Controller.Swap(fromType: string, fromSlot: number, toType: string, toS
     if HookManager then
         HookManager:Fire("OnSwap", fromType, fromSlot)
     end
+
+    return
 end
 
 --// ACTION: EQUIP

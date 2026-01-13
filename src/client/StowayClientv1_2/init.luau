@@ -4,6 +4,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
+local UserInputService = game:GetService("UserInputService")
 local ClientInventoryService = {}
 local HookManagerClass = require(script.Hook.HookManager)
 local HookManager = HookManagerClass.new()
@@ -40,6 +41,7 @@ local HotbarFrame        --= InventoryGui.Hotbar :: Frame
 local ScrollingBackpack : ScrollingFrame --= BackpackFrame.ScrollingFrame :: ScrollingFrame
 local SearchFilter      : TextBox --= BackpackFrame.SearchFilter :: TextBox
 local WeightLabel       : TextLabel --= BackpackFrame.Weight :: TextLabel
+local BackpackStuff     : ImageButton -- Mobile Backpack Button
 
 local InputConnections = {}
 
@@ -52,6 +54,11 @@ function SetUpBinds()
 
     InputManager.Init()
 
+    -- Check if Backpack is globally disabled
+    if not Settings.Storage.BackpackEnabled and BackpackFrame then
+        BackpackFrame.Visible = false
+    end
+
     -- Backpack
     if InputManager.BackpackAction then
         local bpConn = InputManager.BackpackAction.Activated:Connect(function(active, pressed)
@@ -60,6 +67,33 @@ function SetUpBinds()
             end
         end)
         table.insert(InputConnections, bpConn)
+    end
+
+    -- Mobile Backpack Button Logic
+    if BackpackStuff then
+        local function updateBackpackStuffVisibility()
+            local isMobile = UserInputService.PreferredInput == Enum.PreferredInput.Touch
+            local isEnabled = Settings.Storage.BackpackEnabled
+
+            BackpackStuff.Visible = isMobile and isEnabled
+
+            -- If disabled or not mobile, ensure backpack is closed (optional, but good UX)
+            if not (isMobile and isEnabled) and BackpackFrame and BackpackFrame.Visible and UserInputService.PreferredInput == Enum.PreferredInput.Touch then
+                -- BackpackFrame.Visible = false -- Maybe don't force close if opened via other means, but safer to leave alone
+            end
+        end
+
+        updateBackpackStuffVisibility()
+
+        local prefInputConn = UserInputService:GetPropertyChangedSignal("PreferredInput"):Connect(updateBackpackStuffVisibility)
+        table.insert(InputConnections, prefInputConn)
+
+        local clickConn = BackpackStuff.Activated:Connect(function()
+            if BackpackFrame then
+                BackpackFrame.Visible = not BackpackFrame.Visible
+            end
+        end)
+        table.insert(InputConnections, clickConn)
     end
 
 	local currentSettings = Fusion.peek(Store.Settings)
@@ -157,6 +191,7 @@ function BuildGui(UIVersion, FolderName, GuiName)
             ScrollingBackpack = BackpackFrame.ScrollingFrame
             SearchFilter = BackpackFrame.SearchFilter
             WeightLabel = BackpackFrame.Weight
+            BackpackStuff = InventoryGui:FindFirstChild("BackpackStuff")
 
             InventoryGui.Parent = Player.PlayerGui
 
@@ -202,6 +237,8 @@ function BuildStorage()
 		StorageScope:doCleanup()
 		StorageScope = nil
 	end
+
+    if not Settings.Storage.BackpackEnabled then return end
 
     StorageScope = Store.Scope:deriveScope()
 
@@ -344,7 +381,7 @@ function ClientInventoryService.Reload(config: {UiType: string?, Data: any?}?)
     DragHandler.Destroy()
     DragHandler.Init(DraggingGui, HotbarFrame, BackpackFrame, HookManager, SlotFactory.CloneForGhost)
 
-    InteractionManager.Init(DragHandler)
+    InteractionManager.Init(DragHandler, HotbarFrame)
     SelectionManager.Init(HotbarFrame, BackpackFrame, HookManager)
 
     -- 7. BUILD UI
@@ -451,7 +488,7 @@ function ClientInventoryService.Init()
 
     DragHandler.Init(DraggingGui, HotbarFrame, BackpackFrame, HookManager, SlotFactory.CloneForGhost)
 
-    InteractionManager.Init(DragHandler)
+    InteractionManager.Init(DragHandler, HotbarFrame)
     SelectionManager.Init(HotbarFrame, BackpackFrame, HookManager)
 
     BuildHotbar()

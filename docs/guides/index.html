@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Server Overview - Stoway Docs</title>
+    <title>Guides - Stoway Docs</title>
     <link
         href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
@@ -33,10 +33,19 @@
         </div>
 
         <div class="nav-section">
+            <div class="nav-section-title">Guides</div>
+            <a href="index.html" class="nav-link active">All Guides</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Templates</div>
+            <a href="../templates/index.html" class="nav-link">Templates</a>
+        </div>
+
+        <div class="nav-section">
             <div class="nav-section-title">Server</div>
-            <a href="index.html" class="nav-link active">Overview</a>
-            <a href="architecture.html" class="nav-link">Architecture</a>
-            <a href="api-reference.html" class="nav-link">API Reference</a>
+            <a href="../server/index.html" class="nav-link">Overview</a>
+            <a href="../server/api-reference.html" class="nav-link">API Reference</a>
         </div>
 
         <div class="nav-section">
@@ -45,194 +54,239 @@
             <a href="../client/hooks/index.html" class="nav-link">Hooks</a>
             <a href="../client/input/index.html" class="nav-link">Input & Console</a>
         </div>
-
-        <div class="nav-section">
-            <div class="nav-section-title">Guides</div>
-            <a href="../guides/index.html" class="nav-link">All Guides</a>
-            <a href="../guides/add-server-features.html" class="nav-link">Add Features</a>
-        </div>
     </nav>
 
     <main class="main">
         <div class="breadcrumb">
             <a href="../index.html">Docs</a>
             <span>/</span>
-            <span class="current">Server</span>
+            <span class="current">Guides</span>
         </div>
 
         <section class="hero" style="padding: 2rem;">
-            <h1 style="font-size: 2.5rem;">&#128187; Server Backend</h1>
-            <p>Server-authoritative inventory management with modular operations, anti-exploit protection, and per-player settings.</p>
+            <h1 style="font-size: 2.5rem;">&#128218; How-To Guides</h1>
+            <p>Task-oriented tutorials for extending and customizing Stoway. Each guide includes step-by-step instructions and code examples.</p>
         </section>
 
-        <div class="section-cards" style="margin-top: 2rem;">
-            <a href="architecture.html" class="section-card">
-                <div class="section-card-icon">&#128736;</div>
-                <h3>Architecture</h3>
-                <p>System design, data flow, and component overview.</p>
-                <span class="arrow">&#8594;</span>
-            </a>
-
-            <a href="api-reference.html" class="section-card">
-                <div class="section-card-icon">&#128220;</div>
-                <h3>API Reference</h3>
-                <p>Complete InventoryService method documentation.</p>
-                <span class="arrow">&#8594;</span>
-            </a>
-        </div>
-
-        <section style="margin-top: 4rem;">
+        <section id="getting-started">
             <div class="section-header">
-                <h2>Key Features</h2>
-                <p>What the server backend provides</p>
+                <h2>Getting Started</h2>
+                <p>Essential guides for new users</p>
             </div>
 
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">&#128274;</div>
-                    <h3>Server-Authoritative</h3>
-                    <p>All operations validated server-side. Zero client trust.</p>
-                </div>
+            <div class="guide-cards">
+                <a href="quickstart.html" class="guide-card">
+                    <div class="guide-badge">Beginner</div>
+                    <div class="guide-icon">&#9658;</div>
+                    <h3>5-Min Quick Start</h3>
+                    <p>Get Stoway running in your project with minimal configuration.</p>
+                    <span class="guide-meta">5 min read</span>
+                </a>
 
-                <div class="feature-card">
-                    <div class="feature-icon">&#9889;</div>
-                    <h3>O(1) Lookups</h3>
-                    <p>Hash table lookups for instant item access by UUID.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">&#128274;</div>
-                    <h3>Anti-Exploit</h3>
-                    <p>Per-player operation lock prevents remote spam.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">&#127919;</div>
-                    <h3>Modular Operations</h3>
-                    <p>Add, Remove, Swap, Equip, Drop as separate modules.</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">&#128200;</div>
-                    <h3>Per-Player Settings</h3>
-                    <p>Runtime-configurable limits per player (VIP bonuses).</p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">&#128230;</div>
-                    <h3>Smart Stacking</h3>
-                    <p>Metadata-aware grouping with configurable rules.</p>
-                </div>
+                <a href="settings-configuration.html" class="guide-card">
+                    <div class="guide-badge">Beginner</div>
+                    <div class="guide-icon">&#9881;</div>
+                    <h3>Settings Configuration</h3>
+                    <p>Understand global vs per-player settings and how to configure them.</p>
+                    <span class="guide-meta">8 min read</span>
+                </a>
             </div>
         </section>
 
-        <section style="margin-top: 4rem;">
+        <section id="server-development">
             <div class="section-header">
-                <h2>Quick Links</h2>
-                <p>Common tasks and references</p>
+                <h2>Server Development</h2>
+                <p>Extending the backend</p>
             </div>
 
-            <div class="quick-links-list">
-                <a href="../guides/add-server-features.html" class="quick-link-item">
-                    <span class="link-icon">&#43;</span>
-                    <div class="link-content">
-                        <h4>Add a Server Feature</h4>
-                        <p>Create new operations and extend the system</p>
-                    </div>
+            <div class="guide-cards">
+                <a href="add-server-features.html" class="guide-card">
+                    <div class="guide-badge intermediate">Intermediate</div>
+                    <div class="guide-icon">&#43;</div>
+                    <h3>Add Server Features</h3>
+                    <p>Create new operations, add API methods, and wire them to the network protocol.</p>
+                    <span class="guide-meta">15 min read</span>
                 </a>
 
-                <a href="../guides/settings-configuration.html" class="quick-link-item">
-                    <span class="link-icon">&#9881;</span>
-                    <div class="link-content">
-                        <h4>Configure Settings</h4>
-                        <p>Global defaults vs per-player overrides</p>
-                    </div>
+                <a href="remove-features.html" class="guide-card">
+                    <div class="guide-badge">Beginner</div>
+                    <div class="guide-icon">&#10006;</div>
+                    <h3>Remove Features</h3>
+                    <p>Disable sorting, rarity, death handling. Includes custom death patterns and disabling the client.</p>
+                    <span class="guide-meta">10 min read</span>
                 </a>
 
-                <a href="../templates/index.html" class="quick-link-item">
-                    <span class="link-icon">&#128221;</span>
-                    <div class="link-content">
-                        <h4>Code Templates</h4>
-                        <p>Copy-paste ready operation templates</p>
-                    </div>
+                <a href="persistence.html" class="guide-card">
+                    <div class="guide-badge">Beginner</div>
+                    <div class="guide-icon">&#128190;</div>
+                    <h3>Add Persistence</h3>
+                    <p>Save and load player inventories using ProfileStore or DataStore.</p>
+                    <span class="guide-meta">10 min read</span>
+                </a>
+            </div>
+        </section>
+
+        <section id="client-customization">
+            <div class="section-header">
+                <h2>Client Customization</h2>
+                <p>UI, hooks, and input</p>
+            </div>
+
+            <div class="guide-cards">
+                <a href="create-gui-skins.html" class="guide-card">
+                    <div class="guide-badge coming-soon">Coming Soon</div>
+                    <div class="guide-icon">&#127912;</div>
+                    <h3>Create GUI Skins</h3>
+                    <p>Design custom inventory interfaces using the template system.</p>
+                    <span class="guide-meta">12 min read</span>
+                </a>
+
+                <a href="use-hooks.html" class="guide-card">
+                    <div class="guide-badge">Beginner</div>
+                    <div class="guide-icon">&#128218;</div>
+                    <h3>Use Hooks</h3>
+                    <p>Customize client behavior with sound effects, animations, and analytics.</p>
+                    <span class="guide-meta">10 min read</span>
+                </a>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Reference</h2>
+                <p>Related documentation</p>
+            </div>
+
+            <div class="reference-grid">
+                <a href="../server/api-reference.html" class="reference-item">
+                    <h4>&#128187; Server API</h4>
+                    <p>Complete reference for InventoryService methods</p>
+                </a>
+
+                <a href="../client/hooks/available-hooks.html" class="reference-item">
+                    <h4>&#128172; Available Hooks</h4>
+                    <p>All hooks and their arguments</p>
+                </a>
+
+                <a href="../client/input/binds-module.html" class="reference-item">
+                    <h4>&#128290; Binds Module</h4>
+                    <p>Context-based input configuration</p>
+                </a>
+
+                <a href="../templates/index.html" class="reference-item">
+                    <h4>&#128221; Code Templates</h4>
+                    <p>Copy-paste ready code snippets</p>
                 </a>
             </div>
         </section>
     </main>
 
     <style>
-        .features-grid {
+        .guide-cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 1.5rem;
         }
         
-        .feature-card {
+        .guide-card {
             background: linear-gradient(135deg, rgba(37, 32, 25, 0.8), rgba(26, 22, 18, 0.9));
             border: 1px solid var(--border-color);
             border-radius: 16px;
             padding: 2rem;
+            text-decoration: none;
+            color: inherit;
+            position: relative;
             transition: all 0.3s ease;
         }
         
-        .feature-card:hover {
-            transform: translateY(-3px);
+        .guide-card:hover {
+            transform: translateY(-5px);
             border-color: rgba(196, 167, 125, 0.3);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
         }
         
-        .feature-icon {
-            font-size: 2rem;
+        .guide-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.25rem 0.75rem;
+            background: rgba(196, 167, 125, 0.2);
+            color: var(--accent-brown);
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .guide-badge.intermediate {
+            background: rgba(255, 179, 0, 0.2);
+            color: var(--warning);
+        }
+        
+        .guide-badge.advanced {
+            background: rgba(124, 179, 66, 0.2);
+            color: var(--success);
+        }
+        
+        .guide-badge.coming-soon {
+            background: rgba(140, 129, 119, 0.2);
+            color: var(--text-muted);
+        }
+        
+        .guide-card:hover .guide-badge.coming-soon {
+            opacity: 0.7;
+        }
+        
+        .guide-icon {
+            font-size: 2.5rem;
             margin-bottom: 1rem;
         }
         
-        .feature-card h3 {
-            font-size: 1.1rem;
+        .guide-card h3 {
+            font-size: 1.25rem;
             font-weight: 600;
             margin-bottom: 0.5rem;
         }
         
-        .feature-card p {
+        .guide-card p {
             color: var(--text-secondary);
             font-size: 0.9rem;
+            margin-bottom: 1rem;
         }
         
-        .quick-links-list {
-            display: flex;
-            flex-direction: column;
+        .guide-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        
+        .reference-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1rem;
         }
         
-        .quick-link-item {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1.25rem;
+        .reference-item {
             background: var(--bg-secondary);
             border: 1px solid var(--border-color);
             border-radius: 12px;
+            padding: 1.25rem;
             text-decoration: none;
             color: inherit;
             transition: all 0.2s ease;
         }
         
-        .quick-link-item:hover {
+        .reference-item:hover {
             border-color: rgba(196, 167, 125, 0.3);
-            background: rgba(37, 32, 25, 0.8);
         }
         
-        .link-icon {
-            font-size: 1.5rem;
-        }
-        
-        .link-content h4 {
-            font-size: 1rem;
+        .reference-item h4 {
+            font-size: 0.95rem;
             font-weight: 600;
             margin-bottom: 0.25rem;
         }
         
-        .link-content p {
+        .reference-item p {
             color: var(--text-secondary);
-            font-size: 0.85rem;
+            font-size: 0.8rem;
         }
     </style>
 
@@ -400,3 +454,5 @@
         loadSearchIndex();
     </script>
 </body>
+
+</html>

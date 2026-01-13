@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hooks System - Stoway Docs</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="icon" href="../../assets/Logo.png" />
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <nav class="nav">
+        <a href="../../index.html" class="nav-logo">
+            <img src="../../assets/Logo.png" alt="Stoway">
+            <h1>Stoway</h1>
+        </a>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Documentation</div>
+            <a href="../../index.html" class="nav-link">Home</a>
+            <a href="../../quickstart.html" class="nav-link">Quick Start</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Client</div>
+            <a href="../index.html" class="nav-link">Overview</a>
+            <a href="index.html" class="nav-link active">Hooks</a>
+            <a href="gui/index.html" class="nav-link">GUI System</a>
+            <a href="input/index.html" class="nav-link">Input & Console</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Guides</div>
+            <a href="../../guides/index.html" class="nav-link">All Guides</a>
+            <a href="../../guides/use-hooks.html" class="nav-link">Use Hooks</a>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="breadcrumb">
+            <a href="../../index.html">Docs</a>
+            <span>/</span>
+            <a href="../index.html">Client</a>
+            <span>/</span>
+            <span class="current">Hooks</span>
+        </div>
+
+        <section class="hero" style="padding: 2rem;">
+            <h1 style="font-size: 2.5rem;">&#128218; Hooks System</h1>
+            <p>Event-driven customization for the client. Hooks allow you to customize UI behavior, add sound effects, trigger analytics, and more - without modifying core code.</p>
+        </section>
+
+        <div class="section-cards" style="margin-top: 2rem;">
+            <a href="hooks/hook-manager.html" class="section-card">
+                <div class="section-card-icon">&#128736;</div>
+                <h3>Hook Manager</h3>
+                <p>Core API for registering and firing hooks.</p>
+                <span class="arrow">&#8594;</span>
+            </a>
+
+            <a href="hooks/available-hooks.html" class="section-card">
+                <div class="section-card-icon">&#128172;</div>
+                <h3>Available Hooks</h3>
+                <p>Complete reference of all hook events.</p>
+                <span class="arrow">&#8594;</span>
+            </a>
+
+            <a href="hooks/hook-examples.html" class="section-card">
+                <div class="section-card-icon">&#128161;</div>
+                <h3>Practical Examples</h3>
+                <p>Common use cases and code samples.</p>
+                <span class="arrow">&#8594;</span>
+            </a>
+        </div>
+
+        <section style="margin-top: 4rem;">
+            <div class="section-header">
+                <h2>How Hooks Work</h2>
+                <p>Understanding the hook system</p>
+            </div>
+
+            <div class="concept-flow">
+                <div class="concept-step">
+                    <div class="concept-icon">&#128483;</div>
+                    <h4>1. Register</h4>
+                    <p>Register callback functions for specific events</p>
+                    <code>Hooks:Register("OnSlotClick", callback)</code>
+                </div>
+
+                <div class="concept-arrow">&#8594;</div>
+
+                <div class="concept-step">
+                    <div class="concept-icon">&#128293;</div>
+                    <h4>2. Fire</h4>
+                    <p>When an event occurs, hooks fire with data</p>
+                    <code>Hooks:Fire("OnSlotClick", slotType, index)</code>
+                </div>
+
+                <div class="concept-arrow">&#8594;</div>
+
+                <div class="concept-step">
+                    <div class="concept-icon">&#9889;</div>
+                    <h4>3. Execute</h4>
+                    <p>All registered callbacks run with event data</p>
+                    <code>callback(slotType, index, uuid)</code>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Why Use Hooks?</h2>
+                <p>Benefits over direct modification</p>
+            </div>
+
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <div class="benefit-icon">&#128279;</div>
+                    <h4>Non-Invasive</h4>
+                    <p>Don't modify core code. Safe from merge conflicts when updating.</p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-icon">&#128721;</div>
+                    <h4>Dynamic</h4>
+                    <p>Load different hooks based on UI skin or game mode.</p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-icon">&#128200;</div>
+                    <h4>Modular</h4>
+                    <p>Organize hooks into presets. Mix and match as needed.</p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-icon">&#128640;</div>
+                    <h4>Performant</h4>
+                    <p>Lightweight. Only registered callbacks execute.</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Common Use Cases</h2>
+                <p>What hooks are typically used for</p>
+            </div>
+
+            <div class="use-cases">
+                <div class="use-case">
+                    <h4>&#128266; Sound Effects</h4>
+                    <p>Play click, hover, and drag sounds on inventory interactions.</p>
+                </div>
+
+                <div class="use-case">
+                    <h4>&#128247; Visual Feedback</h4>
+                    <p>Animate slots on hover, selection, and equip.</p>
+                </div>
+
+                <div class="use-case">
+                    <h4>&#128202; Analytics</h4>
+                    <p>Track item pickups, drops, and equips for gameplay metrics.</p>
+                </div>
+
+                <div class="use-case">
+                    <h4>&#128302; Game Integration</h4>
+                    <p>Trigger achievements, quests, or other systems on events.</p>
+                </div>
+
+                <div class="use-case">
+                    <h4>&#127919; Haptic Feedback</h4>
+                    <p>Controller vibration on gamepad interactions.</p>
+                </div>
+
+                <div class="use-case">
+                    <h4>&#128337; Cooldowns</h4>
+                    <p>Debounce rapid clicks or prevent spam actions.</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Quick Start</h2>
+                <p>Register your first hook</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Basic Hook Registration</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- Get the HookManager from client</span>
+<span class="keyword">local</span> Client = <span class="function">require</span>(path.to.StowayClient)
+
+<span class="comment">-- Register a hook</span>
+Client.Hooks:<span class="function">Register</span>(<span class="string">"OnSlotClick"</span>, <span class="keyword">function</span>(slotType, index, uuid)
+    <span class="comment">-- Play sound</span>
+    SoundService.Click:<span class="function">Play</span>()
+    
+    <span class="comment">-- Log for analytics</span>
+    <span class="function">print</span>(<span class="string">"Clicked "</span> .. slotType .. <span class="string">" #"</span> .. index)
+<span class="keyword">end</span>)</code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Related Documentation</h2>
+                <p>See also</p>
+            </div>
+
+            <div class="next-steps-grid">
+                <a href="hooks/available-hooks.html" class="next-step-card">
+                    <div class="next-step-icon">&#128172;</div>
+                    <h4>All Hooks</h4>
+                    <p>Complete reference</p>
+                </a>
+
+                <a href="hooks/hook-examples.html" class="next-step-card">
+                    <div class="next-step-icon">&#128161;</div>
+                    <h4>Examples</h4>
+                    <p>Practical code samples</p>
+                </a>
+
+                <a href="../../guides/use-hooks.html" class="next-step-card">
+                    <div class="next-step-icon">&#128218;</div>
+                    <h4>Use Hooks Guide</h4>
+                    <p>Detailed tutorial</p>
+                </a>
+
+                <a href="gui/index.html" class="next-step-card">
+                    <div class="next-step-icon">&#127912;</div>
+                    <h4>GUI System</h4>
+                    <p>UI customization</p>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <style>
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .concept-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            padding: 2rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            margin-bottom: 2rem;
+        }
+        
+        .concept-step {
+            text-align: center;
+            padding: 1.25rem;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            max-width: 180px;
+        }
+        
+        .concept-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .concept-step h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .concept-step p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+        }
+        
+        .concept-step code {
+            font-size: 0.7rem;
+            background: var(--bg-primary);
+            padding: 0.35rem 0.5rem;
+            border-radius: 4px;
+            color: var(--accent-amber);
+            display: block;
+        }
+        
+        .concept-arrow {
+            font-size: 1.5rem;
+            color: var(--accent-brown);
+        }
+        
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .benefit-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-align: center;
+        }
+        
+        .benefit-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .benefit-card h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .benefit-card p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        
+        .use-cases {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+        }
+        
+        .use-case {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+        
+        .use-case h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .use-case p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        
+        .next-steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+        }
+        
+        .next-step-card {
+            background: linear-gradient(135deg, rgba(37, 32, 25, 0.8), rgba(26, 22, 18, 0.9));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+        }
+        
+        .next-step-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(196, 167, 125, 0.3);
+        }
+        
+        .next-step-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .next-step-card h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .next-step-card p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+    </style>
+</body>
+
+</html>

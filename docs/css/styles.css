@@ -79,6 +79,115 @@ body {
     z-index: 100;
 }
 
+.nav-search {
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.nav-search-input {
+    width: 100%;
+    padding: 0.6rem 1rem;
+    background: rgba(61, 53, 42, 0.5);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.nav-search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.nav-search-input:focus {
+    outline: none;
+    border-color: var(--accent-brown);
+    background: rgba(61, 53, 42, 0.8);
+}
+
+.search-results {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-top: 0.5rem;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.search-results.active {
+    display: block;
+}
+
+.search-result-item {
+    display: block;
+    padding: 0.75rem 1rem;
+    text-decoration: none;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.2s ease;
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.search-result-item:hover {
+    background: rgba(196, 167, 125, 0.1);
+}
+
+.search-result-item .result-title {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--accent-brown);
+}
+
+.search-result-item .result-section {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+}
+
+.search-result-item .result-tags {
+    display: flex;
+    gap: 0.25rem;
+    margin-top: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.search-result-item .result-tag {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.4rem;
+    background: rgba(196, 167, 125, 0.1);
+    border-radius: 4px;
+    color: var(--text-muted);
+}
+
+.search-no-results {
+    padding: 1rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.search-shortcut {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.7rem;
+    padding: 0.15rem 0.4rem;
+    background: var(--bg-tertiary);
+    border-radius: 4px;
+    color: var(--text-muted);
+}
+
 .nav-logo {
     display: flex;
     align-items: center;

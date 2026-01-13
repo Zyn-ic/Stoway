@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Start - Stoway Docs</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="icon" href="assets/Logo.png" />
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <nav class="nav">
+        <a href="index.html" class="nav-logo">
+            <img src="assets/Logo.png" alt="Stoway">
+            <h1>Stoway</h1>
+        </a>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Documentation</div>
+            <a href="index.html" class="nav-link">Home</a>
+            <a href="quickstart.html" class="nav-link active">Quick Start</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Guides</div>
+            <a href="guides/index.html" class="nav-link">All Guides</a>
+            <a href="guides/add-server-features.html" class="nav-link">Add Server Features</a>
+            <a href="guides/create-gui-skins.html" class="nav-link">GUI Skins</a>
+            <a href="guides/settings-configuration.html" class="nav-link">Settings</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Server</div>
+            <a href="server/index.html" class="nav-link">Overview</a>
+            <a href="server/architecture.html" class="nav-link">Architecture</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Client</div>
+            <a href="client/index.html" class="nav-link">Overview</a>
+            <a href="client/hooks/index.html" class="nav-link">Hooks</a>
+            <a href="client/input/index.html" class="nav-link">Input & Console</a>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="breadcrumb">
+            <a href="index.html">Docs</a>
+            <span>/</span>
+            <span class="current">Quick Start</span>
+        </div>
+
+        <section class="hero" style="padding: 2rem;">
+            <h1 style="font-size: 2.5rem;">&#9658; Quick Start Guide</h1>
+            <p>Get Stoway running in 5 minutes. This guide covers installation, basic configuration, and your first inventory operation.</p>
+        </section>
+
+        <section class="video-section">
+            <div class="video-header">
+                <div class="video-icon">&#127909;</div>
+                <div class="video-title">
+                    <h2>Video Walkthrough</h2>
+                    <p>Prefer watching? Follow along with this visual guide</p>
+                </div>
+            </div>
+            <div class="video-container">
+                <iframe 
+                    src="https://player.vimeo.com/video/1153827249" 
+                    title="Stoway Setup Video"
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen>
+                </iframe>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Step 1: Copy the Files</h2>
+                <p>Add Stoway to your Roblox project</p>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Copy Server Code</h3>
+                    <p>Copy the entire <code>src/server/StowayServerV1_2</code> folder to your <strong>ServerScriptService</strong></p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-title">Expected Location</span>
+                            <span class="code-lang">Tree</span>
+                        </div>
+                        <pre>ServerScriptService/
+- StowayServerV1_2/
+-   init.luau
+-   Core/
+-   Operations/
+-   Replication/
+-   Utils/</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Copy Client Code</h3>
+                    <p>Copy the entire <code>src/client/StowayClientv1_2</code> folder to your <strong>StarterPlayerScripts</strong></p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-title">Expected Location</span>
+                            <span class="code-lang">Tree</span>
+                        </div>
+                        <pre>StarterPlayer/
+- StarterPlayerScripts/
+-   StowayClientv1_2/
+-     init.luau
+-   CoreState/
+-   Input/
+-   Hook/
+-   Operations/</pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Copy Shared Code</h3>
+                    <p>Copy the shared modules to <strong>ReplicatedStorage</strong></p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-title">Required Files</span>
+                            <span class="code-lang">Tree</span>
+                        </div>
+                        <pre>ReplicatedStorage/
+- Shared/
+-   Settings.luau      # Configuration
+-   Binds.luau         # Input bindings
+-   RarityValues.luau  # Optional: item rarities
+- Packages/
+-   Fusion             # UI framework
+-   IllusionIAS        # Input system</pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Step 2: Set Up GUI Templates</h2>
+                <p>Create your inventory interface structure</p>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3>Create GUI Folder</h3>
+                    <p>In <strong>ReplicatedStorage</strong>, create a folder named <code>Gui</code> with your interface:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-title">GUI Structure</span>
+                            <span class="code-lang">Tree</span>
+                        </div>
+                        <pre>ReplicatedStorage/
+- Gui/
+-   StowayGui/
+-     Stoway              # Main ScreenGui
+-       Backpack          # Storage container
+-         ScrollingFrame  # Dynamic slots
+-         SearchFilter    # Optional search
+-         Weight          # Optional weight label
+-       Hotbar            # Fixed slots (1-9)
+-     Slot/               # Slot template folder
+-       template          # Slot template Frame
+-         slotbutton      # ImageButton for item
+-         stackcount      # Amount label
+-         slotnumber      # Keybind display
+-         selecticon      # Equipped indicator
+-         rarityframe     # Rarity border</pre>
+                    </div>
+                    <p style="color: var(--text-secondary); margin-top: 1rem;">See <a href="guides/create-gui-skins.html" style="color: var(--accent-brown);">Create GUI Skins</a> for detailed template requirements.</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Step 3: Configure Settings</h2>
+                <p>Edit src/shared/Settings.luau for your game</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Essential Settings</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- ReplicatedStorage/Shared/Settings.luau</span>
+
+<span class="comment">-- Hotbar slot count</span>
+Settings.Hotbar = {
+    MaxSlots = <span class="number">9</span>,  <span class="comment">-- Change to your preference</span>
+}
+
+<span class="comment">-- Inventory capacity</span>
+Settings.Storage = {
+    Limit = <span class="number">15</span>,       <span class="comment">-- 0 = unlimited</span>
+    CanStack = <span class="keyword">true</span>,
+    MaxStackSize = <span class="number">5</span>,
+}
+
+<span class="comment">-- UI Configuration (matches GUI folder names)</span>
+Settings.DifferentUIs = {
+    Default = {
+        FolderName = <span class="string">"StowayGui"</span>,
+        GuiName = <span class="string">"Stoway"</span>,
+        HookPresetName = <span class="string">"DefaultHooks"</span>
+    }
+}</code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Step 4: Initialize the System</h2>
+                <p>Start Stoway in your game</p>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <h3>Server Initialization</h3>
+                    <p>Add this to a ServerScript (e.g., ModuleScript in ServerScriptService):</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-title">Server Setup</span>
+                            <span class="code-lang">Luau</span>
+                        </div>
+                        <pre><code><span class="comment">-- ServerScriptService/Main.luau</span>
+
+<span class="keyword">local</span> InventoryService = <span class="function">require</span>(
+    game.ServerScriptService.StowayServerV1_2
+)
+
+<span class="comment">-- Initialize the system</span>
+InventoryService.<span class="function">Init</span>()
+
+<span class="function">print</span>(<span class="string">"[Stoway] Inventory system initialized!"</span>)</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">6</div>
+                <div class="step-content">
+                    <h3>Client Initialization</h3>
+                    <p>Client starts automatically via StarterPlayerScripts entry point</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-title">Client Entry</span>
+                            <span class="code-lang">Luau</span>
+                        </div>
+                        <pre><code><span class="comment">-- StarterPlayerScripts/StowayClientv1_2/init.luau</span>
+
+<span class="keyword">local</span> ClientInventoryService = <span class="function">require</span>(script)
+
+<span class="comment">-- Initialize client (called automatically)</span>
+ClientInventoryService.<span class="function">Init</span>()</code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Step 5: Add Your First Item</h2>
+                <p>Test the system with an item</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Give Item Script</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- ServerScriptService/GiveItems.luau</span>
+
+<span class="keyword">local</span> InventoryService = <span class="function">require</span>(
+    game.ServerScriptService.StowayServerV1_2
+)
+
+<span class="comment">-- Example: Give a tool to a player</span>
+<span class="keyword">local</span> <span class="function">player</span> = game.Players.LocalPlayer  <span class="comment">-- Use in a RemoteFunction context</span>
+
+<span class="comment">-- Add item to player's inventory</span>
+<span class="keyword">local</span> result = InventoryService.<span class="function">AddItem</span>(
+    player,
+    <span class="string">"Sword"</span>,      <span class="comment">-- Item ID (must exist in ServerStorage.Tools)</span>
+    <span class="number">1</span>,             <span class="comment">-- Amount</span>
+    <span class="keyword">nil</span>,            <span class="comment">-- Optional metadata</span>
+    <span class="keyword">true</span>            <span class="comment">-- Replicate to client</span>
+)
+
+<span class="keyword">if</span> result.success <span class="keyword">then</span>
+    <span class="function">print</span>(<span class="string">"Added item successfully!"</span>)
+<span class="keyword">else</span>
+    <span class="function">warn</span>(<span class="string">"Failed to add item: "</span> .. result.reason)
+<span class="keyword">end</span></code></pre>
+            </div>
+
+            <div class="info-box">
+                <strong>&#128161; Tip:</strong> Ensure your item exists in <code>ServerStorage.Tools</code> with the matching name before adding it to inventories.
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Next Steps</h2>
+                <p>Where to go from here</p>
+            </div>
+
+            <div class="next-steps-grid">
+                <a href="guides/add-server-features.html" class="next-step-card">
+                    <div class="next-step-icon">&#43;</div>
+                    <h4>Add Server Features</h4>
+                    <p>Learn to create custom operations</p>
+                </a>
+
+                <a href="guides/create-gui-skins.html" class="next-step-card">
+                    <div class="next-step-icon">&#127912;</div>
+                    <h4>Create GUI Skins</h4>
+                    <p>Design custom interfaces</p>
+                </a>
+
+                <a href="guides/use-hooks.html" class="next-step-card">
+                    <div class="next-step-icon">&#128218;</div>
+                    <h4>Use Hooks</h4>
+                    <p>Customize client behavior</p>
+                </a>
+
+                <a href="client/input/index.html" class="next-step-card">
+                    <div class="next-step-icon">&#127918;</div>
+                    <h4>Console Support</h4>
+                    <p>Gamepad input and modes</p>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <style>
+        .step-card {
+            display: flex;
+            gap: 1.5rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.2s ease;
+        }
+        
+        .step-card:hover {
+            border-color: rgba(196, 167, 125, 0.3);
+        }
+        
+        .step-number {
+            width: 48px;
+            height: 48px;
+            background: var(--accent-gradient);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--bg-primary);
+            flex-shrink: 0;
+        }
+        
+        .step-content h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .step-content p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+        
+        .info-box {
+            background: rgba(124, 179, 66, 0.1);
+            border: 1px solid rgba(124, 179, 66, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .info-box strong {
+            color: var(--success);
+        }
+        
+        .next-steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+        }
+        
+        .next-step-card {
+            background: linear-gradient(135deg, rgba(37, 32, 25, 0.8), rgba(26, 22, 18, 0.9));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+        }
+        
+        .next-step-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(196, 167, 125, 0.3);
+        }
+        
+        .next-step-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .next-step-card h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .next-step-card p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        /* Video Section */
+        .video-section {
+            background: linear-gradient(135deg, rgba(37, 32, 25, 0.6), rgba(26, 22, 18, 0.8));
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .video-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .video-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--accent-gradient);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .video-title h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .video-title p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%;
+            border-radius: 12px;
+            overflow: hidden;
+            background: var(--bg-tertiary);
+        }
+
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .video-placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, rgba(196, 167, 125, 0.1), rgba(212, 168, 83, 0.05));
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .video-placeholder:hover {
+            background: linear-gradient(135deg, rgba(196, 167, 125, 0.15), rgba(212, 168, 83, 0.1));
+        }
+
+        .video-play-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--accent-gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 10px 30px rgba(196, 167, 125, 0.3);
+        }
+
+        .video-placeholder p {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .video-duration {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+    </style>
+</body>
+
+</html>

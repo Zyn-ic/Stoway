@@ -1,58 +1,129 @@
-# Stoway - Advanced Roblox Inventory System (V2.x Dev) 🎒✨
+# Stoway - Advanced Roblox Inventory System (V2.4.0) 🎒✨
 <img src="pics/Logo.png" alt="Stoway Logo" width="120" align = "left" style="margin-right:15px"/> 
 
 <div style="display: flex; flex-direction: column; gap: 2px;">
-<p> <strong>Stoway V2</strong> is the next evolution of the Stoway inventory system. This branch is currently in active development, focusing on a complete overhaul of the input handling architecture using <strong>IllusionIAS</strong>. This update aims to provide robust, context-aware keybindings, full console controller support, and dynamic runtime rebinding capabilities.</p>
+<p> <strong>Stoway</strong> is a robust, data-driven inventory and hotbar system designed for Roblox experiences. Built with performance and flexibility in mind, it uses <strong>Fusion</strong> for reactive UI updates and a smart <strong>Delta Replication</strong> system to minimize network traffic. Whether you need a simple RPG backpack or a complex survival inventory, Stoway provides the solid foundation you need. Please consider going to the <a href="https://github.com/Zyn-ic/Stoway/releases">latest release</a> and downloading it there.</p>
 </div>
 
 <br>
 
-> ⚠️ **Development Branch**: This is the `version-2.x.x` branch. Features here are experimental and subject to change. For the stable release, please see the `main` branch (V1.2).
-
 ## 📖 Table of Contents
 
-- [Stoway - Advanced Roblox Inventory System (V2.x Dev) 🎒✨](#stoway---advanced-roblox-inventory-system-v2x-dev-)
+- [Stoway - Advanced Roblox Inventory System (V2.4.0) 🎒✨](#stoway---advanced-roblox-inventory-system-v236-)
   - [📖 Table of Contents](#-table-of-contents)
-  - [🆕 What's New in V2? ](#-whats-new-in-v2-)
-    - [🎮 Advanced Input Manager ](#-advanced-input-manager-)
-  - [🌟 Core Features (Inherited from V1) ](#-core-features-inherited-from-v1-)
-  - [🚀 Getting Started (V2 Dev) ](#-getting-started-v2-dev-)
-  - [Credits](#credits)
+  - [🌟 Core Features ](#-core-features-)
+    - [🔥 Hotbar ](#-hotbar-)
+    - [🎒 Backpack / Storage ](#-backpack--storage-)
+    - [⚙️ Advanced Systems ](#️-advanced-systems-)
+  - [🚀 Getting Started ](#-getting-started-)
+  - [🛠️ Configuration ](#️-configuration-)
+  - [💬 Debug Commands ](#-debug-commands-)
+- [Credits](#credits)
 
 <br>
 
-## 🆕 What's New in V2? <a name="whats-new-in-v2"></a>
+## 🌟 Core Features <a name="core-features"></a>
 
-### 🎮 Advanced Input Manager <a name="advanced-input-manager"></a>
-*   **IllusionIAS Integration:** We have migrated away from basic UserInputService checks to `IllusionIAS`, a powerful input action system.
-*   **Context-Aware Controls:** Inputs are now scoped to the `StowayGameplay` context, preventing conflicts with other game systems or UI.
-*   **Dynamic Rebinding:** The new `InputManager` allows for real-time updating of keybinds without reloading the character.
-*   **Cross-Platform Ready:** Native support structure for PC and Console bindings within the `Binds` configuration.
+### 🔥 Hotbar <a name="hotbar"></a>
+* **🖐️ Drag & Drop:** Smooth, glitch-free dragging between Hotbar and Storage.
+* **⚡ Static Slots:** Fixed number of hotbar slots (e.g., 1-9) for consistent keybinding.
+* **⌨️ Keybinds:** Built-in support for equipping items via number keys.
+
+### 🎒 Backpack / Storage <a name="backpack-storage"></a>
+* **💾 Data-Driven:** Items are stored as pure data (UUIDs), not physical Instances. Physical tools are only spawned when equipped.
+* **📚 Stacking:** Fully customizable stacking logic. Define max stack sizes globally or per-item.
+* **⚖️ Weight System:** Optional weight/capacity limits (set specific limits or allow infinite storage).
+* **🔍 Sorting & Filtering:** Built-in support for sorting by Rarity, Name, or ItemType, plus real-time search filtering.
+
+### ⚙️ Advanced Systems <a name="advanced-systems"></a>
+* **⚛️ Reactive UI (Fusion):** Uses the Fusion library for highly performant, state-driven UI updates. Zero polling.
+* **📡 Delta Replication:** The server only sends *changes* to the client, ensuring minimal network usage even with large inventories.
+* **🎮 Console Support:** Full gamepad support with dedicated console navigation, selection management, and drop UI.
+* **🎨 UI Skins:** Support for multiple UI layouts/skins (e.g., "Default", "Admin", "Trader") that can be switched on the fly.
+* **💎 Rarity Support:** Integrated rarity system with color-coded borders and sorting priority.
+* **💧 Droppable Items:** Configurable logic for dropping items into the world.
 
 <br>
 
-## 🌟 Core Features (Inherited from V1) <a name="core-features"></a>
+## 🚀 Getting Started <a name="getting-started"></a>
 
-*   **🔥 Hotbar:** Smooth drag & drop, static slots, and reactive state.
-*   **🎒 Backpack / Storage:** Data-driven UUID system, stacking, weight limits, and sorting.
-*   **⚙️ Advanced Systems:** Fusion-powered UI, Delta Replication, and Custom UI Skins.
+> **📚 Full Documentation:** Visit **[https://zyn-ic.github.io/Stoway/](https://zyn-ic.github.io/Stoway/)** for complete guides, API reference, and video walkthroughs.
 
-<br>
-
-## 🚀 Getting Started (V2 Dev) <a name="getting-started"></a>
-
-1.  **Dependencies:** Ensure you have the `IllusionIAS` package installed in `ReplicatedStorage/Packages`.
-2.  **Setup:**
-    *   Follow standard V1 setup procedures.
-    *   Verify `InputManager.luau` is initialized by `StowayClient`.
-
-*(Detailed V2 documentation will be added as features stabilize)*
+1.  📥 **Download:** Get the latest `.rbxm` from the [Releases](https://github.com/Zyn-ic/Stoway/releases) page.
+2.  📁 **Server Setup:**
+    *   Place `StowayServerV1_2` inside `ServerScriptService`.
+    *   *Recommendation:* Create a folder `ServerScriptService/Stoway` to keep it organized.
+3.  📁 **Client Setup:**
+    *   Place `StowayClientv1_2` inside `StarterPlayerScripts`.
+4.  📁 **Shared Resources:**
+    *   Place the `Shared` folder (containing `Settings`, `Types`, `RarityValues`, `Binds`) into `ReplicatedStorage`.
+5.  📦 **Dependencies:**
+    *   Ensure the `Fusion` library is available in `ReplicatedStorage/Packages` (or adjust the `require` paths in the scripts).
+6.  🏁 **Initialize:**
+    Create a server script to load the system:
+    ```lua
+    local StowayServer = require(game.ServerScriptService.StowayServerV1_2)
+    StowayServer.Init()
+    ```
 
 ---
 
-## Credits
+## 🛠️ Configuration <a name="configuration"></a>
 
-1. <img src="https://www.iconpacks.net/icons/2/free-youtube-logo-icon-2431-thumb.png" width=15 height = 15>  [**HowToRoblox**](https://www.youtube.com/watch?v=kqa4u_9mSTQ&list=WL&index=6) - Core mechanics inspiration.
-2. <img src="https://www.iconpacks.net/icons/2/free-youtube-logo-icon-2431-thumb.png" width=15 height = 15> [**Knineteen19**](https://www.youtube.com/watch?v=d2tdaRmqGXI&list=WL&index=8) - Persistence and stacking logic.
-3. <img src="https://devforum-uploads.s3.dualstack.us-east-2.amazonaws.com/uploads/original/4X/5/2/b/52bce3b02f6c5dddf9dfd5390fa00a9b2be6fa38.png" width=17 height = 17> [**Avafe**](https://devforum.roblox.com/t/neohotbar-a-modern-customizable-backpack/2738850) - Fusion and React patterns on Roblox.
-4. <img src="data:image/png;base64,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" width=17 heigh=17> [**Illusion**](https://devforum.roblox.com/t/illusions-inputactionsystem-currently-the-best-input-manager/4071242) for creating a module around roblox's new InputActionService *thank you this saved me a lot of time* 😭
+Stoway V2.4.0 is configured via `ReplicatedStorage/Shared/Settings.luau`.
+
+```lua
+local Settings = {}
+
+--// HOTBAR
+Settings.Hotbar = {
+    MaxSlots = 9,       -- Number of static hotbar slots
+}
+
+--// STORAGE & LIMITS
+Settings.Storage = {
+    Limit = 50,         -- Max weight/slots (0 = Infinite)
+    CanStack = true,    -- Enable item stacking
+    MaxStackSize = 64,  -- Default max stack size
+    Sorting = true,     -- Enable sorting logic
+    SortOrder = "Rarity" -- "None", "Name", "Rarity", "ItemType"
+}
+
+--// GAMEPLAY
+Settings.Gameplay = {
+    Droppable = true,   -- Allow players to drop items
+    DropDistance = 5,   -- How far items drop
+}
+
+--// UI SKINS
+Settings.DifferentUIs = {
+    ["Default"] = {
+        FolderName = "DefaultUI",
+        GuiName = "StowayGui",
+        HookPresetName = "DefaultHooks"
+    }
+}
+
+return Settings
+```
+
+<br>
+
+## 💬 Debug Commands <a name="debug-commands"></a>
+Stoway comes with built-in chat commands for testing (restrict these in production!).
+
+*   `/inv` - Print current inventory state to console.
+*   `/add [itemId] [amount]` - Add an item to your inventory.
+*   `/remove [uuid]` - Remove an item by UUID.
+*   `/clear` - Wipe your inventory.
+*   `/set_limit [n]` - Change your weight limit at runtime.
+*   `/setui [UiType]` - Switch your UI skin (e.g., `/setui Default`).
+
+<br>
+
+# Credits
+
+1. <img src="https://www.iconpacks.net/icons/2/free-youtube-logo-icon-2431-thumb.png" width=15 height = 15>  [**HowToRoblox**](https://www.youtube.com/watch?v=kqa4u_9mSTQ&list=WL&index=6) - sourced a lot of core mechanics from him for backpack/hotbar.
+2. <img src="https://www.iconpacks.net/icons/2/free-youtube-logo-icon-2431-thumb.png" width=15 height = 15> [**Knineteen19**](https://www.youtube.com/watch?v=d2tdaRmqGXI&list=WL&index=8) - his series helped me get a good understanding for inventory/hotbar, presistance, and stacking.
+3. <img src="https://devforum-uploads.s3.dualstack.us-east-2.amazonaws.com/uploads/original/4X/5/2/b/52bce3b02f6c5dddf9dfd5390fa00a9b2be6fa38.png" width=17 height = 17> [**Avafe**](https://devforum.roblox.com/t/neohotbar-a-modern-customizable-backpack/2738850) - learned about the existance of [fusion and react](https://www.youtube.com/watch?v=OHqMLEL5QnY&t=1730s) on roblox from this custom hotbar and backpack system.
+4. <img src="https://raw.githubusercontent.com/IllusionAC/Illusion-InputActionSystem/refs/heads/main/IIASLogo.png" width=20 height = 20> [**Illusion**](https://devforum.roblox.com/t/illusions-inputactionsystem-currently-the-best-input-manager/4071242) for creating a module around roblox's new InputActionService *thank you this saved me a lot of time* 😭

@@ -2,6 +2,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local IllusionIAS = require(ReplicatedStorage.Packages.IllusionIAS)
 local Binds = require(ReplicatedStorage.Shared.Binds)
+local Settings = require(ReplicatedStorage.Shared.Settings)
 
 local InputManager = {}
 InputManager.ContextGlobal = "StowayGlobal"
@@ -63,16 +64,19 @@ end
 function InputManager.UpdateBinds()
     if InputManager.BackpackAction then
         InputManager.BackpackAction:ClearBinds()
-        local binds = Binds.Global.Backpack
-        if binds then
-            if binds.PC then
-                for _, b in ipairs(binds.PC) do
-                    InputManager.BackpackAction:AddBind(b.Main, unpack(b.Modifiers or {}))
+        
+        if Settings.Storage.BackpackEnabled then
+            local binds = Binds.Global.Backpack
+            if binds then
+                if binds.PC then
+                    for _, b in ipairs(binds.PC) do
+                        InputManager.BackpackAction:AddBind(b.Main, unpack(b.Modifiers or {}))
+                    end
                 end
-            end
-            if binds.Console then
-                for _, b in ipairs(binds.Console) do
-                    InputManager.BackpackAction:AddBind(b.Main, unpack(b.Modifiers or {}))
+                if binds.Console then
+                    for _, b in ipairs(binds.Console) do
+                        InputManager.BackpackAction:AddBind(b.Main, unpack(b.Modifiers or {}))
+                    end
                 end
             end
         end

@@ -8,37 +8,39 @@ export type HotbarType = "Static" | "Dynamic"
 
 --// Hotbar Settings
 Settings.Hotbar = {
-	Type = "Static" :: HotbarType, -- Static: fixed slots with holes, Dynamic: packed array
-	MaxSlots = 10,
+	Type = "Static" :: HotbarType, -- Static: fixed slots with holes, Dynamic: packed array (perplayer setting)
+	MaxSlots = 10, -- (perplayer setting)
 }
 
 --// Storage/Backpack Settings (Always Dynamic)
 Settings.Storage = {
-	Limit = 15,             -- Total weight limit (Hotbar + Storage combined)
-	CanStack = true,
-	Sorting = true,
-	MaxStackSize = 5,
-	SortOrder = "None" -- Name, Rarity, ItemType, None
+	Limit = 15,             -- Total weight limit (Hotbar + Storage combined) (perplayer setting)
+	CanStack = true, -- (perplayer setting)
+	Sorting = true, -- (global setting)
+	MaxStackSize = 5, -- (perplayer setting)
+	BackpackEnabled = true, -- (global setting)
+	SortOrder = "None" -- Name, Rarity, ItemType, None (global setting)
 }
 
 --// Stacking Rules
 Settings.Stacking = {
 	-- Fields that MUST match for items to stack
-	RequiredFields = { "Rarity", "Type" },
+	RequiredFields = { "Rarity", "Type" }, -- (global setting)
 	-- Rarities that can NEVER stack
-	Blacklist = {
+	Blacklist = { -- (global setting)
 		["Legendary"] = true,
 		["Mythic"] = true,
 		["Special"] = true,
 	},
 
-	Rarity = true
+	Rarity = true -- (global setting)
 }
 
 --// Gameplay Settings
-Settings.Gameplay = {
+Settings.Gameplay = { -- (global settings)
 	Droppable = true,
 	DropDistance = 10,
+	MouseScroll = true,
 }
 
 Settings.DifferentUIs = {
@@ -47,11 +49,23 @@ Settings.DifferentUIs = {
 		GuiName = "Stoway",
 		HookPresetName = "DefaultHooks"
 	},
-	
+
 	Admin = {
 		FolderName = "StowayAdmin",
 		GuiName = "AdminGui",
 		HookPresetName = "AdminHooks"
+	},
+
+	Grass = {
+        FolderName = "StowayGrass",
+    	GuiName = "GrassUi",
+    	HookPresetName = "GrassHooks"
+	},
+
+	Metal = {
+        FolderName = "StowayMetal",
+    	GuiName = "MetalGUI",
+    	HookPresetName = "MetalHooks"
 	}
 }
 

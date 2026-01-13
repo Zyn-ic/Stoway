@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Selection States - Stoway Docs</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../../../css/styles.css">
+    <link rel="icon" href="../../../assets/Logo.png" />
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <nav class="nav">
+        <a href="../../../index.html" class="nav-logo">
+            <img src="../../../assets/Logo.png" alt="Stoway">
+            <h1>Stoway</h1>
+        </a>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Documentation</div>
+            <a href="../../../index.html" class="nav-link">Home</a>
+            <a href="../../../quickstart.html" class="nav-link">Quick Start</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Client</div>
+            <a href="../../index.html" class="nav-link">Overview</a>
+            <a href="../hooks/index.html" class="nav-link">Hooks</a>
+            <a href="../gui/index.html" class="nav-link">GUI System</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Input & Console</div>
+            <a href="index.html" class="nav-link">Input System</a>
+            <a href="interaction-manager.html" class="nav-link">Interaction Manager</a>
+            <a href="console-modes.html" class="nav-link">Console Modes</a>
+            <a href="selection-states.html" class="nav-link active">Selection States</a>
+            <a href="binds-module.html" class="nav-link">Binds Module</a>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="breadcrumb">
+            <a href="../../../index.html">Docs</a>
+            <span>/</span>
+            <a href="../../index.html">Client</a>
+            <span>/</span>
+            <a href="index.html">Input</a>
+            <span>/</span>
+            <span class="current">Selection States</span>
+        </div>
+
+        <section class="hero" style="padding: 2rem;">
+            <h1 style="font-size: 2.5rem;">&#10003; Selection States</h1>
+            <p>Gamepad users select slots and perform actions through a state machine. Each state represents a step in the selection flow, from idle to completing actions like swap, drop, or quick move.</p>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>State Overview</h2>
+                <p>The selection state machine</p>
+            </div>
+
+            <div class="state-flow">
+                <div class="state-node idle">
+                    <div class="state-icon">&#128444;</div>
+                    <h4>Step 0: Idle</h4>
+                    <p>Ready to select a slot</p>
+                    <div class="state-indicator">&#127890; SELECTING</div>
+                </div>
+
+                <div class="state-arrow">
+                    <span>D-Pad selects slot</span>
+                    &#8595;
+                </div>
+
+                <div class="state-node source">
+                    <div class="state-icon">&#128260;</div>
+                    <h4>Step 1: Source Selected</h4>
+                    <p>First slot chosen, waiting for target</p>
+                    <div class="state-indicator">&#127890; SWAP - SELECT TARGET</div>
+                </div>
+
+                <div class="state-branch">
+                    <div class="branch-label">From Source State</div>
+                    <div class="branch-options">
+                        <div class="branch-path">
+                            <span>Same slot pressed</span>
+                            &#8594; <span class="cancel">Cancel</span>
+                        </div>
+                        <div class="branch-path">
+                            <span>Y pressed</span>
+                            &#8594; <span class="action">Perform Swap</span>
+                        </div>
+                        <div class="branch-path">
+                            <span>X pressed</span>
+                            &#8594; <span class="drop">Enter Drop Mode</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>State Details</h2>
+                <p>What happens in each state</p>
+            </div>
+
+            <table class="settings-table full-width">
+                <thead>
+                    <tr>
+                        <th>State</th>
+                        <th>Step</th>
+                        <th>Description</th>
+                        <th>Enabled Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>Idle</code></td>
+                        <td>0</td>
+                        <td>Waiting for user to select a slot with D-Pad</td>
+                        <td>D-Pad navigation, B to cancel</td>
+                    </tr>
+                    <tr>
+                        <td><code>Source</code></td>
+                        <td>1</td>
+                        <td>Source slot selected, waiting for target or action</td>
+                        <td>Y: Swap, X: Drop, A: QuickMove, B: Cancel</td>
+                    </tr>
+                    <tr>
+                        <td><code>Dropping</code></td>
+                        <td>2</td>
+                        <td>Adjusting drop amount with D-Pad Up/Down</td>
+                        <td>DPadUp/Down: Amount, A: Drop, B: Cancel</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Actions</h2>
+                <p>What each action does</p>
+            </div>
+
+            <div class="action-grid">
+                <div class="action-card">
+                    <div class="action-header">
+                        <div class="action-key">Y</div>
+                        <div class="action-name">Swap</div>
+                    </div>
+                    <p>Swap the source item with the currently selected slot.</p>
+                    <div class="action-flow">
+                        <span>Select source</span> &#8594; <span>Y</span> &#8594; <span>Select target</span> &#8594; <span>Items swapped</span>
+                    </div>
+                </div>
+
+                <div class="action-card">
+                    <div class="action-header">
+                        <div class="action-key">X</div>
+                        <div class="action-name">Drop</div>
+                    </div>
+                    <p>Drop the selected item with configurable amount.</p>
+                    <div class="action-flow">
+                        <span>Select item</span> &#8594; <span>X</span> &#8594; <span>Adjust amount</span> &#8594; <span>A to confirm</span>
+                    </div>
+                </div>
+
+                <div class="action-card">
+                    <div class="action-header">
+                        <div class="action-key">A + R1</div>
+                        <div class="action-name">Quick Move</div>
+                    </div>
+                    <p>Move item to first empty slot in the other container.</p>
+                    <div class="action-flow">
+                        <span>Hotbar item</span> &#8594; <span>A+R1</span> &#8594; <span>Moves to Storage</span>
+                    </div>
+                    <div class="action-flow">
+                        <span>Storage item</span> &#8594; <span>A+R1</span> &#8594; <span>Moves to Hotbar</span>
+                    </div>
+                </div>
+
+                <div class="action-card">
+                    <div class="action-header">
+                        <div class="action-key">B</div>
+                        <div class="action-name">Cancel</div>
+                    </div>
+                    <p>Cancel current selection and return to Idle state.</p>
+                    <div class="action-flow">
+                        <span>Any state</span> &#8594; <span>B</span> &#8594; <span>Clear selection</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Code Structure</h2>
+                <p>SelectionManager implementation</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Selection State</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="keyword">local</span> SelectionState = {
+    enabled = <span class="keyword">false</span>,
+    step = <span class="number">0</span>,           <span class="comment">-- 0: idle, 1: source, 2: dropping</span>
+    sourceType = <span class="keyword">nil</span>,     <span class="comment">-- "Hotbar" | "Storage"</span>
+    sourceSlot = <span class="keyword">nil</span>,      <span class="comment">-- Slot index</span>
+    sourceFrame = <span class="keyword">nil</span>,     <span class="comment">-- Frame reference</span>
+}</code></pre>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Get Slot Info</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="keyword">function</span> SelectionManager.<span class="function">GetSelectedSlotInfo</span>()
+    <span class="keyword">local</span> selected = GuiService.SelectedObject
+    <span class="keyword">if</span> <span class="keyword">not</span> selected <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">nil</span> <span class="keyword">end</span>
+    
+    <span class="keyword">local</span> slotFrame = selected.Parent 
+    <span class="keyword">local</span> slotType
+    
+    <span class="keyword">if</span> slotFrame.Parent.Name == <span class="string">"Hotbar"</span> <span class="keyword">then</span>
+        slotType = <span class="string">"Hotbar"</span>
+    <span class="keyword">elseif</span> slotFrame.Parent.Name == <span class="string">"ScrollingFrame"</span> <span class="keyword">then</span>
+        slotType = <span class="string">"Storage"</span>
+    <span class="keyword">end</span>
+    
+    <span class="keyword">local</span> slotName = slotFrame.Name:<span class="function">gsub</span>(<span class="string">"_"</span>, <span class="string">""</span>)
+    <span class="keyword">local</span> slotIndex = <span class="function">tonumber</span>(slotName)
+    
+    <span class="keyword">return</span> {
+        Type = slotType,
+        Index = slotIndex,
+        Frame = slotFrame
+    }
+<span class="keyword">end</span></code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Swap Handler</h2>
+                <p>Step-by-step swap logic</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">HandleSwap Logic</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="keyword">function</span> SelectionManager.<span class="function">HandleSwap</span>()
+    <span class="keyword">local</span> selected = SelectionManager.<span class="function">GetSelectedSlotInfo</span>()
+    <span class="keyword">if</span> <span class="keyword">not</span> selected <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+    
+    <span class="comment">-- Step 0: Select source</span>
+    <span class="keyword">if</span> SelectionState.step == <span class="number">0</span> <span class="keyword">then</span>
+        SelectionState.step = <span class="number">1</span>
+        SelectionState.sourceType = selected.Type
+        SelectionState.sourceSlot = selected.Index
+        SelectionState.sourceFrame = selected.Frame
+        
+        SelectionManager.<span class="function">ApplySelectionHighlight</span>(selected.Frame)
+        SelectionManager.<span class="function">NotifyStateChanged</span>()
+    
+    <span class="comment">-- Step 1: Select target and swap</span>
+    <span class="keyword">elseif</span> SelectionState.step == <span class="number">1</span> <span class="keyword">then</span>
+        <span class="comment">-- Same slot = cancel</span>
+        <span class="keyword">if</span> SelectionState.sourceType == selected.Type 
+           <span class="keyword">and</span> SelectionState.sourceSlot == selected.Index <span class="keyword">then</span>
+            SelectionManager.<span class="function">CancelSelection</span>()
+            <span class="keyword">return</span>
+        <span class="keyword">end</span>
+        
+        <span class="comment">-- Perform swap</span>
+        InventoryController.<span class="function">Swap</span>(
+            SelectionState.sourceType,
+            SelectionState.sourceSlot,
+            selected.Type,
+            selected.Index,
+            <span class="keyword">true</span>
+        )
+        
+        SelectionManager.<span class="function">CancelSelection</span>()
+    <span class="keyword">end</span>
+<span class="keyword">end</span></code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Drop Handler</h2>
+                <p>Drop with amount selection</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">HandleDrop Logic</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="keyword">function</span> SelectionManager.<span class="function">HandleDrop</span>()
+    <span class="keyword">local</span> selected = SelectionManager.<span class="function">GetSelectedSlotInfo</span>()
+    <span class="keyword">if</span> <span class="keyword">not</span> selected <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+    
+    <span class="comment">-- Get item data</span>
+    <span class="keyword">local</span> store = <span class="function">require</span>(script.Parent.Parent.CoreState.InventoryStore)
+    <span class="keyword">local</span> item = store:<span class="function">GetItemFromSlot</span>(selected.Type, selected.Index)
+    <span class="keyword">if</span> <span class="keyword">not</span> item <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+    
+    <span class="comment">-- Enter dropping state</span>
+    SelectionState.step = <span class="number">2</span>
+    SelectionManager.<span class="function">NotifyStateChanged</span>()
+    
+    <span class="comment">-- Disable inventory, enable drop context</span>
+    InputManager.<span class="function">SetInventoryEnabled</span>(<span class="keyword">false</span>)
+    InputManager.<span class="function">SetDropEnabled</span>(<span class="keyword">true</span>)
+    SelectionManager.<span class="function">LoadDropBinds</span>()
+    
+    <span class="comment">-- Show drop UI</span>
+    ConsoleDropUI.<span class="function">Show</span>(item, <span class="number">1</span>)
+    
+    <span class="comment">-- Set up callbacks</span>
+    ConsoleDropUI.OnDrop = <span class="keyword">function</span>(amount)
+        InventoryController.<span class="function">Drop</span>(selected.Type, selected.Index, amount, <span class="keyword">true</span>)
+        SelectionManager.<span class="function">CloseDropUI</span>()
+    <span class="keyword">end</span>
+    
+    ConsoleDropUI.OnDropAll = <span class="keyword">function</span>()
+        InventoryController.<span class="function">Drop</span>(selected.Type, selected.Index, item.Amount, <span class="keyword">true</span>)
+        SelectionManager.<span class="function">CloseDropUI</span>()
+    <span class="keyword">end</span>
+    
+    ConsoleDropUI.OnCancel = <span class="keyword">function</span>()
+        SelectionManager.<span class="function">CloseDropUI</span>()
+    <span class="keyword">end</span>
+<span class="keyword">end</span></code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Hooks Integration</h2>
+                <p>Firing hooks on selection changes</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                SelectionManager fires hooks when slots are selected/deselected:
+            </p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Selection Hooks</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- Apply highlight when slot is selected</span>
+<span class="keyword">function</span> SelectionManager.<span class="function">ApplySelectionHighlight</span>(frame)
+    <span class="keyword">if</span> HookManager <span class="keyword">then</span>
+        HookManager:<span class="function">Fire</span>(<span class="string">"OnSelect"</span>, frame)
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+
+<span class="comment">-- Clear highlight when slot is deselected</span>
+<span class="keyword">function</span> SelectionManager.<span class="function">ClearSelectionHighlight</span>(frame)
+    <span class="keyword">if</span> HookManager <span class="keyword">then</span>
+        HookManager:<span class="function">Fire</span>(<span class="string">"OnDeselect"</span>, frame)
+    <span class="keyword">end</span>
+<span class="keyword">end</span></code></pre>
+            </div>
+
+            <table class="settings-table">
+                <thead>
+                    <tr>
+                        <th>Hook</th>
+                        <th>Arguments</th>
+                        <th>Fired When</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>OnSelect</code></td>
+                        <td><code>frame</code></td>
+                        <td>Slot is selected (step 0 &#8594; 1)</td>
+                    </tr>
+                    <tr>
+                        <td><code>OnDeselect</code></td>
+                        <td><code>frame</code></td>
+                        <td>Selection is cleared</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Related Documentation</h2>
+                <p>See also</p>
+            </div>
+
+            <div class="next-steps-grid">
+                <a href="index.html" class="next-step-card">
+                    <div class="next-step-icon">&#127918;</div>
+                    <h4>Input System</h4>
+                    <p>Complete overview</p>
+                </a>
+
+                <a href="console-modes.html" class="next-step-card">
+                    <div class="next-step-icon">&#9876;</div>
+                    <h4>Console Modes</h4>
+                    <p>Mode switching</p>
+                </a>
+
+                <a href="binds-module.html" class="next-step-card">
+                    <div class="next-step-icon">&#128290;</div>
+                    <h4>Binds Module</h4>
+                    <p>Action key bindings</p>
+                </a>
+
+                <a href="../hooks/available-hooks.html" class="next-step-card">
+                    <div class="next-step-icon">&#128172;</div>
+                    <h4>Available Hooks</h4>
+                    <p>All hooks reference</p>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <style>
+        .state-flow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 2rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+        }
+        
+        .state-node {
+            text-align: center;
+            padding: 1.5rem 2rem;
+            border-radius: 12px;
+            min-width: 220px;
+            background: var(--bg-tertiary);
+        }
+        
+        .state-node.idle {
+            border: 2px solid rgba(100, 255, 150, 0.3);
+        }
+        
+        .state-node.source {
+            border: 2px solid rgba(255, 179, 0, 0.3);
+        }
+        
+        .state-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .state-node h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .state-node p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .state-indicator {
+            font-size: 0.85rem;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            background: rgba(100, 255, 150, 0.1);
+            color: #90ffb0;
+            font-family: 'Fira Code', monospace;
+        }
+        
+        .state-arrow {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        
+        .state-arrow span {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        
+        .state-branch {
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .branch-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+        
+        .branch-options {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem;
+        }
+        
+        .branch-path {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 0.5rem;
+            font-size: 0.85rem;
+        }
+        
+        .branch-path .cancel {
+            color: #ff6464;
+            font-weight: 500;
+        }
+        
+        .branch-path .action {
+            color: var(--accent-amber);
+            font-weight: 500;
+        }
+        
+        .branch-path .drop {
+            color: #ff9090;
+            font-weight: 500;
+        }
+        
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .action-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+        
+        .action-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .action-key {
+            background: var(--accent-gradient);
+            color: var(--bg-primary);
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+        
+        .action-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        .action-card > p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+        
+        .action-flow {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'Fira Code', monospace;
+        }
+        
+        .action-flow span {
+            padding: 0.2rem 0.4rem;
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+        }
+        
+        .settings-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        
+        .settings-table th {
+            background: var(--bg-tertiary);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+        
+        .settings-table td {
+            padding: 0.875rem 1rem;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+        
+        .settings-table tr:hover td {
+            background: rgba(196, 167, 125, 0.05);
+        }
+        
+        .settings-table code {
+            background: rgba(196, 167, 125, 0.15);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: var(--accent-brown);
+        }
+        
+        .next-steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+        
+        .next-step-card {
+            background: linear-gradient(135deg, rgba(37, 32, 25, 0.8), rgba(26, 22, 18, 0.9));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+        }
+        
+        .next-step-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(196, 167, 125, 0.3);
+        }
+        
+        .next-step-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .next-step-card h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .next-step-card p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+    </style>
+</body>
+
+</html>

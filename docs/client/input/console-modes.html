@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Console Modes - Stoway Docs</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../../../css/styles.css">
+    <link rel="icon" href="../../../assets/Logo.png" />
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <nav class="nav">
+        <a href="../../../index.html" class="nav-logo">
+            <img src="../../../assets/Logo.png" alt="Stoway">
+            <h1>Stoway</h1>
+        </a>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Documentation</div>
+            <a href="../../../index.html" class="nav-link">Home</a>
+            <a href="../../../quickstart.html" class="nav-link">Quick Start</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Client</div>
+            <a href="../../index.html" class="nav-link">Overview</a>
+            <a href="../hooks/index.html" class="nav-link">Hooks</a>
+            <a href="../gui/index.html" class="nav-link">GUI System</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Input & Console</div>
+            <a href="index.html" class="nav-link">Input System</a>
+            <a href="interaction-manager.html" class="nav-link">Interaction Manager</a>
+            <a href="console-modes.html" class="nav-link active">Console Modes</a>
+            <a href="selection-states.html" class="nav-link">Selection States</a>
+            <a href="binds-module.html" class="nav-link">Binds Module</a>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="breadcrumb">
+            <a href="../../../index.html">Docs</a>
+            <span>/</span>
+            <a href="../../index.html">Client</a>
+            <span>/</span>
+            <a href="index.html">Input</a>
+            <span>/</span>
+            <span class="current">Console Modes</span>
+        </div>
+
+        <section class="hero" style="padding: 2rem;">
+            <h1 style="font-size: 2.5rem;">&#9876; Console Modes</h1>
+            <p>Gamepad users have two distinct modes: Combat and Inventory. Each mode enables different binds and controls, with automatic switching based on user interaction.</p>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Mode Overview</h2>
+                <p>Understanding Combat vs Inventory modes</p>
+            </div>
+
+            <div class="modes-comparison">
+                <div class="mode-card combat">
+                    <div class="mode-header">
+                        <div class="mode-icon">&#9876;</div>
+                        <div class="mode-title">
+                            <h3>Combat Mode</h3>
+                            <span class="mode-badge">Default</span>
+                        </div>
+                    </div>
+                    <p>Character controls are active. Inventory interaction is disabled. Quick hotbar access for equipping items during gameplay.</p>
+                    
+                    <div class="mode-section">
+                        <h4>Enabled Binds</h4>
+                        <div class="bind-list">
+                            <span class="bind-item">1-9: Hotbar slots</span>
+                            <span class="bind-item">R1+X: Slot 1</span>
+                            <span class="bind-item">R1+Y: Slot 2</span>
+                            <span class="bind-item">L1+X: Slot 5</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mode-section">
+                        <h4>Disabled Features</h4>
+                        <div class="feature-list">
+                            <span class="feature-item">&#10006; Selection navigation</span>
+                            <span class="feature-item">&#10006; Swap/Drop actions</span>
+                            <span class="feature-item">&#10006; Drag-and-drop</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mode-card inventory">
+                    <div class="mode-header">
+                        <div class="mode-icon">&#127890;</div>
+                        <div class="mode-title">
+                            <h3>Inventory Mode</h3>
+                            <span class="mode-badge">Toggle</span>
+                        </div>
+                    </div>
+                    <p>Character controls are suppressed. UI navigation is active. Full inventory management with selection-based actions.</p>
+                    
+                    <div class="mode-section">
+                        <h4>Enabled Binds</h4>
+                        <div class="bind-list">
+                            <span class="bind-item">D-Pad: Navigate slots</span>
+                            <span class="bind-item">Y: Swap</span>
+                            <span class="bind-item">X: Drop</span>
+                            <span class="bind-item">A: Quick Move</span>
+                            <span class="bind-item">B: Cancel</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mode-section">
+                        <h4>Disabled Features</h4>
+                        <div class="feature-list">
+                            <span class="feature-item">&#10006; Hotbar slot shortcuts</span>
+                            <span class="feature-item">&#10006; Character movement</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Mode Switching</h2>
+                <p>How to transition between modes</p>
+            </div>
+
+            <div class="switch-flow">
+                <div class="switch-step">
+                    <div class="step-icon">&#128300;</div>
+                    <h4>Long Press L3</h4>
+                    <p>Hold the left stick (L3) for 0.5 seconds to toggle between modes.</p>
+                </div>
+                
+                <div class="switch-arrow">&#8596;</div>
+                
+                <div class="switch-step">
+                    <div class="step-icon">&#128205;</div>
+                    <h4>Context Switch</h4>
+                    <p>ConsoleModeManager enables/disables IllusionIAS contexts automatically.</p>
+                </div>
+                
+                <div class="switch-arrow">&#8596;</div>
+                
+                <div class="switch-step">
+                    <div class="step-icon">&#128992;</div>
+                    <h4>Visual Indicator</h4>
+                    <p>Badge appears showing current mode with color coding.</p>
+                </div>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Long Press Configuration</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- src/client/StowayClientv1_2/Input/ConsoleModeManager.luau</span>
+
+<span class="comment">-- Long press duration (seconds)</span>
+<span class="keyword">local</span> LONG_PRESS_DURATION = <span class="number">0.5</span>
+
+<span class="comment">-- Detection logic</span>
+switchAction.Activated:<span class="function">Connect</span>(<span class="keyword">function</span>(active, pressed)
+    <span class="keyword">if</span> pressed <span class="keyword">then</span>
+        isPressed = <span class="keyword">true</span>
+        <span class="comment">-- Schedule toggle after duration</span>
+        longPressTask = <span class="function">task.delay</span>(LONG_PRESS_DURATION, <span class="keyword">function</span>()
+            <span class="keyword">if</span> isPressed <span class="keyword">then</span>
+                ConsoleModeManager.<span class="function">ToggleMode</span>()
+            <span class="keyword">end</span>)
+    <span class="keyword">else</span>
+        isPressed = <span class="keyword">false</span>
+        <span class="keyword">if</span> longPressTask <span class="keyword">then</span>
+            <span class="function">task.cancel</span>(longPressTask)
+            longPressTask = <span class="keyword">nil</span>
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>)</code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Visual Mode Indicator</h2>
+                <p>HUD badge showing current mode</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                A small badge appears in the bottom-right corner showing the current mode:
+            </p>
+
+            <div class="indicator-grid">
+                <div class="indicator-card">
+                    <div class="indicator-preview combat">&#9876; COMBAT</div>
+                    <div class="indicator-info">
+                        <h4>Combat Mode</h4>
+                        <p>Reddish badge, character controls active</p>
+                    </div>
+                </div>
+                
+                <div class="indicator-card">
+                    <div class="indicator-preview inventory">&#127890; SELECTING</div>
+                    <div class="indicator-info">
+                        <h4>Inventory Mode</h4>
+                        <p>Greenish badge, shows selection state</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Mode Indicator Creation</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="keyword">function</span> CreateModeIndicator()
+    <span class="keyword">local</span> player = game.<span class="function">GetService</span>(<span class="string">"Players"</span>).LocalPlayer
+    
+    modeIndicatorGui = Instance.<span class="function">new</span>(<span class="string">"ScreenGui"</span>)
+    modeIndicatorGui.Name = <span class="string">"StowayConsoleHUD"</span>
+    modeIndicatorGui.Parent = player:<span class="function">WaitForChild</span>(<span class="string">"PlayerGui"</span>)
+
+    <span class="keyword">local</span> bg = Instance.<span class="function">new</span>(<span class="string">"Frame"</span>)
+    bg.Name = <span class="string">"ModeBadge"</span>
+    bg.Size = UDim2.<span class="function">fromOffset</span>(<span class="number">150</span>, <span class="number">40</span>)
+    bg.Position = UDim2.<span class="function">new</span>(<span class="number">0.95</span>, -<span class="number">160</span>, <span class="number">0.85</span>, <span class="number">0</span>)
+    bg.BackgroundColor3 = Color3.<span class="function">fromRGB</span>(<span class="number">30</span>, <span class="number">30</span>, <span class="number">30</span>)
+    bg.Parent = modeIndicatorGui
+
+    modeTextLabel = Instance.<span class="function">new</span>(<span class="string">"TextLabel"</span>)
+    modeTextLabel.Text = <span class="string">"COMBAT"</span>
+    modeTextLabel.TextColor3 = Color3.<span class="function">fromRGB</span>(<span class="number">255</span>, <span class="number">100</span>, <span class="number">100</span>)  <span class="comment">-- Red</span>
+    modeTextLabel.Parent = bg
+<span class="keyword">end</span></code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Mode Transition Behavior</h2>
+                <p>What happens when switching modes</p>
+            </div>
+
+            <table class="settings-table">
+                <thead>
+                    <tr>
+                        <th>Action</th>
+                        <th>Switching to Combat</th>
+                        <th>Switching to Inventory</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>InputManager</code></td>
+                        <td>Combat context enabled</td>
+                        <td>Inventory context enabled</td>
+                    </tr>
+                    <tr>
+                        <td><code>SelectionManager</code></td>
+                        <td>Disabled, clears selection</td>
+                        <td>Enabled</td>
+                    </tr>
+                    <tr>
+                        <td><code>GuiService</code></td>
+                        <td>GuiNavigationEnabled = false</td>
+                        <td>GuiNavigationEnabled = true</td>
+                    </tr>
+                    <tr>
+                        <td><code>Mode Indicator</code></td>
+                        <td>"COMBAT" (red)</td>
+                        <td>"SELECTING" (green)</td>
+                    </tr>
+                    <tr>
+                        <td><code>Hooks</code></td>
+                        <td>OnDeselect fired</td>
+                        <td>-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Code Structure</h2>
+                <p>ConsoleModeManager implementation</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">ConsoleModeManager.luau</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="keyword">local</span> ConsoleModeManager = {}
+<span class="keyword">local</span> CurrentMode = <span class="string">""</span>  <span class="comment">-- "Combat" | "Inventory"</span>
+
+<span class="comment">-- Set mode directly</span>
+<span class="keyword">function</span> ConsoleModeManager.<span class="function">SetMode</span>(modeName)
+    <span class="keyword">if</span> CurrentMode == modeName <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+    CurrentMode = modeName
+
+    <span class="keyword">if</span> modeName == <span class="string">"Combat"</span> <span class="keyword">then</span>
+        InputManager.<span class="function">SetCombatEnabled</span>(<span class="keyword">true</span>)
+        InputManager.<span class="function">SetInventoryEnabled</span>(<span class="keyword">false</span>)
+        SelectionManager.<span class="function">SetEnabled</span>(<span class="keyword">false</span>)
+        GuiService.GuiNavigationEnabled = <span class="keyword">false</span>
+        GuiService.SelectedObject = <span class="keyword">nil</span>
+        
+        <span class="keyword">if</span> modeTextLabel <span class="keyword">then</span>
+            modeTextLabel.Text = <span class="string">"&#9876; COMBAT"</span>
+            modeTextLabel.TextColor3 = Color3.<span class="function">fromRGB</span>(<span class="number">255</span>, <span class="number">100</span>, <span class="number">100</span>)
+        <span class="keyword">end</span>
+
+    <span class="keyword">elseif</span> modeName == <span class="string">"Inventory"</span> <span class="keyword">then</span>
+        InputManager.<span class="function">SetCombatEnabled</span>(<span class="keyword">false</span>)
+        InputManager.<span class="function">SetInventoryEnabled</span>(<span class="keyword">true</span>)
+        SelectionManager.<span class="function">SetEnabled</span>(<span class="keyword">true</span>)
+        GuiService.GuiNavigationEnabled = <span class="keyword">true</span>
+        
+        <span class="keyword">if</span> modeTextLabel <span class="keyword">then</span>
+            modeTextLabel.Text = <span class="string">"&#127890; SELECTING"</span>
+            modeTextLabel.TextColor3 = Color3.<span class="function">fromRGB</span>(<span class="number">100</span>, <span class="number">255</span>, <span class="number">150</span>)
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+
+<span class="comment">-- Toggle between modes</span>
+<span class="keyword">function</span> ConsoleModeManager.<span class="function">ToggleMode</span>()
+    <span class="keyword">if</span> CurrentMode == <span class="string">"Combat"</span> <span class="keyword">then</span>
+        ConsoleModeManager.<span class="function">SetMode</span>(<span class="string">"Inventory"</span>)
+    <span class="keyword">else</span>
+        ConsoleModeManager.<span class="function">SetMode</span>(<span class="string">"Combat"</span>)
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+
+<span class="keyword">return</span> ConsoleModeManager</code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>State Callback</h2>
+                <p>React to mode changes</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                SelectionManager provides a callback that updates the mode indicator text when selection state changes:
+            </p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">State Change Callback</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- Connected in SetMode when entering Inventory mode</span>
+SelectionManager.OnStateChanged = <span class="keyword">function</span>(newDesc)
+    <span class="keyword">if</span> modeTextLabel <span class="keyword">then</span>
+        modeTextLabel.Text = <span class="string">"&#127890; "</span> .. newDesc
+    <span class="keyword">end</span>
+<span class="keyword">end</span>
+
+<span class="comment">-- Returns descriptions like:</span>
+<span class="comment">-- "&#128444; SELECTING"     (idle)</span>
+<span class="comment">-- "&#128260; SWAP - SELECT TARGET" (source selected)</span>
+<span class="comment">-- "&#128465; DROPPING ITEM"  (dropping)</span></code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Customization</h2>
+                <p>Modifying mode behavior</p>
+            </div>
+
+            <div class="guide-cards">
+                <a href="binds-module.html" class="guide-card">
+                    <div class="guide-badge">Reference</div>
+                    <div class="guide-icon">&#128290;</div>
+                    <h3>Change Switch Bind</h3>
+                    <p>Modify the L3 long press to a different key.</p>
+                </a>
+
+                <a href="selection-states.html" class="guide-card">
+                    <div class="guide-badge">Reference</div>
+                    <div class="guide-icon">&#10003;</div>
+                    <h3>Selection States</h3>
+                    <p>Customize the state descriptions shown in inventory mode.</p>
+                </a>
+
+                <a href="interaction-manager.html" class="guide-card">
+                    <div class="guide-badge">Reference</div>
+                    <div class="guide-icon">&#128205;</div>
+                    <h3>Interaction Manager</h3>
+                    <p>How gamepad detection triggers console mode.</p>
+                </a>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Related Documentation</h2>
+                <p>See also</p>
+            </div>
+
+            <div class="next-steps-grid">
+                <a href="index.html" class="next-step-card">
+                    <div class="next-step-icon">&#127918;</div>
+                    <h4>Input System</h4>
+                    <p>Complete overview</p>
+                </a>
+
+                <a href="selection-states.html" class="next-step-card">
+                    <div class="next-step-icon">&#10003;</div>
+                    <h4>Selection States</h4>
+                    <p>Inventory mode actions</p>
+                </a>
+
+                <a href="binds-module.html" class="next-step-card">
+                    <div class="next-step-icon">&#128290;</div>
+                    <h4>Binds Module</h4>
+                    <p>Input configuration</p>
+                </a>
+
+                <a href="../hooks/index.html" class="next-step-card">
+                    <div class="next-step-icon">&#128172;</div>
+                    <h4>Hooks</h4>
+                    <p>OnSelect/OnDeselect hooks</p>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <style>
+        .modes-comparison {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .mode-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+        
+        .mode-card.combat {
+            border-color: rgba(255, 100, 100, 0.3);
+        }
+        
+        .mode-card.inventory {
+            border-color: rgba(100, 255, 150, 0.3);
+        }
+        
+        .mode-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .mode-icon {
+            font-size: 2.5rem;
+        }
+        
+        .mode-title h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .mode-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            background: rgba(196, 167, 125, 0.2);
+            color: var(--accent-brown);
+        }
+        
+        .mode-card > p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .mode-section {
+            margin-bottom: 1rem;
+        }
+        
+        .mode-section h4 {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+        
+        .bind-list, .feature-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .bind-item {
+            background: var(--bg-tertiary);
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-family: 'Fira Code', monospace;
+        }
+        
+        .feature-item {
+            background: rgba(255, 100, 100, 0.1);
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: #ff6464;
+        }
+        
+        .switch-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            padding: 2rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            margin-bottom: 2rem;
+        }
+        
+        .switch-step {
+            text-align: center;
+            padding: 1rem 1.5rem;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            max-width: 200px;
+        }
+        
+        .step-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .switch-step h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .switch-step p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        .switch-arrow {
+            font-size: 1.5rem;
+            color: var(--accent-brown);
+        }
+        
+        .indicator-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .indicator-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+        }
+        
+        .indicator-preview {
+            width: 120px;
+            padding: 0.75rem;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+        }
+        
+        .indicator-preview.combat {
+            background: rgba(255, 100, 100, 0.2);
+            border: 1px solid rgba(255, 100, 100, 0.4);
+            color: #ff9090;
+        }
+        
+        .indicator-preview.inventory {
+            background: rgba(100, 255, 150, 0.2);
+            border: 1px solid rgba(100, 255, 150, 0.4);
+            color: #90ffb0;
+        }
+        
+        .indicator-info h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .indicator-info p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        .settings-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        
+        .settings-table th {
+            background: var(--bg-tertiary);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+        
+        .settings-table td {
+            padding: 0.875rem 1rem;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+        
+        .settings-table tr:hover td {
+            background: rgba(196, 167, 125, 0.05);
+        }
+        
+        .guide-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+        }
+        
+        .guide-card {
+            background: linear-gradient(135deg, rgba(37, 32, 25, 0.8), rgba(26, 22, 18, 0.9));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+        }
+        
+        .guide-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(196, 167, 125, 0.3);
+        }
+        
+        .guide-badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 50px;
+            background: rgba(196, 167, 125, 0.2);
+            color: var(--accent-brown);
+            margin-bottom: 0.75rem;
+            display: inline-block;
+        }
+        
+        .guide-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .guide-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .guide-card p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        
+        .next-steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+        
+        .next-step-card {
+            background: linear-gradient(135deg, rgba(37, 32, 25, 0.8), rgba(26, 22, 18, 0.9));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+        }
+        
+        .next-step-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(196, 167, 125, 0.3);
+        }
+        
+        .next-step-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .next-step-card h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .next-step-card p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+    </style>
+</body>
+
+</html>

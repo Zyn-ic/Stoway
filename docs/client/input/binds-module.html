@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binds Module - Stoway Docs</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../../../css/styles.css">
+    <link rel="icon" href="../../../assets/Logo.png" />
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <nav class="nav">
+        <a href="../../../index.html" class="nav-logo">
+            <img src="../../../assets/Logo.png" alt="Stoway">
+            <h1>Stoway</h1>
+        </a>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Documentation</div>
+            <a href="../../../index.html" class="nav-link">Home</a>
+            <a href="../../../quickstart.html" class="nav-link">Quick Start</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Client</div>
+            <a href="../../index.html" class="nav-link">Overview</a>
+            <a href="../hooks/index.html" class="nav-link">Hooks</a>
+            <a href="../gui/index.html" class="nav-link">GUI System</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Input & Console</div>
+            <a href="index.html" class="nav-link">Input System</a>
+            <a href="interaction-manager.html" class="nav-link">Interaction Manager</a>
+            <a href="console-modes.html" class="nav-link">Console Modes</a>
+            <a href="selection-states.html" class="nav-link">Selection States</a>
+            <a href="binds-module.html" class="nav-link active">Binds Module</a>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="breadcrumb">
+            <a href="../../../index.html">Docs</a>
+            <span>/</span>
+            <a href="../../index.html">Client</a>
+            <span>/</span>
+            <a href="index.html">Input</a>
+            <span>/</span>
+            <span class="current">Binds Module</span>
+        </div>
+
+        <section class="hero" style="padding: 2rem;">
+            <h1 style="font-size: 2.5rem;">&#128290; Binds Module</h1>
+            <p>A centralized, context-based input configuration system that prevents bind conflicts by organizing bindings into logical contexts (Global, Combat, Inventory, Drop).</p>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Why Contexts?</h2>
+                <p>The problem with traditional bind systems</p>
+            </div>
+
+            <div class="problem-solution">
+                <div class="problem-box">
+                    <h4>&#10060; The Problem</h4>
+                    <p>In traditional systems, if you bind "X" to "Drop" globally, it will trigger even when:</p>
+                    <ul>
+                        <li>Opening the backpack</li>
+                        <li>In a menu</li>
+                        <li>During combat</li>
+                    </ul>
+                    <p>This causes conflicts and confusing UX.</p>
+                </div>
+
+                <div class="solution-box">
+                    <h4>&#10004; The Solution</h4>
+                    <p>Stoway's context system ensures "X" only triggers "Drop" when:</p>
+                    <ul>
+                        <li>Gamepad input is active</li>
+                        <li>Inventory mode is enabled</li>
+                        <li>A slot is selected</li>
+                    </ul>
+                    <p>Same key, different actions in different contexts.</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Context Structure</h2>
+                <p>Four contexts for different interaction modes</p>
+            </div>
+
+            <div class="context-table">
+                <div class="context-row header">
+                    <div class="context-cell">Context Name</div>
+                    <div class="context-cell">When Enabled</div>
+                    <div class="context-cell">Contains</div>
+                </div>
+                <div class="context-row">
+                    <div class="context-cell code">StowayGlobal</div>
+                    <div class="context-cell">Always</div>
+                    <div class="context-cell">Backpack toggle, Mode switch</div>
+                </div>
+                <div class="context-row">
+                    <div class="context-cell code">StowayCombat</div>
+                    <div class="context-cell">Combat Mode</div>
+                    <div class="context-cell">Hotbar slot selection</div>
+                </div>
+                <div class="context-row">
+                    <div class="context-cell code">StowayInventory</div>
+                    <div class="context-cell">Inventory Mode</div>
+                    <div class="context-cell">Swap, Drop, QuickMove, Cancel</div>
+                </div>
+                <div class="context-row">
+                    <div class="context-cell code">StowayDrop</div>
+                    <div class="context-cell">Dropping Item</div>
+                    <div class="context-cell">Increase/Decrease amount</div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>File Structure</h2>
+                <p>Location and organization</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">File Location</span>
+                    <span class="code-lang">Tree</span>
+                </div>
+                <pre>ReplicatedStorage/
+- Shared/
+-   Binds.luau       <span class="comment">-- Main configuration file</span></pre>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Binds.luau Structure</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="keyword">local</span> Binds = {}
+
+<span class="comment">-- Helper function for applying binds</span>
+<span class="keyword">function</span> Binds.<span class="function">ApplyToAction</span>(action, bindConfig, inputType?)
+
+<span class="comment">-- Hotbar slot configuration (1-10)</span>
+Binds.HotbarSlots = {
+    [<span class="number">1</span>] = { Display = <span class="string">"1"</span>, PC = {...}, Console = {...} },
+    [<span class="number">2</span>] = { ... },
+    <span class="comment">-- ... up to 10</span>
+}
+
+<span class="comment">-- Global binds (always available)</span>
+Binds.Global = {
+    Backpack = { PC = {...}, Console = {...} },
+    SwitchMode = { PC = {...}, Console = {...} },
+    InventoryActions = { Swap = {...}, Drop = {...}, ... },
+    DropActions = { Increase = {...}, Decrease = {...} }
+}
+
+<span class="keyword">return</span> Binds</code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Bind Format</h2>
+                <p>How to define input bindings</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Bind Structure</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- Single bind entry</span>
+{
+    Main = Enum.KeyCode.<span class="string">"KeyName"</span>,        <span class="comment">-- Required: primary key</span>
+    Modifiers = { Enum.KeyCode.<span class="string">"Modifier"</span> }  <span class="comment">-- Optional: modifier keys</span>
+}
+
+<span class="comment">-- Examples</span>
+{ Main = Enum.KeyCode.One }                                    <span class="comment">-- Just "1"</span>
+{ Main = Enum.KeyCode.ButtonX, Modifiers = { Enum.KeyCode.ButtonR1 } }  <span class="comment">-- R1 + X</span>
+{ Main = Enum.KeyCode.Tab }                                    <span class="comment">-- Tab key</span></code></pre>
+            </div>
+
+            <table class="settings-table">
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Type</th>
+                        <th>Required</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>Main</code></td>
+                        <td>Enum.KeyCode</td>
+                        <td>Yes</td>
+                        <td>The primary key to bind</td>
+                    </tr>
+                    <tr>
+                        <td><code>Modifiers</code></td>
+                        <td>{Enum.KeyCode}</td>
+                        <td>No</td>
+                        <td>Modifier keys that must be held</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Hotbar Slots Configuration</h2>
+                <p>Slot binding for 1-10 keys</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Hotbar Bind Examples</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code>Binds.HotbarSlots = {
+    [<span class="number">1</span>] = {
+        Display = <span class="string">"1"</span>,  <span class="comment">-- Shown on slot</span>
+        PC = { {Main = Enum.KeyCode.One} },
+        Console = { {Main = Enum.KeyCode.ButtonX, Modifiers = {Enum.KeyCode.ButtonR1}} }
+    },
+    [<span class="number">2</span>] = {
+        Display = <span class="string">"2"</span>,
+        PC = { {Main = Enum.KeyCode.Two} },
+        Console = { {Main = Enum.KeyCode.ButtonY, Modifiers = {Enum.KeyCode.ButtonR1}} }
+    },
+    [<span class="number">3</span>] = {
+        Display = <span class="string">"3"</span>,
+        PC = { {Main = Enum.KeyCode.Three} },
+        Console = { {Main = Enum.KeyCode.ButtonB, Modifiers = {Enum.KeyCode.ButtonR1}} }
+    },
+    [<span class="number">4</span>] = {
+        Display = <span class="string">"4"</span>,
+        PC = { {Main = Enum.KeyCode.Four} },
+        Console = { {Main = Enum.KeyCode.ButtonA, Modifiers = {Enum.KeyCode.ButtonR1}} }
+    },
+    [<span class="number">5</span>] = {
+        Display = <span class="string">"5"</span>,
+        PC = { {Main = Enum.KeyCode.Five} },
+        Console = { {Main = Enum.KeyCode.ButtonX, Modifiers = {Enum.KeyCode.ButtonL1}} }
+    },
+    [<span class="number">6</span>] = {
+        Display = <span class="string">"6"</span>,
+        PC = { {Main = Enum.KeyCode.Six} },
+        Console = { {Main = Enum.KeyCode.ButtonY, Modifiers = {Enum.KeyCode.ButtonL1}} }
+    },
+    [<span class="number">7</span>] = {
+        Display = <span class="string">"7"</span>,
+        PC = { {Main = Enum.KeyCode.Seven} },
+        Console = { {Main = Enum.KeyCode.ButtonB, Modifiers = {Enum.KeyCode.ButtonL1}} }
+    },
+    [<span class="number">8</span>] = {
+        Display = <span class="string">"8"</span>,
+        PC = { {Main = Enum.KeyCode.Eight} },
+        Console = { {Main = Enum.KeyCode.ButtonA, Modifiers = {Enum.KeyCode.ButtonL1}} }
+    },
+    [<span class="number">9</span>] = {
+        Display = <span class="string">"9"</span>,
+        PC = { {Main = Enum.KeyCode.Nine} },
+        Console = { {Main = Enum.KeyCode.DPadUp, Modifiers = {Enum.KeyCode.ButtonR1}} }
+    },
+    [<span class="number">10</span>] = {
+        Display = <span class="string">"0"</span>,
+        PC = { {Main = Enum.KeyCode.Zero} },
+        Console = { {Main = Enum.KeyCode.DPadDown, Modifiers = {Enum.KeyCode.ButtonR1}} }
+    }
+}</code></pre>
+            </div>
+
+            <div class="info-box">
+                <strong>&#128161; Tip:</strong> PC binds use number keys 1-0. Console binds use R1/L1 + face buttons for quick access.
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Global Binds</h2>
+                <p>Bindings available in all contexts</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Global Configuration</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code>Binds.Global = {
+    <span class="comment">-- Toggle backpack visibility</span>
+    Backpack = {
+        PC = { 
+            {Main = Enum.KeyCode.Tab},
+            {Main = Enum.KeyCode.B}
+        },
+        Console = { {Main = Enum.KeyCode.DPadLeft} }
+    },
+
+    <span class="comment">-- Switch between Combat/Inventory modes</span>
+    SwitchMode = {
+        PC = { {Main = Enum.KeyCode.M} },  <span class="comment">-- M key for testing</span>
+        Console = { {Main = Enum.KeyCode.ButtonL3} }  <span class="comment">-- Long press L3</span>
+    },
+
+    <span class="comment">-- Inventory mode actions</span>
+    InventoryActions = {
+        Swap = {
+            Console = { {Main = Enum.KeyCode.ButtonY} }
+        },
+        Drop = {
+            Console = { {Main = Enum.KeyCode.ButtonX} }
+        },
+        QuickMove = {
+            Console = { {Main = Enum.KeyCode.ButtonL1, Modifiers = {Enum.KeyCode.ButtonR1}} }
+        },
+        Cancel = {
+            Console = { {Main = Enum.KeyCode.ButtonB} }
+        }
+    },
+
+    <span class="comment">-- Drop amount adjustment</span>
+    DropActions = {
+        Increase = { Console = { {Main = Enum.KeyCode.DPadUp} } },
+        Decrease = { Console = { {Main = Enum.KeyCode.DPadDown} } },
+    }
+}</code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Helper Function</h2>
+                <p>ApplyToAction for easy binding</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                The <code>ApplyToAction</code> helper function simplifies applying binds to IllusionIAS actions:
+            </p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">ApplyToAction Usage</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- Signature</span>
+<span class="keyword">function</span> Binds.<span class="function">ApplyToAction</span>(
+    action,              <span class="comment">-- IllusionIAS action object</span>
+    bindConfig,          <span class="comment">-- Bind entry from Binds table</span>
+    inputType: (<span class="string">"PC"</span> | <span class="string">"Console"</span>)?  <span class="comment">-- Optional: filter by input type</span>
+)
+
+<span class="comment">-- Example 1: Apply all binds (PC + Console)</span>
+<span class="keyword">local</span> swapAction = IllusionIAS.<span class="function">new</span>(<span class="string">"ConsoleSwapAction"</span>)
+Binds.<span class="function">ApplyToAction</span>(swapAction, Binds.Global.InventoryActions.Swap)
+
+<span class="comment">-- Example 2: Apply only Console binds</span>
+<span class="keyword">local</span> dropAction = IllusionIAS.<span class="function">new</span>(<span class="string">"ConsoleDropAction"</span>)
+Binds.<span class="function">ApplyToAction</span>(dropAction, Binds.Global.InventoryActions.Drop, <span class="string">"Console"</span>)
+
+<span class="comment">-- Example 3: Apply PC binds only</span>
+<span class="keyword">local</span> backpackAction = IllusionIAS.<span class="function">new</span>(<span class="string">"BackpackAction"</span>)
+Binds.<span class="function">ApplyToAction</span>(backpackAction, Binds.Global.Backpack, <span class="string">"PC"</span>)</code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Customization Example</h2>
+                <p>Adding a custom bind</p>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Add to Binds.luau</h3>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-title">Custom bind entry</span>
+                            <span class="code-lang">Luau</span>
+                        </div>
+                        <pre><code><span class="comment">-- In Binds.Global section</span>
+InventoryActions = {
+    Swap = { Console = { {Main = Enum.KeyCode.ButtonY} } },
+    Drop = { Console = { {Main = Enum.KeyCode.ButtonX} } },
+    QuickMove = { Console = { {Main = Enum.KeyCode.ButtonL1, Modifiers = {Enum.KeyCode.ButtonR1}} } },
+    Cancel = { Console = { {Main = Enum.KeyCode.ButtonB} } },
+    <span class="comment">-- Add your custom action</span>
+    EquipBest = { 
+        Console = { {Main = Enum.KeyCode.ButtonR3} }  <span class="comment">-- R3 (right stick click)</span>
+    }
+}</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Create the Action</h3>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-title">In SelectionManager.luau</span>
+                            <span class="code-lang">Luau</span>
+                        </div>
+                        <pre><code><span class="comment">-- Create action</span>
+<span class="keyword">local</span> equipBestAction = IllusionIAS.<span class="function">new</span>(<span class="string">"ConsoleEquipBestAction"</span>)
+Binds.<span class="function">ApplyToAction</span>(equipBestAction, Binds.Global.InventoryActions.EquipBest, <span class="string">"Console"</span>)
+
+<span class="comment">-- Connect handler</span>
+equipBestAction.Activated:<span class="function">Connect</span>(<span class="keyword">function</span>(active, pressed)
+    <span class="keyword">if</span> <span class="keyword">not</span> SelectionState.enabled <span class="keyword">or</span> <span class="keyword">not</span> pressed <span class="keyword">then</span> <span class="keyword">return</span> <span class="keyword">end</span>
+    SelectionManager.<span class="function">HandleEquipBest</span>()
+<span class="keyword">end</span>)
+
+<span class="comment">-- Add to inventory context</span>
+IllusionIAS.addContext(InputManager.ContextInventory, equipBestAction)</code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Available Key Codes</h2>
+                <p>Commonly used Enum.KeyCode values</p>
+            </div>
+
+            <table class="settings-table">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Key Codes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Number Keys</strong></td>
+                        <td><code>One, Two, Three, Four, Five, Six, Seven, Eight, Nine, Zero</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Letter Keys</strong></td>
+                        <td><code>A, B, C, ... Z</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Gamepad - Face Buttons</strong></td>
+                        <td><code>ButtonA, ButtonB, ButtonX, ButtonY</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Gamepad - Shoulder</strong></td>
+                        <td><code>ButtonL1, ButtonR1, ButtonL2, ButtonR2</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Gamepad - Stick</strong></td>
+                        <td><code>ButtonL3, ButtonR3</code> (click)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Gamepad - D-Pad</strong></td>
+                        <td><code>DPadUp, DPadDown, DPadLeft, DPadRight</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Special</strong></td>
+                        <td><code>Tab, Escape, Space, Backspace, Enter</code></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Related Documentation</h2>
+                <p>See also</p>
+            </div>
+
+            <div class="next-steps-grid">
+                <a href="index.html" class="next-step-card">
+                    <div class="next-step-icon">&#127918;</div>
+                    <h4>Input System</h4>
+                    <p>Complete input overview</p>
+                </a>
+
+                <a href="console-modes.html" class="next-step-card">
+                    <div class="next-step-icon">&#9876;</div>
+                    <h4>Console Modes</h4>
+                    <p>How modes enable/disable contexts</p>
+                </a>
+
+                <a href="selection-states.html" class="next-step-card">
+                    <div class="next-step-icon">&#10003;</div>
+                    <h4>Selection States</h4>
+                    <p>Actions triggered by selection</p>
+                </a>
+
+                <a href="interaction-manager.html" class="next-step-card">
+                    <div class="next-step-icon">&#128205;</div>
+                    <h4>Interaction Manager</h4>
+                    <p>Input type detection</p>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <style>
+        .problem-solution {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .problem-box, .solution-box {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        
+        .problem-box {
+            border-color: rgba(255, 100, 100, 0.3);
+        }
+        
+        .solution-box {
+            border-color: rgba(124, 179, 66, 0.3);
+        }
+        
+        .problem-box h4, .solution-box h4 {
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .problem-box h4 { color: #ff6464; }
+        .solution-box h4 { color: var(--success); }
+        
+        .problem-box p, .solution-box p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .problem-box ul, .solution-box ul {
+            list-style: disc;
+            padding-left: 1.5rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .context-table {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .context-row {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1.5fr;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .context-row:last-child {
+            border-bottom: none;
+        }
+        
+        .context-row.header {
+            background: var(--bg-tertiary);
+        }
+        
+        .context-row.header .context-cell {
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+        
+        .context-cell {
+            padding: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .context-cell.code {
+            font-family: 'Fira Code', monospace;
+            color: var(--accent-amber);
+        }
+        
+        .step-card {
+            display: flex;
+            gap: 1.5rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: var(--accent-gradient);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--bg-primary);
+            flex-shrink: 0;
+        }
+        
+        .step-content h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .step-content p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+        
+        .info-box {
+            background: rgba(124, 179, 66, 0.1);
+            border: 1px solid rgba(124, 179, 66, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .info-box strong {
+            color: var(--success);
+        }
+        
+        .settings-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        
+        .settings-table th {
+            background: var(--bg-tertiary);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+        
+        .settings-table td {
+            padding: 0.875rem 1rem;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+        
+        .settings-table tr:hover td {
+            background: rgba(196, 167, 125, 0.05);
+        }
+        
+        .settings-table code {
+            background: rgba(196, 167, 125, 0.15);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: var(--accent-brown);
+        }
+        
+        .next-steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+        
+        .next-step-card {
+            background: linear-gradient(135deg, rgba(37, 32, 25, 0.8), rgba(26, 22, 18, 0.9));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+        }
+        
+        .next-step-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(196, 167, 125, 0.3);
+        }
+        
+        .next-step-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .next-step-card h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .next-step-card p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+    </style>
+</body>
+
+</html>

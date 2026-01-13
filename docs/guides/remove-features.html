@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remove Features - Stoway Docs</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira:400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="icon" href="../assets/Logo.png" />
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <nav class="nav">
+        <a href="../index.html" class="nav-logo">
+            <img src="../assets/Logo.png" alt="Stoway">
+            <h1>Stoway</h1>
+        </a>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Documentation</div>
+            <a href="../index.html" class="nav-link">Home</a>
+            <a href="../quickstart.html" class="nav-link">Quick Start</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Guides</div>
+            <a href="index.html" class="nav-link active">All Guides</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Server</div>
+            <a href="../server/index.html" class="nav-link">Overview</a>
+            <a href="../server/architecture.html" class="nav-link">Architecture</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Templates</div>
+            <a href="../templates/index.html" class="nav-link">Templates</a>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="breadcrumb">
+            <a href="../index.html">Docs</a>
+            <span>/</span>
+            <a href="index.html">Guides</a>
+            <span>/</span>
+            <span class="current">Remove Features</span>
+        </div>
+
+        <section class="hero" style="padding: 2rem;">
+            <h1 style="font-size: 2.5rem;">&#10006; Remove Features</h1>
+            <p>Disable or remove inventory features you don't need. Also learn how to extend the player lifecycle for custom game mechanics like death handling and persistent items.</p>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Quick Reference</h2>
+                <p>Common features to disable</p>
+            </div>
+
+            <div class="feature-cards">
+                <div class="feature-card">
+                    <div class="feature-icon">&#128202;</div>
+                    <h3>Disable Sorting</h3>
+                    <p>Stop items from being auto-sorted</p>
+                    <a href="#disable-sorting" class="feature-link">How to &#8594;</a>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">&#128142;</div>
+                    <h3>Disable Rarity</h3>
+                    <p>Remove rarity color display</p>
+                    <a href="#disable-rarity" class="feature-link">How to &#8594;</a>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">&#9760;</div>
+                    <h3>Disable Death Re-equip</h3>
+                    <p>Stop auto-equipping on respawn</p>
+                    <a href="#disable-death-equip" class="feature-link">How to &#8594;</a>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">&#128683;</div>
+                    <h3>Disable Client</h3>
+                    <p>Completely disable inventory UI</p>
+                    <a href="#disable-client" class="feature-link">How to &#8594;</a>
+                </div>
+            </div>
+        </section>
+
+        <section id="disable-sorting">
+            <div class="section-header">
+                <h2>Disable Sorting</h2>
+                <p>Stop items from being auto-sorted in storage</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                Sorting is controlled by <code>Settings.Storage.Sorting</code> in <code>src/shared/Settings.luau</code>:
+            </p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Settings.luau</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code>Settings.Storage = {
+    Limit = <span class="number">15</span>,
+    CanStack = <span class="keyword">true</span>,
+    Sorting = <span class="keyword">false</span>,    <span class="comment">-- Set to false to disable sorting</span>
+    MaxStackSize = <span class="number">5</span>,
+    SortOrder = <span class="string">"None"</span>
+}</code></pre>
+            </div>
+
+            <div class="warning-box">
+                <strong>&#9888; Note:</strong> Setting <code>Sorting = false</code> also disables the SearchFilter functionality, as sorting and search use the same UI infrastructure.
+            </div>
+        </section>
+
+        <section id="disable-rarity">
+            <div class="section-header">
+                <h2>Disable Rarity</h2>
+                <p>Remove rarity color frames from slots</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                Rarity display is controlled by two settings:
+            </p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Settings.luau</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- Disable rarity colors on items</span>
+Settings.Stacking = {
+    RequiredFields = { <span class="string">"Type"</span> },  <span class="comment">-- Remove "Rarity" from required fields</span>
+    Blacklist = {},
+    Rarity = <span class="keyword">false</span>                 <span class="comment">-- Set to false to hide rarity frames</span>
+}</code></pre>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-top: 1rem; margin-bottom: 1.5rem;">
+                Additionally, ensure your GUI templates don't have rarity frames, or hide them via SlotFactory:
+            </p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">SlotFactory.luau</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- In Create function, hide rarityframe if rarity is disabled</span>
+<span class="keyword">if</span> rarityframe <span class="keyword">then</span>
+    <span class="keyword">if</span> Settings.Stacking.Rarity <span class="keyword">then</span>
+        <span class="comment">-- Show with reactive colors</span>
+        scope:Hydrate(rarityframe) {
+            BackgroundColor3 = scope:Computed(<span class="keyword">function</span>(use)
+                <span class="keyword">local</span> item = use(currentItem)
+                <span class="keyword">if</span> item <span class="keyword">and</span> item.Metadata <span class="keyword">and</span> item.Metadata.Rarity <span class="keyword">then</span>
+                    <span class="keyword">return</span> RarityValues.rarityColors[item.Metadata.Rarity]
+                <span class="keyword">end</span>
+                <span class="keyword">return</span> Color3.<span class="function">new</span>(<span class="number">0.4</span>, <span class="number">0.4</span>, <span class="number">0.4</span>)
+            <span class="keyword">end</span>),
+            Visible = hasItem,
+        }
+    <span class="keyword">else</span>
+        <span class="comment">-- Always hide</span>
+        rarityframe.Visible = <span class="keyword">false</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span></code></pre>
+            </div>
+        </section>
+
+        <section id="disable-death-equip">
+            <div class="section-header">
+                <h2>Disable Death Re-equip</h2>
+                <p>Stop items from being re-equipped when player respawns</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                The death handling code is in <code>src/server/StowayServerV1_2/init.luau</code>, lines 46-61:
+            </p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Current Death Handling</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code>player.CharacterAdded:<span class="function">Connect</span>(<span class="keyword">function</span>(char)
+
+    char:FindFirstChildWhichIsA(<span class="string">"Humanoid"</span>).Died:<span class="function">Once</span>(<span class="keyword">function</span>()
+        state.died = <span class="keyword">true</span>
+    <span class="keyword">end</span>)
+
+    <span class="keyword">if</span> state.died <span class="keyword">then</span>
+        InventoryService.<span class="function">ReloadClient</span>(player, {configSettingName = state.Settings.UiType})
+
+        <span class="keyword">if</span> state.EquippedItemUUID <span class="keyword">then</span>
+            <span class="keyword">local</span> slotType, index = SlotManager.<span class="function">FindSlotByUUID</span>(state, state.EquippedItemUUID)
+            InventoryService.<span class="function">UnequipSlot</span>(player, <span class="keyword">true</span>)
+            InventoryService.<span class="function">EquipSlot</span>(player, slotType, index, <span class="keyword">true</span>)
+        <span class="keyword">end</span>
+
+        state.died = <span class="keyword">false</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>)</code></pre>
+            </div>
+
+            <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Option 1: Disable Re-equip Only</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                Keep the reload but don't re-equip:
+            </p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Disable Re-equip</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code>player.CharacterAdded:<span class="function">Connect</span>(<span class="keyword">function</span>(char)
+
+    char:FindFirstChildWhichIsA(<span class="string">"Humanoid"</span>).Died:<span class="function">Once</span>(<span class="keyword">function</span>()
+        state.died = <span class="keyword">true</span>
+    <span class="keyword">end</span>)
+
+    <span class="keyword">if</span> state.died <span class="keyword">then</span>
+        <span class="comment">-- Just reload UI, don't re-equip</span>
+        InventoryService.<span class="function">ReloadClient</span>(player, {configSettingName = state.Settings.UiType})
+        state.died = <span class="keyword">false</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>)</code></pre>
+            </div>
+
+            <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Option 2: Remove Death Handling Entirely</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                Comment out the entire CharacterAdded block:
+            </p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Remove Death Handling</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">--[[
+player.CharacterAdded:Connect(function(char)
+    char:FindFirstChildWhichIsA("Humanoid").Died:Once(function() state.died = true end)
+
+    if state.died then
+        InventoryService.ReloadClient(player, {configSettingName = state.Settings.UiType})
+        if state.EquippedItemUUID then 
+            local slotType, index = SlotManager.FindSlotByUUID(state, state.EquippedItemUUID)
+            InventoryService.UnequipSlot(player, true)
+            InventoryService.EquipSlot(player, slotType, index, true)
+        end
+        state.died = false
+    end
+end)
+--]]</code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Customize Death Behavior</h2>
+                <p>Extend the player lifecycle for custom game mechanics</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                The death handling pattern can be extended for various game mechanics:
+            </p>
+
+            <div class="pattern-cards">
+                <div class="pattern-card">
+                    <h4>&#128465; Clear Inventory on Death</h4>
+                    <p>Remove all items when player dies</p>
+                    <a href="#clear-on-death" class="pattern-link">See Example &#8594;</a>
+                </div>
+
+                <div class="pattern-card">
+                    <h4>&#128295; Persistent Items</h4>
+                    <p>Always have essential items (flashlight, etc.)</p>
+                    <a href="#persistent-items" class="pattern-link">See Example &#8594;</a>
+                </div>
+
+                <div class="pattern-card">
+                    <h4>&#128275; Drop Items on Death</h4>
+                    <p>Drop inventory to world on death</p>
+                    <a href="#drop-on-death" class="pattern-link">See Example &#8594;</a>
+                </div>
+
+                <div class="pattern-card">
+                    <h4>&#9888; Keep Selected Slot</h4>
+                    <p>Remember and restore equipped slot</p>
+                    <a href="#keep-slot" class="pattern-link">See Example &#8594;</a>
+                </div>
+            </div>
+        </section>
+
+        <section id="clear-on-death">
+            <div class="section-header">
+                <h3>Clear Inventory on Death</h3>
+                <p>Remove all items when player dies</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Clear on Death</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code>player.CharacterAdded:<span class="function">Connect</span>(<span class="keyword">function</span>(char)
+
+    char:FindFirstChildWhichIsA(<span class="string">"Humanoid"</span>).Died:<span class="function">Once</span>(<span class="keyword">function</span>()
+        state.died = <span class="keyword">true</span>
+    <span class="keyword">end</span>)
+
+    <span class="keyword">if</span> state.died <span class="keyword">then</span>
+        <span class="comment">-- Clear all items from inventory</span>
+        <span class="keyword">for</span> uuid <span class="keyword">in</span> <span class="function">pairs</span>(state.Items) <span class="keyword">do</span>
+            RemoveOperation.<span class="function">Execute</span>(state, uuid)
+        <span class="keyword">end</span>
+
+        <span class="comment">-- Reset hotbar and storage arrays</span>
+        state.Hotbar = {}
+        state.Storage = {}
+        state.Items = {}
+        state.ItemsByID = {}
+        state.EquippedItemUUID = <span class="keyword">nil</span>
+        state.Weight = <span class="number">0</span>
+
+        <span class="comment">-- Reload client</span>
+        InventoryService.<span class="function">ReloadClient</span>(player, {configSettingName = state.Settings.UiType})
+
+        state.died = <span class="keyword">false</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>)</code></pre>
+            </div>
+        </section>
+
+        <section id="persistent-items">
+            <div class="section-header">
+                <h3>Persistent Items</h3>
+                <p>Always grant essential items on respawn (e.g., flashlight)</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Persistent Items</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- Define persistent items (always granted on respawn)</span>
+<span class="keyword">local</span> PERSISTENT_ITEMS = {
+    { Id = <span class="string">"flashlight"</span>, Amount = <span class="number">1</span> },
+    { Id = <span class="string">"compass"</span>, Amount = <span class="number">1</span> },
+}
+
+player.CharacterAdded:<span class="function">Connect</span>(<span class="keyword">function</span>(char)
+
+    char:FindFirstChildWhichIsA(<span class="string">"Humanoid"</span>).Died:<span class="function">Once</span>(<span class="keyword">function</span>()
+        state.died = <span class="keyword">true</span>
+    <span class="keyword">end</span>)
+
+    <span class="keyword">if</span> state.died <span class="keyword">then</span>
+        <span class="comment">-- Reload UI first</span>
+        InventoryService.<span class="function">ReloadClient</span>(player, {configSettingName = state.Settings.UiType})
+
+        <span class="comment">-- Grant persistent items to hotbar</span>
+        <span class="keyword">for</span> _, item <span class="keyword">in</span> <span class="function">ipairs</span>(PERSISTENT_ITEMS) <span class="keyword">do</span>
+            InventoryService.<span class="function">AddItem</span>(player, item.Id, item.Amount, <span class="keyword">nil</span>, <span class="keyword">true</span>)
+        <span class="keyword">end</span>
+
+        <span class="comment">-- Restore equipped item if exists</span>
+        <span class="keyword">if</span> state.EquippedItemUUID <span class="keyword">then</span>
+            <span class="keyword">local</span> slotType, index = SlotManager.<span class="function">FindSlotByUUID</span>(state, state.EquippedItemUUID)
+            <span class="keyword">if</span> slotType <span class="keyword">and</span> index <span class="keyword">then</span>
+                InventoryService.<span class="function">EquipSlot</span>(player, slotType, index, <span class="keyword">true</span>)
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+
+        state.died = <span class="keyword">false</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>)</code></pre>
+            </div>
+
+            <div class="info-box">
+                <strong>&#128161; Tip:</strong> Persistent items are great for essential gameplay items like flashlights, maps, radios, or quest items that players should always have.
+            </div>
+        </section>
+
+        <section id="drop-on-death">
+            <div class="section-header">
+                <h3>Drop Items on Death</h3>
+                <p>Drop inventory to world when player dies</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Drop on Death</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="keyword">local</span> ItemSpawner = <span class="function">require</span>(script.World.ItemSpawner)
+
+player.CharacterAdded:<span class="function">Connect</span>(<span class="keyword">function</span>(char)
+
+    <span class="keyword">local</span> humanoid = char:FindFirstChildWhichIsA(<span class="string">"Humanoid"</span>)
+    
+    humanoid.Died:<span class="function">Once</span>(<span class="keyword">function</span>()
+        state.died = <span class="keyword">true</span>
+        
+        <span class="comment">-- Get spawn position</span>
+        <span class="keyword">local</span> spawnPos = char:GetPrimaryPartCFrame().Position
+        <span class="keyword">local</span> dropPosition = spawnPos + Vector3.<span class="function">new</span>(<span class="number">0</span>, <span class="number">3</span>, <span class="number">0</span>)
+        
+        <span class="comment">-- Drop all items to world</span>
+        <span class="keyword">for</span> uuid, item <span class="keyword">in</span> <span class="function">pairs</span>(state.Items) <span class="keyword">do</span>
+            <span class="keyword">if</span> item.Metadata <span class="keyword">and</span> item.Metadata.Droppable ~= <span class="keyword">false</span> <span class="keyword">then</span>
+                <span class="comment">-- Spawn item in world</span>
+                ItemSpawner.<span class="function">Spawn</span>({
+                    Name = item.Id,
+                    Amount = item.Amount,
+                    Position = dropPosition + Vector3.<span class="function">new</span>(
+                        math.<span class="function">random</span>(-<span class="number">5</span>, <span class="number">5</span>),
+                        <span class="number">0</span>,
+                        math.<span class="function">random</span>(-<span class="number">5</span>, <span class="number">5</span>)
+                    ),
+                    Metadata = item.Metadata,
+                })
+            <span class="keyword">end</span>
+        <span class="keyword">end</span>
+        
+        <span class="comment">-- Clear inventory</span>
+        state.Hotbar = {}
+        state.Storage = {}
+        state.Items = {}
+        state.ItemsByID = {}
+        state.EquippedItemUUID = <span class="keyword">nil</span>
+        state.Weight = <span class="number">0</span>
+    <span class="keyword">end</span>)
+
+    <span class="keyword">if</span> state.died <span class="keyword">then</span>
+        InventoryService.<span class="function">ReloadClient</span>(player, {configSettingName = state.Settings.UiType})
+        state.died = <span class="keyword">false</span>
+    <span class="keyword">end</span>
+<span class="keyword">end</span>)</code></pre>
+            </div>
+        </section>
+
+        <section id="disable-client">
+            <div class="section-header">
+                <h2>Disable Client Completely</h2>
+                <p>Completely disable the inventory UI for specific players</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                This feature is useful for spectators, certain game modes, or when you want to completely hide the inventory from specific players. It requires both server and client coordination.
+            </p>
+
+            <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Server Side</h3>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Server - Disable Client</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- Add to init.luau</span>
+
+<span class="keyword">function</span> InventoryService.<span class="function">DisableClient</span>(player: Player)
+    <span class="keyword">local</span> state = PlayerInventories[player]
+    <span class="keyword">if</span> <span class="keyword">not</span> state <span class="keyword">then</span> <span class="keyword">return</span> { success = <span class="keyword">false</span>, reason = <span class="string">"NO_INVENTORY"</span> } <span class="keyword">end</span>
+
+    <span class="comment">-- Send disable signal to client</span>
+    <span class="keyword">local</span> remotesFolder = Replicator.<span class="function">GetRemotesFolder</span>()
+    <span class="keyword">local</span> disableRemote = remotesFolder:FindFirstChild(<span class="string">"DisableStoway"</span>)
+    <span class="keyword">if</span> disableRemote <span class="keyword">then</span>
+        disableRemote:<span class="function">FireClient</span>(player)
+    <span class="keyword">end</span>
+
+    <span class="keyword">return</span> { success = <span class="keyword">true</span> }
+<span class="keyword">end</span></code></pre>
+            </div>
+
+            <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Client Side - Add to init.luau</h3>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Client - Handle Disable</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- Add this to SetupRemotes() or init section</span>
+
+<span class="comment">-- Get disable remote (create if needed)</span>
+<span class="keyword">local</span> remotesFolder = ReplicatedStorage:WaitForChild(<span class="string">"Remotes"</span>)
+<span class="keyword">local</span> disableRemote = remotesFolder:FindFirstChild(<span class="string">"DisableStoway"</span>)
+<span class="keyword">if</span> <span class="keyword">not</span> disableRemote <span class="keyword">then</span>
+    disableRemote = Instance.<span class="function">new</span>(<span class="string">"RemoteEvent"</span>)
+    disableRemote.Name = <span class="string">"DisableStoway"</span>
+    disableRemote.Parent = remotesFolder
+<span class="keyword">end</span>
+
+<span class="comment">-- Handle disable signal</span>
+disableRemote.<span class="function">OnClientEvent</span>:<span class="function">Connect</span>(<span class="keyword">function</span>()
+    <span class="function">print</span>(<span class="string">"[Stoway] Disabling client..."</span>)
+
+    <span class="comment">-- 1. Destroy UI</span>
+    <span class="keyword">if</span> InventoryGui <span class="keyword">then</span>
+        InventoryGui:Destroy()
+        InventoryGui = <span class="keyword">nil</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- 2. Clean up scopes</span>
+    <span class="keyword">if</span> HotbarScope <span class="keyword">then</span>
+        HotbarScope:doCleanup()
+        HotbarScope = <span class="keyword">nil</span>
+    <span class="keyword">end</span>
+    <span class="keyword">if</span> StorageScope <span class="keyword">then</span>
+        StorageScope:doCleanup()
+        StorageScope = <span class="keyword">nil</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- 3. Destroy input</span>
+    InputManager.<span class="function">Destroy</span>()
+    InteractionManager.<span class="function">Destroy</span>()
+    SelectionManager.<span class="function">Destroy</span>()
+    DragHandler.<span class="function">Destroy</span>()
+
+    <span class="comment">-- 4. Disconnect network</span>
+    NetworkHandler.<span class="function">Destroy</span>()
+
+    <span class="comment">-- 5. Clean up connections</span>
+    <span class="keyword">for</span> _, conn <span class="keyword">in</span> <span class="function">ipairs</span>(InputConnections) <span class="keyword">do</span>
+        conn:Disconnect()
+    <span class="keyword">end</span>
+    table.clear(InputConnections)
+
+    <span class="comment">-- 6. Clear references</span>
+    BackpackFrame = <span class="keyword">nil</span>
+    HotbarFrame = <span class="keyword">nil</span>
+    ScrollingBackpack = <span class="keyword">nil</span>
+    DraggingGui = <span class="keyword">nil</span>
+
+    <span class="function">print</span>(<span class="string">"[Stoway] Client disabled successfully"</span>)
+<span class="keyword">end</span>)</code></pre>
+            </div>
+
+            <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Usage</h3>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Usage Example</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- Disable inventory for spectator players</span>
+<span class="keyword">local</span> Players = game:GetService(<span class="string">"Players"</span>)
+
+Players.PlayerAdded:<span class="function">Connect</span>(<span class="keyword">function</span>(player)
+    <span class="keyword">if</span> player.<span class="function">GetRankInGroup</span>(player, <span class="number">123456</span>) == <span class="number">0</span> <span class="keyword">then</span>  <span class="comment">-- Not in group</span>
+        <span class="comment">-- Wait for inventory to initialize</span>
+        <span class="function">task.wait</span>(<span class="number">1</span>)
+        InventoryService.<span class="function">DisableClient</span>(player)
+    <span class="keyword">end</span>
+<span class="keyword">end</span>)</code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Related Documentation</h2>
+                <p>See also</p>
+            </div>
+
+            <div class="next-steps-grid">
+                <a href="add-server-features.html" class="next-step-card">
+                    <div class="next-step-icon">&#43;</div>
+                    <h4>Add Features</h4>
+                    <p>Create new operations</p>
+                </a>
+
+                <a href="settings-configuration.html" class="next-step-card">
+                    <div class="next-step-icon">&#9881;</div>
+                    <h4>Settings Guide</h4>
+                    <p>Configuration reference</p>
+                </a>
+
+                <a href="../server/architecture.html" class="next-step-card">
+                    <div class="next-step-icon">&#128736;</div>
+                    <h4>Architecture</h4>
+                    <p>Server structure</p>
+                </a>
+
+                <a href="../templates/index.html" class="next-step-card">
+                    <div class="next-step-icon">&#128221;</div>
+                    <h4>Templates</h4>
+                    <p>Code templates</p>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <style>
+        .feature-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .feature-card {
+            background: linear-gradient(135deg, rgba(37, 32, 25, 0.8), rgba(26, 22, 18, 0.9));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(196, 167, 125, 0.3);
+        }
+        
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .feature-card h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-link {
+            color: var(--accent-brown);
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .feature-link:hover {
+            text-decoration: underline;
+        }
+        
+        .pattern-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .pattern-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+        
+        .pattern-card h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .pattern-card p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+        
+        .pattern-link {
+            color: var(--accent-amber);
+            text-decoration: none;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .pattern-link:hover {
+            text-decoration: underline;
+        }
+        
+        .warning-box {
+            background: rgba(255, 179, 0, 0.1);
+            border: 1px solid rgba(255, 179, 0, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .warning-box strong {
+            color: var(--warning);
+        }
+        
+        .info-box {
+            background: rgba(124, 179, 66, 0.1);
+            border: 1px solid rgba(124, 179, 66, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .info-box strong {
+            color: var(--success);
+        }
+        
+        .next-steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1rem;
+        }
+        
+        .next-step-card {
+            background: linear-gradient(135deg, rgba(37, 32, 25, 0.8), rgba(26, 22, 18, 0.9));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+        }
+        
+        .next-step-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(196, 167, 125, 0.3);
+        }
+        
+        .next-step-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .next-step-card h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .next-step-card p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+    </style>
+</body>
+
+</html>

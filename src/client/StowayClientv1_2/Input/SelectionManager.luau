@@ -85,15 +85,25 @@ function SelectionManager.LoadDropBinds()
 
     dropIncreaseAction = IllusionIAS.new("DropIncrease")
     Binds.ApplyToAction(dropIncreaseAction, dropActions.Increase, "Console")
-    
+
+    local increaseButton = ConsoleDropUI.GetIncreaseButton()
+    if increaseButton then
+        dropIncreaseAction:SetUIButton(increaseButton)
+    end
+
     dropDecreaseAction = IllusionIAS.new("DropDecrease")
     Binds.ApplyToAction(dropDecreaseAction, dropActions.Decrease, "Console")
-    
+
+    local decreaseButton = ConsoleDropUI.GetDecreaseButton()
+    if decreaseButton then
+        dropDecreaseAction:SetUIButton(decreaseButton)
+    end
+
     dropIncreaseAction.Activated:Connect(function(active, pressed) if pressed then ConsoleDropUI.ChangeAmount(1) end end)
     dropDecreaseAction.Activated:Connect(function(active, pressed) if pressed then ConsoleDropUI.ChangeAmount(-1) end end)
-    
+
     IllusionIAS.addContext(InputManager.ContextDrop, dropIncreaseAction, dropDecreaseAction)
-    
+
     table.insert(activeDropActions, dropIncreaseAction)
     table.insert(activeDropActions, dropDecreaseAction)
 end
