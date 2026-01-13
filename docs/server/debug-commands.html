@@ -154,10 +154,10 @@ STORAGE: #1
                 <div class="code-header">
                     <span class="code-title">Examples</span>
                 </div>
-                <pre>/add Sword           -- Adds 1 Sword to first empty hotbar slot
-/add Potion 10       -- Adds 10 Potions (stacks across slots if needed)
-/addback Wood 5      -- Adds 5 Wood directly to storage
-/remove abc-123-def  -- Removes entire stack with that UUID
+                <pre>/add Sword         - Adds 1 Sword to first empty hotbar slot
+/add Potion 10     - Adds 10 Potions (stacks across slots if needed)
+/addback Wood 5    - Adds 5 Wood directly to storage
+/remove abc-123-def- Removes entire stack with that UUID
 /remove abc-123-def 2 -- Removes 2 from that stack</pre>
             </div>
         </section>
@@ -208,7 +208,7 @@ STORAGE: #1
                 <div class="code-header">
                     <span class="code-title">Slot Types</span>
                 </div>
-                <pre>Hotbar  -- Slots 1-9 (configurable via MaxHotbarSlots)
+                <pre>Hotbar- Slots 1-9 (configurable via MaxHotbarSlots)
 Storage -- Dynamic array, indices start at 1</pre>
             </div>
         </section>
@@ -262,15 +262,15 @@ Storage -- Dynamic array, indices start at 1</pre>
                 </div>
                 <pre>-- Test stacking disabled
 /toggle_stack
-/add Sword 3        -- Creates 3 separate stacks
+/add Sword 3      - Creates 3 separate stacks
 
 -- Test infinite inventory
 /set_limit 0
-/add Wood 100       -- No weight rejection
+/add Wood 100     - No weight rejection
 
 -- Test small hotbar
 /set_hotbar_slots 3
-/add Sword 5        -- 3 go to hotbar, 2 to storage</pre>
+/add Sword 5      - 3 go to hotbar, 2 to storage</pre>
             </div>
         </section>
 
@@ -299,8 +299,8 @@ Storage -- Dynamic array, indices start at 1</pre>
                     <pre>/setui [uitype]
 
 Example:
-/setui Default     -- Reload with Default UI
-/setui Mod         -- Reload with Mod UI (if configured)</pre>
+/setui Default   - Reload with Default UI
+/setui Mod       - Reload with Mod UI (if configured)</pre>
                 </div>
 
                 <div class="warning-box" style="margin-top: 1rem;">

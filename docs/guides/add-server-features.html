@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Server Features - Stoway Docs</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="icon" href="../assets/Logo.png" />
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <nav class="nav">
+        <a href="../index.html" class="nav-logo">
+            <img src="../assets/Logo.png" alt="Stoway">
+            <h1>Stoway</h1>
+        </a>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Documentation</div>
+            <a href="../index.html" class="nav-link">Home</a>
+            <a href="../quickstart.html" class="nav-link">Quick Start</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Guides</div>
+            <a href="index.html" class="nav-link active">All Guides</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Server</div>
+            <a href="../server/index.html" class="nav-link">Overview</a>
+            <a href="../server/api-reference.html" class="nav-link">API Reference</a>
+            <a href="../server/operations/index.html" class="nav-link">Operations</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Templates</div>
+            <a href="../templates/index.html" class="nav-link">Templates</a>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="breadcrumb">
+            <a href="../index.html">Docs</a>
+            <span>/</span>
+            <a href="index.html">Guides</a>
+            <span>/</span>
+            <span class="current">Add Server Features</span>
+        </div>
+
+        <section class="hero" style="padding: 2rem;">
+            <h1 style="font-size: 2.5rem;">&#43; Add Server Features</h1>
+            <p>Learn how to extend Stoway by creating new operations, adding API methods, and wiring them to the network protocol.</p>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Overview</h2>
+                <p>How the operations system works</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                Stoway uses a modular operation system. Each operation (Add, Remove, Swap, Equip, Drop) is a self-contained module that handles a specific inventory action. Adding a new feature involves:
+            </p>
+
+            <ol class="steps-list">
+                <li>
+                    <strong>Create the operation module</strong> - Handle the core logic
+                </li>
+                <li>
+                    <strong>Add an API method</strong> - Expose the operation in InventoryService
+                </li>
+                <li>
+                    <strong>Wire to network protocol</strong> - Allow clients to trigger it
+                </li>
+                <li>
+                    <strong>Add replication (optional)</strong> - Notify clients of changes
+                </li>
+            </ol>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Architecture Overview</span>
+                    <span class="code-lang">Diagram</span>
+                </div>
+                <pre>Client Request &#8594; InventoryAction (RemoteEvent)
+    &#8594; OperationHandlers[operation] 
+    &#8594; OperationModule.Execute()
+    &#8594; InventoryState updates
+    &#8594; Replicator.Send*() (optional)
+    &#8594; Client update</pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Step 1: Create the Operation Module</h2>
+                <p>Write the core logic for your operation</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                Create a new file in <code>src/server/StowayServerV1_2/Operations/</code>. Use the template below:
+            </p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">MyOperation.luau</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- src/server/StowayServerV1_2/Operations/MyOperation.luau</span>
+<span class="comment">-- Description: What your operation does</span>
+
+<span class="keyword">local</span> MyOperation = {}
+
+<span class="comment">-- Type definitions for clarity</span>
+<span class="keyword">export type</span> MyResult = {
+    success: <span class="keyword">boolean</span>,
+    reason: <span class="keyword">string</span>?,
+    <span class="comment">-- Add your result fields here</span>
+}
+
+<span class="comment">-- Main execute function</span>
+<span class="keyword">function</span> MyOperation.<span class="function">Execute</span>(
+    state: InventoryStateType,
+    <span class="comment">-- Add your parameters</span>
+    param1: <span class="keyword">string</span>,
+    param2: <span class="keyword">number</span>
+): MyResult
+    <span class="comment">-- 1. Validate inputs</span>
+    <span class="keyword">if</span> <span class="keyword">not</span> param1 <span class="keyword">then</span>
+        <span class="keyword">return</span> { success = <span class="keyword">false</span>, reason = <span class="string">"INVALID_PARAM"</span> }
+    <span class="keyword">end</span>
+
+    <span class="comment">-- 2. Perform the operation</span>
+    <span class="comment">-- Modify state.Items, state.Hotbar, state.Storage as needed</span>
+
+    <span class="comment">-- 3. Return result</span>
+    <span class="keyword">return</span> {
+        success = <span class="keyword">true</span>,
+        <span class="comment">-- Add result fields</span>
+    }
+<span class="keyword">end</span>
+
+<span class="keyword">return</span> MyOperation</code></pre>
+            </div>
+
+            <div class="info-box">
+                <strong>&#128161; Best Practices:</strong>
+                <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                    <li>Always validate inputs before modifying state</li>
+                    <li>Use the existing helpers (SlotManager, LimitChecker, etc.)</li>
+                    <li>Return descriptive error messages</li>
+                    <li>Keep the operation focused on a single task</li>
+                </ul>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Step 2: Add API Method</h2>
+                <p>Expose your operation in InventoryService</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                Open <code>src/server/StowayServerV1_2/init.luau</code> and add:
+            </p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">init.luau - Imports</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- At the top with other operation imports</span>
+<span class="keyword">local</span> MyOperation = <span class="function">require</span>(script.Operations.MyOperation)</code></pre>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">init.luau - API Method</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- Add in the PUBLIC API section</span>
+
+<span class="keyword">function</span> InventoryService.<span class="function">MyOperation</span>(
+    player: Player,
+    param1: <span class="keyword">string</span>,
+    param2: <span class="keyword">number</span>,
+    REPLICATE: <span class="keyword">boolean</span>
+)
+    <span class="keyword">local</span> state = PlayerInventories[player]
+    <span class="keyword">if</span> <span class="keyword">not</span> state <span class="keyword">then</span> <span class="keyword">return</span> { success = <span class="keyword">false</span>, reason = <span class="string">"NO_INVENTORY"</span> } <span class="keyword">end</span>
+    
+    <span class="keyword">local</span> result = MyOperation.<span class="function">Execute</span>(state, param1, param2)
+    
+    <span class="keyword">if</span> result.success <span class="keyword">and</span> REPLICATE <span class="keyword">then</span>
+        <span class="comment">-- Add replication if needed</span>
+        <span class="comment">-- Replicator.SendSomething(player, ...)</span>
+    <span class="keyword">end</span>
+    
+    <span class="keyword">return</span> result
+<span class="keyword">end</span></code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Step 3: Wire to Network Protocol</h2>
+                <p>Allow clients to trigger the operation</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">init.luau - Operation Types</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- In the Operations table</span>
+<span class="keyword">local</span> Operations = {
+    SWAP = <span class="string">"Swap"</span>,
+    EQUIP = <span class="string">"Equip"</span>,
+    UNEQUIP = <span class="string">"Unequip"</span>,
+    REMOVE = <span class="string">"Remove"</span>,
+    DROP = <span class="string">"Drop"</span>,
+    STACK = <span class="string">"Stack"</span>,
+    <span class="comment">-- Add your new operation type</span>
+    MY_OPERATION = <span class="string">"MyOperation"</span>,
+}</code></pre>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">init.luau - Operation Handlers</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- In the OperationHandlers table</span>
+<span class="keyword">local</span> OperationHandlers = {
+    <span class="comment">-- ... existing handlers ...</span>
+    
+    <span class="comment">-- Add your handler</span>
+    [Operations.MY_OPERATION] = <span class="keyword">function</span>(player, args)
+        <span class="keyword">return</span> InventoryService.<span class="function">MyOperation</span>(
+            player,
+            args.param1,
+            args.param2,
+            <span class="keyword">false</span>  <span class="comment">-- Replication handled by API method</span>
+        )
+    <span class="keyword">end</span>,
+}</code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Step 4: Add Replication (Optional)</h2>
+                <p>Notify clients of changes</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                If your operation changes visible state, add a replication method. See <code>Replicator.luau</code> for patterns:
+            </p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Replicator.luau Pattern</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- Add to Replicator module</span>
+
+<span class="keyword">function</span> Replicator.<span class="function">SendMyOperation</span>(player, <span class="comment">-- your data</span>)
+    <span class="keyword">local</span> payload = {
+        Operation = <span class="string">"MyOperation"</span>,
+        <span class="comment">-- Your payload data</span>
+    }
+    InventoryActionRemote:<span class="function">FireClient</span>(player, payload)
+<span class="keyword">end</span></code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Example: Craft Operation</h2>
+                <p>Complete working example</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                Here's a simplified craft operation that consumes ingredients and produces an output item:
+            </p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">CraftOperation.luau</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- src/server/StowayServerV1_2/Operations/CraftOperation.luau</span>
+
+<span class="keyword">local</span> SlotManager = <span class="function">require</span>(script.Parent.Parent.Core.SlotManager)
+<span class="keyword">local</span> RemoveOperation = <span class="function">require</span>(script.Parent.Parent.Operations.RemoveOperation)
+<span class="keyword">local</span> AddOperation = <span class="function">require</span>(script.Parent.Parent.Operations.AddOperation)
+
+<span class="keyword">local</span> CraftOperation = {}
+
+<span class="keyword">export type</span> CraftResult = {
+    success: <span class="keyword">boolean</span>,
+    reason: <span class="keyword">string</span>?,
+    outputItem: <span class="keyword">string</span>?,
+}
+
+<span class="keyword">function</span> CraftOperation.<span class="function">Execute</span>(
+    state: InventoryStateType,
+    recipeId: <span class="keyword">string</span>
+): CraftResult
+    <span class="comment">-- Define your recipes (could also be in a separate module)</span>
+    <span class="keyword">local</span> recipes = {
+        sword = {
+            ingredients = { wood = 2, iron = 1 },
+            output = <span class="string">"sword"</span>
+        },
+        potion = {
+            ingredients = { herb = 3, water = 1 },
+            output = <span class="string">"potion"</span>
+        }
+    }
+
+    <span class="keyword">local</span> recipe = recipes[recipeId]
+    <span class="keyword">if</span> <span class="keyword">not</span> recipe <span class="keyword">then</span>
+        <span class="keyword">return</span> { success = <span class="keyword">false</span>, reason = <span class="string">"UNKNOWN_RECIPE"</span> }
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Check ingredients exist</span>
+    <span class="keyword">for</span> itemId, amount <span class="keyword">in</span> <span class="function">pairs</span>(recipe.ingredients) <span class="keyword">do</span>
+        <span class="keyword">local</span> count = state.ItemsByID[itemId] and #state.ItemsByID[itemId] or 0
+        <span class="keyword">if</span> count < amount <span class="keyword">then</span>
+            <span class="keyword">return</span> { success = <span class="keyword">false</span>, reason = <span class="string">"MISSING_INGREDIENTS"</span> }
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Consume ingredients</span>
+    <span class="keyword">for</span> itemId, amount <span class="keyword">in</span> <span class="function">pairs</span>(recipe.ingredients) <span class="keyword">do</span>
+        <span class="keyword">for</span> i = 1, amount <span class="keyword">do</span>
+            <span class="keyword">local</span> uuid = state.ItemsByID[itemId][<span class="number">1</span>]
+            RemoveOperation.<span class="function">Execute</span>(state, uuid, <span class="number">1</span>)
+        <span class="keyword">end</span>
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Add output</span>
+    <span class="keyword">local</span> addResult = AddOperation.<span class="function">Execute</span>(state, recipe.output, <span class="number">1</span>, <span class="keyword">nil</span>)
+
+    <span class="keyword">return</span> {
+        success = <span class="keyword">true</span>,
+        outputItem = recipe.output
+    }
+<span class="keyword">end</span>
+
+<span class="keyword">return</span> CraftOperation</code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Next Steps</h2>
+                <p>Related documentation</p>
+            </div>
+
+            <div class="next-steps-grid">
+                <a href="../server/api-reference.html" class="next-step-card">
+                    <div class="next-step-icon">&#128187;</div>
+                    <h4>API Reference</h4>
+                    <p>Full InventoryService documentation</p>
+                </a>
+
+                <a href="remove-features.html" class="next-step-card">
+                    <div class="next-step-icon">&#10006;</div>
+                    <h4>Remove Features</h4>
+                    <p>Learn to disable features</p>
+                </a>
+
+                <a href="persistence.html" class="next-step-card">
+                    <div class="next-step-icon">&#128190;</div>
+                    <h4>Add Persistence</h4>
+                    <p>Save inventory state</p>
+                </a>
+
+                <a href="../templates/index.html" class="next-step-card">
+                    <div class="next-step-icon">&#128221;</div>
+                    <h4>Templates</h4>
+                    <p>Copy operation template</p>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <style>
+        .steps-list {
+            list-style: none;
+            counter-reset: steps;
+            margin-bottom: 2rem;
+        }
+        
+        .steps-list li {
+            counter-increment: steps;
+            padding: 1rem 1rem 1rem 3.5rem;
+            position: relative;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 0.75rem;
+        }
+        
+        .steps-list li::before {
+            content: counter(steps);
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 28px;
+            height: 28px;
+            background: var(--accent-gradient);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--bg-primary);
+        }
+        
+        .info-box {
+            background: rgba(124, 179, 66, 0.1);
+            border: 1px solid rgba(124, 179, 66, 0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .info-box strong {
+            color: var(--success);
+        }
+        
+        .info-box ul {
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+        
+        .next-steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .next-step-card {
+            background: linear-gradient(135deg, rgba(37, 32, 25, 0.8), rgba(26, 22, 18, 0.9));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+        }
+        
+        .next-step-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(196, 167, 125, 0.3);
+        }
+        
+        .next-step-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .next-step-card h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .next-step-card p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+    </style>
+</body>
+
+</html>

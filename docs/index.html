@@ -24,86 +24,344 @@
         <div class="nav-section">
             <div class="nav-section-title">Documentation</div>
             <a href="index.html" class="nav-link active">Home</a>
+            <a href="quickstart.html" class="nav-link">Quick Start</a>
         </div>
 
         <div class="nav-section">
-            <div class="nav-section-title">Backend</div>
-            <a href="server/index.html" class="nav-link">Server Overview</a>
-            <a href="server/inventory-service.html" class="nav-link">InventoryService</a>
-            <a href="server/inventory-data.html" class="nav-link">InventoryData</a>
-            <a href="server/utils.html" class="nav-link">Utilities</a>
+            <div class="nav-section-title">Guides</div>
+            <a href="guides/index.html" class="nav-link">All Guides</a>
+            <a href="guides/add-server-features.html" class="nav-link">Add Server Features</a>
+            <a href="guides/create-gui-skins.html" class="nav-link">GUI Skins</a>
+            <a href="guides/settings-configuration.html" class="nav-link">Settings</a>
         </div>
 
         <div class="nav-section">
-            <div class="nav-section-title">Frontend</div>
-            <a href="client/index.html" class="nav-link">Client Overview</a>
+            <div class="nav-section-title">Templates</div>
+            <a href="templates/index.html" class="nav-link">Templates</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Server</div>
+            <a href="server/index.html" class="nav-link">Overview</a>
+            <a href="server/architecture.html" class="nav-link">Architecture</a>
+            <a href="server/api-reference.html" class="nav-link">API Reference</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Client</div>
+            <a href="client/index.html" class="nav-link">Overview</a>
+            <a href="client/hooks/index.html" class="nav-link">Hooks</a>
+            <a href="client/gui/index.html" class="nav-link">GUI System</a>
+            <a href="client/input/index.html" class="nav-link">Input & Console</a>
         </div>
     </nav>
 
     <main class="main">
         <section class="hero">
-            <span class="hero-badge">⚡ Headless Backend Architecture</span>
+            <span class="hero-badge">&#9889; Headless Backend Architecture</span>
             <h1>Stoway Docs</h1>
-            <p>A production-ready, server-authoritative inventory system for Roblox with O(1) lookups and full
-                persistence support.</p>
+            <p>A production-ready, server-authoritative inventory system for Roblox with O(1) lookups, full
+                persistence support, and cross-platform input (mouse, touch, gamepad).</p>
+
+            <div class="quick-links">
+                <a href="quickstart.html" class="quick-link">&#9658; 5-Min Quick Start</a>
+                <a href="guides/index.html" class="quick-link">&#128218; Browse Guides</a>
+                <a href="templates/index.html" class="quick-link">&#128221; Copy Templates</a>
+            </div>
 
             <div class="section-cards">
                 <a href="server/index.html" class="section-card">
-                    <div class="section-card-icon">🖥️</div>
+                    <div class="section-card-icon">&#128187;</div>
                     <h3>Server Backend</h3>
-                    <p>Server-authoritative inventory management, API reference, and helper modules.</p>
-                    <span class="arrow">→</span>
+                    <p>Server-authoritative inventory management, operations, and anti-exploit protection.</p>
+                    <span class="arrow">&#8594;</span>
                 </a>
 
                 <a href="client/index.html" class="section-card">
-                    <div class="section-card-icon">🎨</div>
+                    <div class="section-card-icon">&#127912;</div>
                     <h3>Client Frontend</h3>
-                    <p>UI components, Fusion integration, and drag-and-drop implementation.</p>
-                    <span class="arrow">→</span>
+                    <p>Fusion reactive UI, hook system for customization, and console/gamepad support.</p>
+                    <span class="arrow">&#8594;</span>
                 </a>
             </div>
         </section>
 
         <section>
             <div class="section-header">
-                <h2>What We Offer</h2>
-                <p>Enterprise-grade features for professional Roblox development</p>
+                <h2>Key Concepts</h2>
+                <p>Understand the core ideas behind Stoway</p>
             </div>
 
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">🚀</div>
-                    <h3>Headless Backend</h3>
-                    <p>Fully server-authoritative with zero client trust.</p>
+            <div class="concept-grid">
+                <div class="concept-card">
+                    <div class="concept-icon">&#128274;</div>
+                    <h3>Server-Authoritative</h3>
+                    <p>All operations validated server-side. Single RemoteEvent with per-player operation locking prevents exploit spam.</p>
+                    <a href="server/architecture.html">Learn more &#8594;</a>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon">⚡</div>
-                    <h3>O(1) Lookups</h3>
-                    <p>Lightning-fast item stacking with hash table lookups.</p>
+
+                <div class="concept-card">
+                    <div class="concept-icon">&#128279;</div>
+                    <h3>Context-Based Input</h3>
+                    <p>IllusionIAS contexts prevent bind conflicts. Same keys work differently in Combat vs Inventory mode.</p>
+                    <a href="client/input/index.html">Learn more &#8594;</a>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🔒</div>
-                    <h3>Exploit-Proof</h3>
-                    <p>All operations validated server-side with bounds checking.</p>
+
+                <div class="concept-card">
+                    <div class="concept-icon">&#128218;</div>
+                    <h3>Hooks System</h3>
+                    <p>Client-side customization without modifying core code. Sound effects, animations, analytics via event hooks.</p>
+                    <a href="client/hooks/index.html">Learn more &#8594;</a>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🎯</div>
-                    <h3>Drag & Drop</h3>
-                    <p>Intuitive item management with full swap support.</p>
+
+                <div class="concept-card">
+                    <div class="concept-icon">&#127912;</div>
+                    <h3>GUI Skins</h3>
+                    <p>Template-based UI system. Multiple skins with different layouts, all using the same slot factory.</p>
+                    <a href="guides/create-gui-skins.html">Learn more &#8594;</a>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon">📦</div>
-                    <h3>Smart Stacking</h3>
-                    <p>Automatic stack management with metadata-aware grouping.</p>
+
+                <div class="concept-card">
+                    <div class="concept-icon">&#9881;</div>
+                    <h3>Settings Layers</h3>
+                    <p>Global defaults in Settings.luau, per-player overrides in state.Settings. Runtime modifiable.</p>
+                    <a href="guides/settings-configuration.html">Learn more &#8594;</a>
                 </div>
-                <div class="feature-card">
-                    <div class="feature-icon">💾</div>
-                    <h3>Persistence Ready</h3>
-                    <p>Data-first architecture for seamless DataStore integration.</p>
+
+                <div class="concept-card">
+                    <div class="concept-icon">&#127918;</div>
+                    <h3>Console Support</h3>
+                    <p>Gamepad-aware UI with selection states, visual mode indicators, and hybrid input switching.</p>
+                    <a href="client/input/console-modes.html">Learn more &#8594;</a>
                 </div>
             </div>
         </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Project Structure</h2>
+                <p>Quick reference to source locations</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Server Code</span>
+                    <span class="code-lang">Location</span>
+                </div>
+                <pre>src/server/StowayServerV1_2/
+- init.luau              # Entry point & API
+- Core/
+-   InventoryState.luau  # Per-player data container
+-   SlotManager.luau     # Hotbar/Storage slot logic
+-   LimitChecker.luau    # Weight validation
+- Operations/
+-   AddOperation.luau    # Add items to inventory
+-   RemoveOperation.luau # Remove items
+-   SwapOperation.luau   # Swap/move items
+-   EquipOperation.luau  # Equip/Unequip items
+-   DropOperation.luau   # Drop to world
+- Replication/           # Delta updates to clients
+- Utils/                 # UUID, MetadataParser, etc.
+- Debug/                 # Chat commands</pre>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Client Code</span>
+                    <span class="code-lang">Location</span>
+                </div>
+                <pre>src/client/StowayClientv1_2/
+- init.luau              # Entry point & UI builder
+- CoreState/
+-   InventoryStore.luau  # Fusion reactive state
+- Input/
+-   InputManager.luau    # Context-based binds
+-   InteractionManager.luau # Mouse/Gamepad switching
+-   ConsoleModeManager.luau # Combat/Inventory modes
+-   SelectionManager.luau   # Selection state machine
+-   ConsoleDropUI.luau  # Drop amount UI
+- Hook/
+-   HookManager.luau     # Event hook system
+- Operations/
+-   InventoryController.luau # Client operations
+- DragFunctions/
+-   DragHandler.luau     # Drag-and-drop logic
+- SlotCreation/
+-   SlotFactory.luau     # Slot UI component
+- NetworkFunctions/
+-   NetworkHandler.luau  # Server sync</pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Popular Topics</h2>
+                <p>Common questions and tasks</p>
+            </div>
+
+            <div class="topics-list">
+                <a href="guides/add-server-features.html" class="topic-item">
+                    <span class="topic-icon">&#43;</span>
+                    <div class="topic-content">
+                        <h4>Add a New Server Operation</h4>
+                        <p>Step-by-step guide to extending the inventory system</p>
+                    </div>
+                </a>
+
+                <a href="guides/create-gui-skins.html" class="topic-item">
+                    <span class="topic-icon">&#127912;</span>
+                    <div class="topic-content">
+                        <h4>Create a GUI Skin</h4>
+                        <p>Design custom inventory interfaces with templates</p>
+                    </div>
+                </a>
+
+                <a href="client/input/binds-module.html" class="topic-item">
+                    <span class="topic-icon">&#128290;</span>
+                    <div class="topic-content">
+                        <h4>Understand the Binds Module</h4>
+                        <p>Context-based input system explained</p>
+                    </div>
+                </a>
+
+                <a href="guides/settings-configuration.html" class="topic-item">
+                    <span class="topic-icon">&#9881;</span>
+                    <div class="topic-content">
+                        <h4>Configure Settings</h4>
+                        <p>Global vs per-player settings distinction</p>
+                    </div>
+                </a>
+
+                <a href="client/hooks/hook-examples.html" class="topic-item">
+                    <span class="topic-icon">&#128172;</span>
+                    <div class="topic-content">
+                        <h4>Use Hooks for Customization</h4>
+                        <p>Practical examples for UI feedback</p>
+                    </div>
+                </a>
+
+                <a href="client/input/console-modes.html" class="topic-item">
+                    <span class="topic-icon">&#127918;</span>
+                    <div class="topic-content">
+                        <h4>Console Mode System</h4>
+                        <p>Combat vs Inventory modes and state flow</p>
+                    </div>
+                </a>
+            </div>
+        </section>
     </main>
+
+    <style>
+        .quick-links {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin: 2rem 0 3rem;
+        }
+        
+        .quick-link {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, rgba(196, 167, 125, 0.15), rgba(212, 168, 83, 0.1));
+            border: 1px solid rgba(196, 167, 125, 0.3);
+            border-radius: 8px;
+            color: var(--accent-brown);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .quick-link:hover {
+            background: linear-gradient(135deg, rgba(196, 167, 125, 0.25), rgba(212, 168, 83, 0.2));
+            transform: translateY(-2px);
+        }
+        
+        .concept-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 4rem;
+        }
+        
+        .concept-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .concept-card:hover {
+            border-color: rgba(196, 167, 125, 0.3);
+            transform: translateY(-3px);
+        }
+        
+        .concept-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .concept-card h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .concept-card p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .concept-card a {
+            color: var(--accent-brown);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .concept-card a:hover {
+            text-decoration: underline;
+        }
+        
+        .topics-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .topic-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.25rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.2s ease;
+        }
+        
+        .topic-item:hover {
+            border-color: rgba(196, 167, 125, 0.3);
+            background: rgba(37, 32, 25, 0.8);
+        }
+        
+        .topic-icon {
+            font-size: 1.5rem;
+        }
+        
+        .topic-content h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .topic-content p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+    </style>
 </body>
 
 </html>

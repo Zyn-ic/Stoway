@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings Configuration - Stoway Docs</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="icon" href="../assets/Logo.png" />
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <nav class="nav">
+        <a href="../index.html" class="nav-logo">
+            <img src="../assets/Logo.png" alt="Stoway">
+            <h1>Stoway</h1>
+        </a>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Documentation</div>
+            <a href="../index.html" class="nav-link">Home</a>
+            <a href="../quickstart.html" class="nav-link">Quick Start</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Guides</div>
+            <a href="index.html" class="nav-link active">All Guides</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Server</div>
+            <a href="../server/index.html" class="nav-link">Overview</a>
+            <a href="../server/api-reference.html" class="nav-link">API Reference</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Client</div>
+            <a href="../client/index.html" class="nav-link">Overview</a>
+            <a href="../client/hooks/index.html" class="nav-link">Hooks</a>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="breadcrumb">
+            <a href="../index.html">Docs</a>
+            <span>/</span>
+            <a href="index.html">Guides</a>
+            <span>/</span>
+            <span class="current">Settings Configuration</span>
+        </div>
+
+        <section class="hero" style="padding: 2rem;">
+            <h1 style="font-size: 2.5rem;">&#9881; Settings Configuration</h1>
+            <p>Understand the two-layer settings system: global defaults and per-player overrides. Learn when to use each and how to modify them at runtime.</p>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>The Two Layers</h2>
+                <p>Global defaults vs per-player overrides</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                Stoway uses a two-layer settings system to provide flexibility:
+            </p>
+
+            <div class="layers-comparison">
+                <div class="layer-card global">
+                    <div class="layer-header">
+                        <div class="layer-icon">&#127758;</div>
+                        <div class="layer-title">
+                            <h3>Global Settings</h3>
+                            <span class="layer-badge">File: Settings.luau</span>
+                        </div>
+                    </div>
+                    <p>Default values applied to all players. Set once, affects everyone.</p>
+                    <ul class="layer-features">
+                        <li>Game-wide defaults</li>
+                        <li>Static configuration</li>
+                        <li>Changed in code</li>
+                        <li>Requires server restart to apply</li>
+                    </ul>
+                </div>
+
+                <div class="layer-arrow">&#8594;</div>
+
+                <div class="layer-card player">
+                    <div class="layer-header">
+                        <div class="layer-icon">&#128100;</div>
+                        <div class="layer-title">
+                            <h3>Per-Player Settings</h3>
+                            <span class="layer-badge">Property: state.Settings</span>
+                        </div>
+                    </div>
+                    <p>Individual overrides per player. Can change at runtime.</p>
+                    <ul class="layer-features">
+                        <li>Player-specific values</li>
+                        <li>Runtime modifiable</li>
+                        <li>Synced to client automatically</li>
+                        <li>VIP, permissions, game modes</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Global Settings</h2>
+                <p>Configuration in src/shared/Settings.luau</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">Settings.luau Structure</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- src/shared/Settings.luau</span>
+
+<span class="comment">-- Hotbar Configuration</span>
+Settings.Hotbar = {
+    Type = <span class="string">"Static"</span>,      <span class="comment">-- Static or Dynamic</span>
+    MaxSlots = <span class="number">10</span>,            <span class="comment">-- Number of hotbar slots</span>
+}
+
+<span class="comment">-- Storage/Backpack Configuration</span>
+Settings.Storage = {
+    Limit = <span class="number">15</span>,              <span class="comment">-- Weight limit (0 = infinite)</span>
+    CanStack = <span class="keyword">true</span>,         <span class="comment">-- Enable stacking</span>
+    Sorting = <span class="keyword">true</span>,          <span class="comment">-- Enable sorting</span>
+    MaxStackSize = <span class="number">5</span>,        <span class="comment">-- Max items per stack</span>
+    SortOrder = <span class="string">"None"</span>        <span class="comment">-- Name, Rarity, ItemType, None</span>
+}
+
+<span class="comment">-- Stacking Rules</span>
+Settings.Stacking = {
+    RequiredFields = { <span class="string">"Rarity"</span>, <span class="string">"Type"</span> },  <span class="comment">-- Must match to stack</span>
+    Blacklist = {                          <span class="comment">-- Never stack these</span>
+        [<span class="string">"Legendary"</span>] = <span class="keyword">true</span>,
+        [<span class="string">"Mythic"</span>] = <span class="keyword">true</span>,
+    },
+    Rarity = <span class="keyword">true</span>,            <span class="comment">-- Show rarity colors</span>
+}
+
+<span class="comment">-- Gameplay Settings</span>
+Settings.Gameplay = {
+    Droppable = <span class="keyword">true</span>,        <span class="comment">-- Can items be dropped</span>
+    DropDistance = <span class="number">10</span>,        <span class="comment">-- Drop range</span>
+}
+
+<span class="comment">-- UI Configuration</span>
+Settings.DifferentUIs = {
+    Default = {
+        FolderName = <span class="string">"StowayGui"</span>,
+        GuiName = <span class="string">"Stoway"</span>,
+        HookPresetName = <span class="string">"DefaultHooks"</span>
+    },
+    Admin = {
+        FolderName = <span class="string">"StowayAdmin"</span>,
+        GuiName = <span class="string">"AdminGui"</span>,
+        HookPresetName = <span class="string">"AdminHooks"</span>
+    }
+}</code></pre>
+            </div>
+
+            <table class="settings-table">
+                <thead>
+                    <tr>
+                        <th>Setting</th>
+                        <th>Type</th>
+                        <th>Default</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>Hotbar.MaxSlots</code></td>
+                        <td>number</td>
+                        <td>10</td>
+                        <td>Number of fixed hotbar slots (1-9 standard)</td>
+                    </tr>
+                    <tr>
+                        <td><code>Storage.Limit</code></td>
+                        <td>number</td>
+                        <td>15</td>
+                        <td>Weight limit, 0 = unlimited</td>
+                    </tr>
+                    <tr>
+                        <td><code>Storage.CanStack</code></td>
+                        <td>boolean</td>
+                        <td>true</td>
+                        <td>Enable item stacking</td>
+                    </tr>
+                    <tr>
+                        <td><code>Storage.MaxStackSize</code></td>
+                        <td>number</td>
+                        <td>5</td>
+                        <td>Max items per stack</td>
+                    </tr>
+                    <tr>
+                        <td><code>Gameplay.Droppable</code></td>
+                        <td>boolean</td>
+                        <td>true</td>
+                        <td>Allow dropping items to world</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Per-Player Settings</h2>
+                <p>Runtime configuration per player</p>
+            </div>
+
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                Each player has a <code>state.Settings</code> table that inherits from global defaults but can be overridden:
+            </p>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">InventoryState.luau</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- src/server/StowayServerV1_2/Core/InventoryState.luau</span>
+
+<span class="keyword">export type</span> PlayerSettings = {
+    Limit: <span class="keyword">number</span>,             <span class="comment">-- Weight limit (0 = infinite)</span>
+    CanStack: <span class="keyword">boolean</span>,         <span class="comment">-- Allow stacking</span>
+    MaxStackSize: <span class="keyword">number</span>,      <span class="comment">-- Max items per stack</span>
+    MaxHotbarSlots: <span class="keyword">number</span>,   <span class="comment">-- Number of hotbar slots</span>
+    Droppable: <span class="keyword">boolean</span>,        <span class="comment">-- Allow dropping</span>
+    UiType: <span class="keyword">string</span>,            <span class="comment">-- Interface version</span>
+}
+
+<span class="comment">-- Constructor applies defaults</span>
+<span class="keyword">function</span> InventoryState.new(player: Player): InventoryStateType
+    <span class="comment">-- ...</span>
+    self.Settings = {
+        Droppable = Settings.Gameplay.Droppable,
+        Limit = Settings.Storage.Limit,
+        CanStack = Settings.Storage.CanStack,
+        MaxStackSize = Settings.Storage.MaxStackSize,
+        MaxHotbarSlots = Settings.Hotbar.MaxSlots,
+        UiType = <span class="string">"Default"</span>
+    }
+    <span class="keyword">return</span> self
+<span class="keyword">end</span></code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Modifying Per-Player Settings</h2>
+                <p>Change settings at runtime</p>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Direct Modification</h3>
+                    <p>Modify <code>state.Settings</code> directly and sync:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-title">Direct modification</span>
+                            <span class="code-lang">Luau</span>
+                        </div>
+                        <pre><code><span class="keyword">local</span> state = InventoryService.<span class="function">GetState</span>(player)
+
+<span class="comment">-- Give VIP players more inventory space</span>
+<span class="keyword">if</span> player.<span class="function">GetRankInGroup</span>(<span class="number\">12345</span>) > <span class="number">254</span> <span class="keyword">then</span>
+    state.Settings.Limit = <span class="number">50</span>  <span class="comment">-- VIP gets 50 slots</span>
+<span class="keyword">end</span>
+
+<span class="comment">-- Disable dropping for new players</span>
+state.Settings.Droppable = <span class="keyword">false</span>
+
+<span class="comment">-- Sync to client</span>
+InventoryService.<span class="function">SyncSettings</span>(player)</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Change UI Type</h3>
+                    <p>Switch a player's UI skin:</p>
+                    <div class="code-block">
+                        <div class="code-header">
+                            <span class="code-title">Reload client UI</span>
+                            <span class="code-lang">Luau</span>
+                        </div>
+                        <pre><code><span class="comment">-- Switch to admin UI</span>
+InventoryService.<span class="function">ReloadClient</span>(player, {
+    configSettingName = <span class="string">"Admin"</span>
+})
+
+<span class="comment">-- The client will:
+<span class="comment">-- 1. Destroy old UI</span>
+<span class="comment">-- 2. Load new GUI from DifferentUIs.Admin</span>
+<span class="comment">-- 3. Load new hooks from DifferentUIs.Admin.HookPresetName</span>
+<span class="comment">-- 4. Rebuild all slots</span></code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Use Cases</h2>
+                <p>When to use each settings layer</p>
+            </div>
+
+            <div class="use-case-grid">
+                <div class="use-case-card">
+                    <div class="use-case-icon">&#127919;</div>
+                    <h3>Global Settings For:</h3>
+                    <ul>
+                        <li>Game balance constants</li>
+                        <li>Default stacking rules</li>
+                        <li>Standard hotbar size</li>
+                        <li>Base weight limits</li>
+                    </ul>
+                </div>
+
+                <div class="use-case-card">
+                    <div class="use-case-icon">&#128100;</div>
+                    <h3>Per-Player Settings For:</h3>
+                    <ul>
+                        <li>VIP/member bonuses</li>
+                        <li>Permission-based limits</li>
+                        <li>Game mode restrictions</li>
+                        <li>Temporary effects</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Example: VIP Inventory Bonus</h2>
+                <p>Complete example with global and per-player settings</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">VIP Configuration</span>
+                    <span class="code-lang">Luau</span>
+                </div>
+                <pre><code><span class="comment">-- src/server/StowayServerV1_2/init.luau</span>
+
+<span class="keyword">local</span> VIP_GROUP_ID = <span class="number">12345</span>
+<span class="keyword">local</span> VIP_RANK = <span class="number">255</span>
+<span class="keyword">local</span> VIP_LIMIT = <span class="number">50</span>     <span class="comment">-- VIPs get 50 slots</span>
+<span class="keyword">local</span> NORMAL_LIMIT = <span class="number">15</span>  <span class="comment">-- Normal players get 15</span>
+
+<span class="keyword">local</span> <span class="function">OnPlayerAdded</span> = <span class="keyword">function</span>(player)
+    <span class="keyword">local</span> state = InventoryState.<span class="function">new</span>(player)
+    PlayerInventories[player] = state
+
+    <span class="comment">-- Apply VIP bonus</span>
+    <span class="keyword">local</span> rank = player:<span class="function">GetRankInGroup</span>(VIP_GROUP_ID)
+    <span class="keyword">if</span> rank >= VIP_RANK <span class="keyword">then</span>
+        <span class="function">print</span>(<span class="string">"[Stoway] "</span> .. player.Name .. <span class="string">" is a VIP!"</span>)
+        state.Settings.Limit = VIP_LIMIT
+        state.Settings.MaxStackSize = <span class="number">10</span>  <span class="comment">-- VIPs stack higher</span>
+    <span class="keyword">else</span>
+        state.Settings.Limit = NORMAL_LIMIT
+    <span class="keyword">end</span>
+
+    <span class="comment">-- Sync settings to client</span>
+    InventoryService.<span class="function">SyncSettings</span>(player)
+<span class="keyword">end</span></code></pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Settings Reference</h2>
+                <p>Quick reference for all settings</p>
+            </div>
+
+            <table class="settings-table full-width">
+                <thead>
+                    <tr>
+                        <th>Setting</th>
+                        <th>Layer</th>
+                        <th>Type</th>
+                        <th>Default</th>
+                        <th>Syncs to Client</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>Limit</code></td>
+                        <td>Both</td>
+                        <td>number</td>
+                        <td>15</td>
+                        <td>&#10004; Yes</td>
+                    </tr>
+                    <tr>
+                        <td><code>CanStack</code></td>
+                        <td>Both</td>
+                        <td>boolean</td>
+                        <td>true</td>
+                        <td>&#10004; Yes</td>
+                    </tr>
+                    <tr>
+                        <td><code>MaxStackSize</code></td>
+                        <td>Both</td>
+                        <td>number</td>
+                        <td>5</td>
+                        <td>&#10004; Yes</td>
+                    </tr>
+                    <tr>
+                        <td><code>MaxHotbarSlots</code></td>
+                        <td>Both</td>
+                        <td>number</td>
+                        <td>10</td>
+                        <td>&#10004; Yes</td>
+                    </tr>
+                    <tr>
+                        <td><code>Droppable</code></td>
+                        <td>Both</td>
+                        <td>boolean</td>
+                        <td>true</td>
+                        <td>&#10004; Yes</td>
+                    </tr>
+                    <tr>
+                        <td><code>UiType</code></td>
+                        <td>Player only</td>
+                        <td>string</td>
+                        <td>"Default"</td>
+                        <td>&#10004; Yes</td>
+                    </tr>
+                    <tr>
+                        <td><code>Hotbar.Type</code></td>
+                        <td>Global only</td>
+                        <td>string</td>
+                        <td>"Static"</td>
+                        <td>&#10006; No</td>
+                    </tr>
+                    <tr>
+                        <td><code>Storage.Sorting</code></td>
+                        <td>Global only</td>
+                        <td>boolean</td>
+                        <td>true</td>
+                        <td>&#10006; No</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Next Steps</h2>
+                <p>Related documentation</p>
+            </div>
+
+            <div class="next-steps-grid">
+                <a href="add-server-features.html" class="next-step-card">
+                    <div class="next-step-icon">&#43;</div>
+                    <h4>Add Server Features</h4>
+                    <p>Create operations that use settings</p>
+                </a>
+
+                <a href="create-gui-skins.html" class="next-step-card">
+                    <div class="next-step-icon">&#127912;</div>
+                    <h4>Create GUI Skins</h4>
+                    <p>Multiple UI configurations</p>
+                </a>
+
+                <a href="../server/api-reference.html" class="next-step-card">
+                    <div class="next-step-icon">&#128187;</div>
+                    <h4>API Reference</h4>
+                    <p>SyncSettings, ReloadClient</p>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <style>
+        .layers-comparison {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .layer-card {
+            flex: 1;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+        }
+        
+        .layer-card.global {
+            border-color: rgba(196, 167, 125, 0.3);
+        }
+        
+        .layer-card.player {
+            border-color: rgba(124, 179, 66, 0.3);
+        }
+        
+        .layer-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .layer-icon {
+            font-size: 2rem;
+        }
+        
+        .layer-title h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .layer-badge {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: 'Fira Code', monospace;
+        }
+        
+        .layer-card > p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .layer-features {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .layer-features li {
+            padding: 0.35rem 0;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .layer-features li:last-child {
+            border-bottom: none;
+        }
+        
+        .layer-features li::before {
+            content: "- ";
+            color: var(--text-muted);
+        }
+        
+        .layer-arrow {
+            font-size: 2rem;
+            color: var(--accent-brown);
+        }
+        
+        .step-card {
+            display: flex;
+            gap: 1.5rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: var(--accent-gradient);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--bg-primary);
+            flex-shrink: 0;
+        }
+        
+        .step-content h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .step-content p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+        
+        .settings-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        
+        .settings-table th {
+            background: var(--bg-tertiary);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+        
+        .settings-table td {
+            padding: 0.875rem 1rem;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+        
+        .settings-table tr:hover td {
+            background: rgba(196, 167, 125, 0.05);
+        }
+        
+        .settings-table code {
+            background: rgba(196, 167, 125, 0.15);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: var(--accent-brown);
+        }
+        
+        .use-case-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .use-case-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        
+        .use-case-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .use-case-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        
+        .use-case-card ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .use-case-card li {
+            padding: 0.5rem 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .use-case-card li:last-child {
+            border-bottom: none;
+        }
+        
+        .next-steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .next-step-card {
+            background: linear-gradient(135deg, rgba(37, 32, 25, 0.8), rgba(26, 22, 18, 0.9));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+        }
+        
+        .next-step-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(196, 167, 125, 0.3);
+        }
+        
+        .next-step-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .next-step-card h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .next-step-card p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+    </style>
+</body>
+
+</html>

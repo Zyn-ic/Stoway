@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Templates - Stoway Docs</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="icon" href="../assets/Logo.png" />
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <nav class="nav">
+        <a href="../index.html" class="nav-logo">
+            <img src="../assets/Logo.png" alt="Stoway">
+            <h1>Stoway</h1>
+        </a>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Documentation</div>
+            <a href="../index.html" class="nav-link">Home</a>
+            <a href="../quickstart.html" class="nav-link">Quick Start</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Templates</div>
+            <a href="index.html" class="nav-link active">Templates</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Guides</div>
+            <a href="../guides/index.html" class="nav-link">All Guides</a>
+            <a href="../guides/add-server-features.html" class="nav-link">Add Features</a>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="breadcrumb">
+            <a href="../index.html">Docs</a>
+            <span>/</span>
+            <span class="current">Templates</span>
+        </div>
+
+        <section class="hero" style="padding: 2rem;">
+            <h1 style="font-size: 2.5rem;">&#128221; Code Templates</h1>
+            <p>Copy-paste ready code snippets for common tasks. Each template includes placeholders and comments to help you customize it for your needs.</p>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Server Templates</h2>
+                <p>Backend code for extending inventory functionality</p>
+            </div>
+
+            <div class="template-grid">
+                <a href="server-operation-template.luau" class="template-card" download>
+                    <div class="template-icon">&#9881;</div>
+                    <div class="template-info">
+                        <h3>Server Operation</h3>
+                        <p>Template for creating new inventory operations</p>
+                    </div>
+                    <div class="template-lang">Luau</div>
+                </a>
+
+                <a href="#" class="template-card coming-soon">
+                    <div class="template-icon">&#128172;</div>
+                    <div class="template-info">
+                        <h3>Hook Preset</h3>
+                        <p>Template for client-side hook configurations</p>
+                    </div>
+                    <div class="template-lang">Luau</div>
+                </a>
+
+                <a href="#" class="template-card coming-soon">
+                    <div class="template-icon">&#127912;</div>
+                    <div class="template-info">
+                        <h3>GUI Skin Config</h3>
+                        <p>Template for Settings.DifferentUIs configuration</p>
+                    </div>
+                    <div class="template-lang">Luau</div>
+                </a>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Usage</h2>
+                <p>How to use these templates</p>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Download or Copy</h3>
+                    <p>Click the template link to download, or copy the code directly from the page.</p>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Customize Placeholders</h3>
+                    <p>Replace all <code>{{PLACEHOLDER}}</code> values with your specific code:</p>
+                    <ul style="color: var(--text-secondary); margin-left: 1.5rem; margin-top: 0.5rem;">
+                        <li><code>{{OperationName}}</code> - Your operation name (e.g., "Craft")</li>
+                        <li><code>{{param1}}</code> - First parameter</li>
+                        <li><code>{{param2}}</code> - Second parameter</li>
+                        <li><code>{{resultFields}}</code> - Result fields</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Add to Your Project</h3>
+                    <p>Place the file in the appropriate location and wire it up per the guide.</p>
+                    <p style="margin-top: 0.5rem; color: var(--text-secondary);">See <a href="../guides/add-server-features.html" style="color: var(--accent-brown);">Add Server Features</a> guide for complete instructions.</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Quick Reference</h2>
+                <p>Click any card to see full documentation. Click outside to close.</p>
+            </div>
+
+            <div class="pattern-cards">
+                <div class="pattern-card expandable" data-pattern="add-item">
+                    <h4>&#43; Add Item</h4>
+                    <div class="code-snippet">
+                        <pre>InventoryService.AddItem(player, "itemId", 1, nil, true)</pre>
+                    </div>
+                    <div class="pattern-details">
+                        <h5>AddItem</h5>
+                        <p>Adds an item to the player's inventory. Follows hotbar-first, then storage logic.</p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-title">Signature</span>
+                                <span class="code-lang">Luau</span>
+                            </div>
+                            <pre><code><span class="keyword">function</span> InventoryService.<span class="function">AddItem</span>(
+    player: Player,
+    itemId: <span class="keyword">string</span>,
+    amount: <span class="keyword">number</span>,
+    metadata: <span class="keyword">any</span>?,
+    REPLICATE: <span class="keyword">boolean</span>
+): AddResult</code></pre>
+                        </div>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-title">Parameters</span>
+                                <span class="code-lang">Table</span>
+                            </div>
+                            <table class="api-table">
+                                <thead>
+                                    <tr><th>Param</th><th>Type</th><th>Description</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>player</td><td>Player</td><td>The target player</td></tr>
+                                    <tr><td>itemId</td><td>string</td><td>Item ID (must exist in ServerStorage.Tools)</td></tr>
+                                    <tr><td>amount</td><td>number</td><td>Quantity to add</td></tr>
+                                    <tr><td>metadata</td><td>any?</td><td>Optional item metadata</td></tr>
+                                    <tr><td>REPLICATE</td><td>boolean</td><td>Sync to client if true</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-title">Returns</span>
+                                <span class="code-lang">Luau</span>
+                            </div>
+                            <pre><code>{
+    success = <span class="keyword">boolean</span>,
+    reason = <span class="keyword">string</span>?,
+    addedItems = { { uuid, slotType, slot } }?,
+    addedAmount = <span class="keyword">number</span>,
+    overflow = <span class="keyword">number</span>
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pattern-card expandable" data-pattern="remove-item">
+                    <h4>&#10006; Remove Item</h4>
+                    <div class="code-snippet">
+                        <pre>InventoryService.RemoveItem(player, uuid, amount, true)</pre>
+                    </div>
+                    <div class="pattern-details">
+                        <h5>RemoveItem</h5>
+                        <p>Removes an item from the player's inventory by UUID.</p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-title">Signature</span>
+                                <span class="code-lang">Luau</span>
+                            </div>
+                            <pre><code><span class="keyword">function</span> InventoryService.<span class="function">RemoveItem</span>(
+    player: Player,
+    uuid: <span class="keyword">string</span>,
+    amount: <span class="keyword">number</span>?,
+    REPLICATE: <span class="keyword">boolean</span>
+): RemoveResult</code></pre>
+                        </div>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-title">Parameters</span>
+                                <span class="code-lang">Table</span>
+                            </div>
+                            <table class="api-table">
+                                <thead>
+                                    <tr><th>Param</th><th>Type</th><th>Description</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>player</td><td>Player</td><td>The target player</td></tr>
+                                    <tr><td>uuid</td><td>string</td><td>Item UUID to remove</td></tr>
+                                    <tr><td>amount</td><td>number?</td><td>Amount to remove (nil = all)</td></tr>
+                                    <tr><td>REPLICATE</td><td>boolean</td><td>Sync to client if true</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pattern-card expandable" data-pattern="swap-slots">
+                    <h4>&#8646; Swap Slots</h4>
+                    <div class="code-snippet">
+                        <pre>InventoryService.SwapSlots(player, "Hotbar", 1, "Storage", 5, true)</pre>
+                    </div>
+                    <div class="pattern-details">
+                        <h5>SwapSlots</h5>
+                        <p>Swaps items between any two slots (Hotbar/Storage combinations).</p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-title">Signature</span>
+                                <span class="code-lang">Luau</span>
+                            </div>
+                            <pre><code><span class="keyword">function</span> InventoryService.<span class="function">SwapSlots</span>(
+    player: Player,
+    fromType: <span class="keyword">string</span>,
+    fromSlot: <span class="keyword">number</span>,
+    toType: <span class="keyword">string</span>,
+    toSlot: <span class="keyword">number</span>,
+    REPLICATE: <span class="keyword">boolean</span>
+): SwapResult</code></pre>
+                        </div>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-title">Parameters</span>
+                                <span class="code-lang">Table</span>
+                            </div>
+                            <table class="api-table">
+                                <thead>
+                                    <tr><th>Param</th><th>Type</th><th>Description</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>fromType</td><td>string</td><td>"Hotbar" or "Storage"</td></tr>
+                                    <tr><td>fromSlot</td><td>number</td><td>Source slot index (1-based)</td></tr>
+                                    <tr><td>toType</td><td>string</td><td>"Hotbar" or "Storage"</td></tr>
+                                    <tr><td>toSlot</td><td>number</td><td>Target slot index (1-based)</td></tr>
+                                    <tr><td>REPLICATE</td><td>boolean</td><td>Sync to client if true</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pattern-card expandable" data-pattern="equip-slot">
+                    <h4>&#9935; Equip Item</h4>
+                    <div class="code-snippet">
+                        <pre>InventoryService.EquipSlot(player, "Hotbar", 1, true)</pre>
+                    </div>
+                    <div class="pattern-details">
+                        <h5>EquipSlot</h5>
+                        <p>Equips an item from a slot, making it the active tool.</p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-title">Signature</span>
+                                <span class="code-lang">Luau</span>
+                            </div>
+                            <pre><code><span class="keyword">function</span> InventoryService.<span class="function">EquipSlot</span>(
+    player: Player,
+    slotType: <span class="keyword">string</span>,
+    slot: <span class="keyword">number</span>,
+    REPLICATE: <span class="keyword">boolean</span>
+): EquipResult</code></pre>
+                        </div>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-title">Parameters</span>
+                                <span class="code-lang">Table</span>
+                            </div>
+                            <table class="api-table">
+                                <thead>
+                                    <tr><th>Param</th><th>Type</th><th>Description</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>player</td><td>Player</td><td>The target player</td></tr>
+                                    <tr><td>slotType</td><td>string</td><td>"Hotbar" or "Storage"</td></tr>
+                                    <tr><td>slot</td><td>number</td><td>Slot index (1-based)</td></tr>
+                                    <tr><td>REPLICATE</td><td>boolean</td><td>Sync to client if true</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pattern-card expandable" data-pattern="drop-item">
+                    <h4>&#128465; Drop Item</h4>
+                    <div class="code-snippet">
+                        <pre>InventoryService.DropItem(player, "Hotbar", 1, 1, true)</pre>
+                    </div>
+                    <div class="pattern-details">
+                        <h5>DropItem</h5>
+                        <p>Drops an item from a slot into the world as a pickup.</p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-title">Signature</span>
+                                <span class="code-lang">Luau</span>
+                            </div>
+                            <pre><code><span class="keyword">function</span> InventoryService.<span class="function">DropItem</span>(
+    player: Player,
+    slotType: <span class="keyword">string</span>,
+    slot: <span class="keyword">number</span>,
+    amount: <span class="keyword">number</span>?,
+    REPLICATE: <span class="keyword">boolean</span>
+): DropResult</code></pre>
+                        </div>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-title">Parameters</span>
+                                <span class="code-lang">Table</span>
+                            </div>
+                            <table class="api-table">
+                                <thead>
+                                    <tr><th>Param</th><th>Type</th><th>Description</th></tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>player</td><td>Player</td><td>The target player</td></tr>
+                                    <tr><td>slotType</td><td>string</td><td>"Hotbar" or "Storage"</td></tr>
+                                    <tr><td>slot</td><td>number</td><td>Slot index</td></tr>
+                                    <tr><td>amount</td><td>number?</td><td>Amount to drop (nil = all)</td></tr>
+                                    <tr><td>REPLICATE</td><td>boolean</td><td>Sync to client if true</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pattern-card expandable" data-pattern="get-state">
+                    <h4>&#128269; Get State</h4>
+                    <div class="code-snippet">
+                        <pre>InventoryService.GetState(player)</pre>
+                    </div>
+            <div class="pattern-details">
+                <h5>GetState</h5>
+                        <p>Returns the player's inventory state for direct access.</p>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-title">Signature</span>
+                                <span class="code-lang">Luau</span>
+                            </div>
+                            <pre><code><span class="keyword">function</span> InventoryService.<span class="function">GetState</span>(player: Player): InventoryStateType?</code></pre>
+                        </div>
+                        <div class="code-block">
+                            <div class="code-header">
+                                <span class="code-title">Returns</span>
+                                <span class="code-lang">Luau</span>
+                            </div>
+                            <pre><code>InventoryStateType {
+    Items: { [uuid] = ItemInstance },
+    ItemsByID: { [itemId] = { uuid } },
+    Hotbar: { [slot] = uuid? },
+    Storage: { uuid },
+    EquippedItemUUID: string?,
+    Weight: number,
+    Settings: PlayerSettings
+}</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Related</h2>
+                <p>See also</p>
+            </div>
+
+            <div class="next-steps-grid">
+                <a href="../guides/add-server-features.html" class="next-step-card">
+                    <div class="next-step-icon">&#43;</div>
+                    <h4>Add Server Features</h4>
+                    <p>Step-by-step guide</p>
+                </a>
+
+                <a href="../server/api-reference.html" class="next-step-card">
+                    <div class="next-step-icon">&#128187;</div>
+                    <h4>API Reference</h4>
+                    <p>Complete API docs</p>
+                </a>
+
+                <a href="../guides/settings-configuration.html" class="next-step-card">
+                    <div class="next-step-icon">&#9881;</div>
+                    <h4>Settings Guide</h4>
+                    <p>Configuration patterns</p>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <div id="expand-overlay" class="expand-overlay" style="display: none;"></div>
+
+    <script>
+        (function() {
+            const expandables = document.querySelectorAll('.pattern-card.expandable');
+            const overlay = document.getElementById('expand-overlay');
+            let activeCard = null;
+
+            function openCard(card) {
+                if (activeCard === card) return;
+                
+                closeActiveCard();
+                activeCard = card;
+                card.classList.add('expanded');
+                overlay.style.display = 'block';
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeActiveCard() {
+                if (activeCard) {
+                    activeCard.classList.remove('expanded');
+                    activeCard = null;
+                }
+                overlay.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+
+            expandables.forEach(card => {
+                card.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openCard(card);
+                });
+            });
+
+            overlay.addEventListener('click', () => {
+                closeActiveCard();
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeActiveCard();
+                }
+            });
+        })();
+    </script>
+
+    <style>
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .template-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+        }
+        
+        .template-card:hover {
+            border-color: rgba(196, 167, 125, 0.3);
+            transform: translateY(-3px);
+        }
+        
+        .template-card.coming-soon {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .template-card.coming-soon:hover {
+            transform: none;
+            border-color: var(--border-color);
+        }
+        
+        .template-icon {
+            font-size: 2.5rem;
+            flex-shrink: 0;
+        }
+        
+        .template-info h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .template-info p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        
+        .template-lang {
+            margin-left: auto;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            background: rgba(196, 167, 125, 0.2);
+            border-radius: 50px;
+            color: var(--accent-brown);
+        }
+        
+        .step-card {
+            display: flex;
+            gap: 1.5rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: var(--accent-gradient);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--bg-primary);
+            flex-shrink: 0;
+        }
+        
+        .step-content h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .step-content p {
+            color: var(--text-secondary);
+        }
+        
+        .pattern-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        
+        .pattern-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .pattern-card:hover {
+            border-color: rgba(196, 167, 125, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .pattern-card h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+        
+        .code-snippet {
+            background: var(--bg-primary);
+            border-radius: 8px;
+            padding: 0.75rem;
+            overflow-x: auto;
+        }
+        
+        .code-snippet pre {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            margin: 0;
+            color: var(--accent-amber);
+        }
+        
+        .expand-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+            animation: fadeIn 0.2s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .pattern-card.expanded {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow-y: auto;
+            z-index: 1001;
+            background: var(--bg-secondary);
+            border-color: var(--accent-brown);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            padding: 2rem;
+            animation: expandIn 0.3s ease;
+        }
+        
+        @keyframes expandIn {
+            from {
+                top: 100%;
+                opacity: 0;
+            }
+            to {
+                top: 50%;
+                opacity: 1;
+            }
+        }
+        
+        .pattern-card.expanded > h4 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .pattern-details {
+            display: none;
+            margin-top: 1rem;
+        }
+        
+        .pattern-card.expanded > .code-snippet {
+            display: none;
+        }
+        
+        .pattern-card.expanded .pattern-details {
+            display: block;
+        }
+        
+        .pattern-details h5 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--accent-amber);
+            margin-bottom: 0.5rem;
+        }
+        
+        .pattern-details > p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+        
+        .pattern-details .code-block {
+            margin-bottom: 1rem;
+        }
+        
+        .pattern-details .api-table {
+            font-size: 0.85rem;
+        }
+        
+        .pattern-details .api-table th,
+        .pattern-details .api-table td {
+            padding: 0.6rem 0.8rem;
+        }
+        
+        .next-steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+        
+        .next-step-card {
+            background: linear-gradient(135deg, rgba(37, 32, 25, 0.8), rgba(26, 22, 18, 0.9));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+        }
+        
+        .next-step-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(196, 167, 125, 0.3);
+        }
+        
+        .next-step-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .next-step-card h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .next-step-card p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+        
+        .pattern-card.expanded::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .pattern-card.expanded::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+            border-radius: 4px;
+        }
+        
+        .pattern-card.expanded::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+    </style>
+</body>
+
+</html>

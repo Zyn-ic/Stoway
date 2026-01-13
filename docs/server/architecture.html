@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Architecture - Stoway Docs</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="icon" href="../assets/Logo.png" />
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <nav class="nav">
+        <a href="../index.html" class="nav-logo">
+            <img src="../assets/Logo.png" alt="Stoway">
+            <h1>Stoway</h1>
+        </a>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Documentation</div>
+            <a href="../index.html" class="nav-link">Home</a>
+            <a href="../quickstart.html" class="nav-link">Quick Start</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Server</div>
+            <a href="index.html" class="nav-link">Overview</a>
+            <a href="architecture.html" class="nav-link active">Architecture</a>
+            <a href="api-reference.html" class="nav-link">API Reference</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Guides</div>
+            <a href="../guides/index.html" class="nav-link">All Guides</a>
+            <a href="../guides/add-server-features.html" class="nav-link">Add Features</a>
+        </div>
+    </nav>
+
+    <main class="main">
+        <div class="breadcrumb">
+            <a href="../index.html">Docs</a>
+            <span>/</span>
+            <a href="index.html">Server</a>
+            <span>/</span>
+            <span class="current">Architecture</span>
+        </div>
+
+        <section class="hero" style="padding: 2rem;">
+            <h1 style="font-size: 2.5rem;">&#128187; Server Architecture</h1>
+            <p>Understanding the server-authoritative backend structure, data flow, and how to extend it.</p>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>System Overview</h2>
+                <p>High-level architecture diagram</p>
+            </div>
+
+            <div class="arch-diagram">
+                <div class="arch-layer client">
+                    <div class="layer-label">Client</div>
+                    <div class="layer-content">
+                        <span class="component">StowayClientv1_2</span>
+                        <span class="arrow-right">&#8594;</span>
+                    </div>
+                </div>
+
+                <div class="arch-connection">
+                    <span>InventoryAction (RemoteEvent)</span>
+                    <span>InventoryUpdate (RemoteEvent)</span>
+                </div>
+
+                <div class="arch-layer server">
+                    <div class="layer-label">Server</div>
+                    <div class="layer-content">
+                        <span class="component">InventoryService (init.luau)</span>
+                    </div>
+                </div>
+
+                <div class="arch-subsystems">
+                    <div class="subsystem">
+                        <h4>Core</h4>
+                        <ul>
+                            <li>InventoryState</li>
+                            <li>SlotManager</li>
+                            <li>LimitChecker</li>
+                        </ul>
+                    </div>
+                    <div class="subsystem">
+                        <h4>Operations</h4>
+                        <ul>
+                            <li>AddOperation</li>
+                            <li>RemoveOperation</li>
+                            <li>SwapOperation</li>
+                            <li>EquipOperation</li>
+                            <li>DropOperation</li>
+                        </ul>
+                    </div>
+                    <div class="subsystem">
+                        <h4>Replication</h4>
+                        <ul>
+                            <li>Replicator</li>
+                            <li>Actions</li>
+                        </ul>
+                    </div>
+                    <div class="subsystem">
+                        <h4>Utils</h4>
+                        <ul>
+                            <li>UUID</li>
+                            <li>MetadataParser</li>
+                            <li>StackChecker</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Directory Structure</h2>
+                <p>File organization</p>
+            </div>
+
+            <div class="code-block">
+                <div class="code-header">
+                    <span class="code-title">src/server/StowayServerV1_2/</span>
+                    <span class="code-lang">Tree</span>
+                </div>
+                <pre>src/server/StowayServerV1_2/
+- init.luau                    # Entry point &amp; InventoryService API
+-
+- <span class="comment">-- Core Data &amp; Logic</span>
+- Core/
+-   InventoryState.luau       # Per-player inventory state container
+-   SlotManager.luau          # Hotbar/Storage slot management
+-   LimitChecker.luau         # Weight limit validation
+-
+- <span class="comment">-- Inventory Operations (Modular)</span>
+- Operations/
+-   AddOperation.luau         # Add items (Limit &#8594; Stack &#8594; Hotbar &#8594; Storage)
+-   RemoveOperation.luau      # Remove items (Validate &#8594; Reduce/Destroy)
+-   SwapOperation.luau        # Swap any two slots
+-   EquipOperation.luau       # Equip/Unequip items
+-   DropOperation.luau        # Drop items to world
+-
+- <span class="comment">-- Client Communication</span>
+- Replication/
+-   Replicator.luau           # Delta updates to clients
+-   Actions.luau              # Payload builders
+-
+- <span class="comment">-- Utilities</span>
+- Utils/
+-   UUID.luau                # Unique ID generation
+-   MetadataParser.luau       # Parse metadata from tools
+-   StackChecker.luau         # Stacking validation
+-
+- <span class="comment">-- Debug (Remove in production!)</span>
+- Debug/
+-   ChatCommands.luau         # /add, /swap, /equip, etc.</pre>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Data Flow</h2>
+                <p>How requests are processed</p>
+            </div>
+
+            <div class="flow-steps">
+                <div class="flow-step">
+                    <div class="flow-number">1</div>
+                    <div class="flow-content">
+                        <h4>Client Request</h4>
+                        <p>Client fires <code>InventoryAction</code> RemoteEvent with operation type and arguments.</p>
+                    </div>
+                </div>
+
+                <div class="flow-arrow">&#8595;</div>
+
+                <div class="flow-step">
+                    <div class="flow-number">2</div>
+                    <div class="flow-content">
+                        <h4>Anti-Exploit Lock</h4>
+                        <p>Server checks <code>PlayerOperationLock[player]</code>. If locked, rejects request.</p>
+                    </div>
+                </div>
+
+                <div class="flow-arrow">&#8595;</div>
+
+                <div class="flow-step">
+                    <div class="flow-number">3</div>
+                    <div class="flow-content">
+                        <h4>Route to Handler</h4>
+                        <p>Operation type maps to handler in <code>OperationHandlers</code> table.</p>
+                    </div>
+                </div>
+
+                <div class="flow-arrow">&#8595;</div>
+
+                <div class="flow-step">
+                    <div class="flow-number">4</div>
+                    <div class="flow-content">
+                        <h4>Execute Operation</h4>
+                        <p>Handler calls operation module's <code>Execute()</code> function. Validates and modifies state.</p>
+                    </div>
+                </div>
+
+                <div class="flow-arrow">&#8595;</div>
+
+                <div class="flow-step">
+                    <div class="flow-number">5</div>
+                    <div class="flow-content">
+                        <h4>Replicate</h4>
+                        <p>If successful, Replicator sends delta update via <code>InventoryUpdate</code> RemoteEvent.</p>
+                    </div>
+                </div>
+
+                <div class="flow-arrow">&#8595;</div>
+
+                <div class="flow-step">
+                    <div class="flow-number">6</div>
+                    <div class="flow-content">
+                        <h4>Client Sync</h4>
+                        <p>Client's NetworkHandler processes update and syncs Fusion state.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Key Components</h2>
+                <p>What each module does</p>
+            </div>
+
+            <div class="component-grid">
+                <div class="component-card">
+                    <h3>InventoryState</h3>
+                    <p>Pure data container. No logic, just storage.</p>
+                    <ul>
+                        <li><code>state.Items</code> - UUID &#8594; Item map</li>
+                        <li><code>state.Hotbar</code> - Slot &#8594; UUID</li>
+                        <li><code>state.Storage</code> - Array of UUIDs</li>
+                        <li><code>state.Settings</code> - Per-player config</li>
+                    </ul>
+                </div>
+
+                <div class="component-card">
+                    <h3>SlotManager</h3>
+                    <p>Slot location management. Handles static vs dynamic containers.</p>
+                    <ul>
+                        <li><code>FindEmptyHotbarSlot()</code></li>
+                        <li><code>SetHotbarSlot()</code></li>
+                        <li><code>AppendStorage()</code></li>
+                        <li><code>FindSlotByUUID()</code></li>
+                    </ul>
+                </div>
+
+                <div class="component-card">
+                    <h3>LimitChecker</h3>
+                    <p>Weight tracking and validation.</p>
+                    <ul>
+                        <li><code>IsEnabled()</code></li>
+                        <li><code>GetRemainingCapacity()</code></li>
+                        <li><code>AddWeight()</code></li>
+                        <li><code>RemoveWeight()</code></li>
+                    </ul>
+                </div>
+
+                <div class="component-card">
+                    <h3>Operations</h3>
+                    <p>Modular operation handlers. Each handles one action.</p>
+                    <ul>
+                        <li>Add &#8594; Remove &#8594; Swap</li>
+                        <li>Equip &#8594; Unequip</li>
+                        <li>Drop to world</li>
+                        <li>Stack two stacks</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Anti-Exploit Features</h2>
+                <p>Server-authoritative protections</p>
+            </div>
+
+            <div class="security-features">
+                <div class="security-item">
+                    <div class="security-icon">&#128274;</div>
+                    <div class="security-content">
+                        <h4>Per-Player Operation Lock</h4>
+                        <p>Only one operation per player at a time. Prevents spam exploits.</p>
+                    </div>
+                </div>
+
+                <div class="security-item">
+                    <div class="security-icon">&#128276;</div>
+                    <div class="security-content">
+                        <h4>Single Remote Entry Point</h4>
+                        <p>All requests go through <code>InventoryAction</code>. No direct state access.</p>
+                    </div>
+                </div>
+
+                <div class="security-item">
+                    <div class="security-icon">&#128737;</div>
+                    <div class="security-content">
+                        <h4>Bounds Checking</h4>
+                        <p>All slot indices validated before access. Prevents out-of-bounds exploits.</p>
+                    </div>
+                </div>
+
+                <div class="security-item">
+                    <div class="security-icon">&#128170;</div>
+                    <div class="security-content">
+                        <h4>Pcall Wrapping</h4>
+                        <p>All operations wrapped in pcall. Server never crashes from bad input.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-header">
+                <h2>Related Documentation</h2>
+                <p>See also</p>
+            </div>
+
+            <div class="next-steps-grid">
+                <a href="api-reference.html" class="next-step-card">
+                    <div class="next-step-icon">&#128187;</div>
+                    <h4>API Reference</h4>
+                    <p>Complete API documentation</p>
+                </a>
+
+                <a href="../guides/add-server-features.html" class="next-step-card">
+                    <div class="next-step-icon">&#43;</div>
+                    <h4>Add Features</h4>
+                    <p>How to extend the server</p>
+                </a>
+
+                <a href="../guides/settings-configuration.html" class="next-step-card">
+                    <div class="next-step-icon">&#9881;</div>
+                    <h4>Settings</h4>
+                    <p>Global and per-player settings</p>
+                </a>
+
+                <a href="../client/architecture.html" class="next-step-card">
+                    <div class="next-step-icon">&#127912;</div>
+                    <h4>Client Architecture</h4>
+                    <p>Frontend structure</p>
+                </a>
+            </div>
+        </section>
+    </main>
+
+    <style>
+        .arch-diagram {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .arch-layer {
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .arch-layer.client {
+            border-color: rgba(100, 255, 150, 0.3);
+        }
+        
+        .arch-layer.server {
+            border-color: rgba(196, 167, 125, 0.3);
+        }
+        
+        .layer-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+        
+        .layer-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .component {
+            background: var(--bg-secondary);
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+        }
+        
+        .arrow-right {
+            font-size: 1.5rem;
+            color: var(--accent-brown);
+        }
+        
+        .arch-connection {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            margin: 0.5rem 0;
+            font-size: 0.8rem;
+            font-family: 'Fira Code', monospace;
+            color: var(--text-muted);
+        }
+        
+        .arch-subsystems {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .subsystem {
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        
+        .subsystem h4 {
+            font-size: 0.85rem;
+            color: var(--accent-amber);
+            margin-bottom: 0.5rem;
+        }
+        
+        .subsystem ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        .subsystem li {
+            padding: 0.2rem 0;
+        }
+        
+        .flow-steps {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .flow-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            width: 100%;
+            max-width: 500px;
+        }
+        
+        .flow-number {
+            width: 36px;
+            height: 36px;
+            background: var(--accent-gradient);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: var(--bg-primary);
+            flex-shrink: 0;
+        }
+        
+        .flow-content h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .flow-content p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        
+        .flow-content code {
+            background: rgba(196, 167, 125, 0.15);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: var(--accent-brown);
+        }
+        
+        .flow-arrow {
+            color: var(--accent-brown);
+            font-size: 1.25rem;
+        }
+        
+        .component-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .component-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+        
+        .component-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--accent-amber);
+        }
+        
+        .component-card > p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+        
+        .component-card ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .component-card li {
+            padding: 0.35rem 0;
+            font-size: 0.8rem;
+            font-family: 'Fira Code', monospace;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .component-card li:last-child {
+            border-bottom: none;
+        }
+        
+        .security-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+        }
+        
+        .security-item {
+            display: flex;
+            gap: 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+        
+        .security-icon {
+            font-size: 2rem;
+            flex-shrink: 0;
+        }
+        
+        .security-content h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .security-content p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        
+        .next-steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+        }
+        
+        .next-step-card {
+            background: linear-gradient(135deg, rgba(37, 32, 25, 0.8), rgba(26, 22, 18, 0.9));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+        }
+        
+        .next-step-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(196, 167, 125, 0.3);
+        }
+        
+        .next-step-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .next-step-card h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .next-step-card p {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+    </style>
+</body>
+
+</html>

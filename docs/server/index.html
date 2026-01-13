@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Server Overview V1.2 - Stoway Docs</title>
+    <title>Server Overview - Stoway Docs</title>
     <link
         href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
@@ -24,20 +24,27 @@
         <div class="nav-section">
             <div class="nav-section-title">Documentation</div>
             <a href="../index.html" class="nav-link">Home</a>
+            <a href="../quickstart.html" class="nav-link">Quick Start</a>
         </div>
 
         <div class="nav-section">
-            <div class="nav-section-title">Backend V1.2</div>
-            <a href="index.html" class="nav-link active">Server Overview</a>
-            <a href="inventory-service.html" class="nav-link">InventoryService</a>
-            <a href="inventory-data.html" class="nav-link">InventoryState</a>
-            <a href="utils.html" class="nav-link">Utilities</a>
-            <a href="debug-commands.html" class="nav-link">Debug Commands</a>
+            <div class="nav-section-title">Server</div>
+            <a href="index.html" class="nav-link active">Overview</a>
+            <a href="architecture.html" class="nav-link">Architecture</a>
+            <a href="api-reference.html" class="nav-link">API Reference</a>
         </div>
 
         <div class="nav-section">
-            <div class="nav-section-title">Frontend</div>
-            <a href="../client/index.html" class="nav-link">Client Overview</a>
+            <div class="nav-section-title">Client</div>
+            <a href="../client/index.html" class="nav-link">Overview</a>
+            <a href="../client/hooks/index.html" class="nav-link">Hooks</a>
+            <a href="../client/input/index.html" class="nav-link">Input & Console</a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Guides</div>
+            <a href="../guides/index.html" class="nav-link">All Guides</a>
+            <a href="../guides/add-server-features.html" class="nav-link">Add Features</a>
         </div>
     </nav>
 
@@ -45,109 +52,184 @@
         <div class="breadcrumb">
             <a href="../index.html">Docs</a>
             <span>/</span>
-            <span class="current">Server V1.2</span>
+            <span class="current">Server</span>
         </div>
 
         <section class="hero" style="padding: 2rem;">
-            <h1 style="font-size: 2.5rem;">Server Backend V1.2</h1>
-            <p>Modular, server-authoritative inventory with per-player settings and anti-exploit protection</p>
+            <h1 style="font-size: 2.5rem;">&#128187; Server Backend</h1>
+            <p>Server-authoritative inventory management with modular operations, anti-exploit protection, and per-player settings.</p>
         </section>
 
         <div class="section-cards" style="margin-top: 2rem;">
-            <a href="inventory-service.html" class="section-card">
-                <div class="section-card-icon">⚙️</div>
-                <h3>InventoryService</h3>
-                <p>Central service with unified network protocol and operation lock.</p>
-                <span class="arrow">→</span>
+            <a href="architecture.html" class="section-card">
+                <div class="section-card-icon">&#128736;</div>
+                <h3>Architecture</h3>
+                <p>System design, data flow, and component overview.</p>
+                <span class="arrow">&#8594;</span>
             </a>
 
-            <a href="inventory-data.html" class="section-card">
-                <div class="section-card-icon">📊</div>
-                <h3>InventoryState</h3>
-                <p>Per-player data with O(1) lookups and runtime-configurable settings.</p>
-                <span class="arrow">→</span>
-            </a>
-
-            <a href="utils.html" class="section-card">
-                <div class="section-card-icon">🔧</div>
-                <h3>Utilities</h3>
-                <p>SlotManager, LimitChecker, StackChecker, MetadataParser, ItemSpawner.</p>
-                <span class="arrow">→</span>
+            <a href="api-reference.html" class="section-card">
+                <div class="section-card-icon">&#128220;</div>
+                <h3>API Reference</h3>
+                <p>Complete InventoryService method documentation.</p>
+                <span class="arrow">&#8594;</span>
             </a>
         </div>
 
         <section style="margin-top: 4rem;">
             <div class="section-header">
-                <h2>Architecture V1.2</h2>
-                <p>Modular directory structure</p>
+                <h2>Key Features</h2>
+                <p>What the server backend provides</p>
             </div>
 
-            <div class="code-block">
-                <div class="code-header">
-                    <span class="code-title">Directory Structure</span>
-                    <span class="code-lang">Tree</span>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">&#128274;</div>
+                    <h3>Server-Authoritative</h3>
+                    <p>All operations validated server-side. Zero client trust.</p>
                 </div>
-                <pre>src/server/StowayServerV1_2/
-├── init.luau                    # Entry + API + Network
-├── Config/Settings.luau         # Global defaults
-├── Core/
-│   ├── InventoryState.luau      # Data + per-player settings
-│   ├── SlotManager.luau         # Static Hotbar / Dynamic Storage
-│   └── LimitChecker.luau        # Weight validation
-├── Operations/
-│   ├── AddOperation.luau        # Limit → Stack → Slot
-│   ├── RemoveOperation.luau     # Validate → Reduce/Destroy
-│   ├── SwapOperation.luau       # All swap combinations
-│   ├── EquipOperation.luau      # Equip/Unequip
-│   └── DropOperation.luau       # Unequip → Remove → Spawn
-├── Replication/
-│   ├── Actions.luau             # Payload builders
-│   └── Replicator.luau          # Delta dispatcher
-├── Utils/                       # UUID, MetadataParser, StackChecker
-├── Debug/ChatCommands.luau      # ⚠️ REMOVE IN PRODUCTION
-└── World/ItemSpawner.luau       # Physical tools</pre>
+
+                <div class="feature-card">
+                    <div class="feature-icon">&#9889;</div>
+                    <h3>O(1) Lookups</h3>
+                    <p>Hash table lookups for instant item access by UUID.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">&#128274;</div>
+                    <h3>Anti-Exploit</h3>
+                    <p>Per-player operation lock prevents remote spam.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">&#127919;</div>
+                    <h3>Modular Operations</h3>
+                    <p>Add, Remove, Swap, Equip, Drop as separate modules.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">&#128200;</div>
+                    <h3>Per-Player Settings</h3>
+                    <p>Runtime-configurable limits per player (VIP bonuses).</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">&#128230;</div>
+                    <h3>Smart Stacking</h3>
+                    <p>Metadata-aware grouping with configurable rules.</p>
+                </div>
             </div>
         </section>
 
         <section style="margin-top: 4rem;">
             <div class="section-header">
-                <h2>Data Flow</h2>
-                <p>How requests are processed</p>
+                <h2>Quick Links</h2>
+                <p>Common tasks and references</p>
             </div>
 
-            <div class="code-block">
-                <div class="code-header">
-                    <span class="code-title">Request Flow (V1.2)</span>
-                    <span class="code-lang">Diagram</span>
-                </div>
-                <pre>Client → InventoryAction (RemoteFunction) → Operation Lock Check
-    ↓
-InventoryService → Operation Module → InventoryState
-    ↓
-Replicator.Send*() → InventoryUpdate (RemoteEvent) → Client</pre>
+            <div class="quick-links-list">
+                <a href="../guides/add-server-features.html" class="quick-link-item">
+                    <span class="link-icon">&#43;</span>
+                    <div class="link-content">
+                        <h4>Add a Server Feature</h4>
+                        <p>Create new operations and extend the system</p>
+                    </div>
+                </a>
+
+                <a href="../guides/settings-configuration.html" class="quick-link-item">
+                    <span class="link-icon">&#9881;</span>
+                    <div class="link-content">
+                        <h4>Configure Settings</h4>
+                        <p>Global defaults vs per-player overrides</p>
+                    </div>
+                </a>
+
+                <a href="../templates/index.html" class="quick-link-item">
+                    <span class="link-icon">&#128221;</span>
+                    <div class="link-content">
+                        <h4>Code Templates</h4>
+                        <p>Copy-paste ready operation templates</p>
+                    </div>
+                </a>
             </div>
-
-            <p style="color: var(--text-secondary); margin-top: 1rem;">
-                All client requests go through a single <code class="inline-code">InventoryAction</code> RemoteFunction
-                with per-player operation locking. This prevents remote spam exploits.
-            </p>
-        </section>
-
-        <section style="margin-top: 4rem;">
-            <div class="section-header">
-                <h2>Key V1.2 Features</h2>
-            </div>
-
-            <ul style="color: var(--text-secondary); margin-left: 1.5rem; list-style-type: disc;">
-                <li><strong>Per-Player Settings:</strong> Limit, CanStack, MaxStackSize, MaxHotbarSlots</li>
-                <li><strong>Anti-Exploit:</strong> Single remote + per-player operation lock</li>
-                <li><strong>UUID-Based Equip:</strong> Equipment follows item, not slot</li>
-                <li><strong>Dynamic Storage:</strong> Packed array with auto-shift on removal</li>
-                <li><strong>Delta Replication:</strong> Minimal network payloads</li>
-                <li><strong>Debug Commands:</strong> /add, /swap, /equip, /clear, etc.</li>
-            </ul>
         </section>
     </main>
+
+    <style>
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .feature-card {
+            background: linear-gradient(135deg, rgba(37, 32, 25, 0.8), rgba(26, 22, 18, 0.9));
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(196, 167, 125, 0.3);
+        }
+        
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-card h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .quick-links-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .quick-link-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.25rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.2s ease;
+        }
+        
+        .quick-link-item:hover {
+            border-color: rgba(196, 167, 125, 0.3);
+            background: rgba(37, 32, 25, 0.8);
+        }
+        
+        .link-icon {
+            font-size: 1.5rem;
+        }
+        
+        .link-content h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .link-content p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+    </style>
 </body>
 
 </html>
