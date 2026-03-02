@@ -3,8 +3,9 @@ local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local InventoryController = require(script.Parent.Parent.Operations.InventoryController)
+local InventoryStore = require(script.Parent.Parent.CoreState.InventoryStore)
 local fusion = require(ReplicatedStorage.Packages.fusion)
---local Settings = require(ReplicatedStorage.Shared.Settings)
+local Settings = require(ReplicatedStorage.Shared.Settings)
 
 local peek = fusion.peek
 
@@ -231,12 +232,12 @@ end
 
 local function GetHotbarSlotUnderMouse()
 	for _, child in ipairs(HotbarFrame:GetChildren()) do
-		if child:IsA("Frame") and IsMouseInside(DragState.ghostFrame, child) then
+		if child:IsA("Frame") and child.Visible and IsMouseInside(DragState.ghostFrame, child) then
 			local slotindex = child.Name:gsub("_", "")
 			return child, tonumber(slotindex)
 		end
 
-		if child:IsA("ImageLabel") and IsMouseInside(DragState.ghostFrame, child) then
+		if child:IsA("ImageLabel") and child.Visible and IsMouseInside(DragState.ghostFrame, child) then
 			local slotindex = child.Name:gsub("_", "")
 			return child, tonumber(slotindex)
 		end
@@ -250,12 +251,14 @@ local function GetBackpackSlotUnderMouse()
 	if not scrolling then return end
 
 	for _, child in ipairs(scrolling:GetChildren()) do
-		if child:IsA("Frame") and IsMouseInside(DragState.ghostFrame, child) then
-			return child, tonumber(child.Name)
+		if child:IsA("Frame") and child.Visible and IsMouseInside(DragState.ghostFrame, child) then
+            local slotIndex = child.Name:gsub("_", "")
+			return child, tonumber(slotIndex)
 		end
 
-		if child:IsA("ImageLabel") and IsMouseInside(DragState.ghostFrame, child) then
-			return child, tonumber(child.Name)
+		if child:IsA("ImageLabel") and child.Visible and IsMouseInside(DragState.ghostFrame, child) then
+            local slotIndex = child.Name:gsub("_", "")
+			return child, tonumber(slotIndex)
 		end
 	end
 
@@ -288,7 +291,10 @@ function DragHandler.EndDrag(--[[, Scope]])
 	local index
 	-- local index2
 
-	if FromSlot then FromSlot.Name:gsub("_", ""); index = tonumber(FromSlot.Name) end
+	if FromSlot then
+        local slotIndex = FromSlot.Name:gsub("_", "")
+        index = tonumber(slotIndex)
+    end
 	-- if targetSlot then targetSlot.Name:gsub("_", ""); index2 = tonumber(targetSlot.Name) end
 
 
@@ -320,6 +326,15 @@ function DragHandler.EndDrag(--[[, Scope]])
 			InventoryController.Swap(FromType, index, targetType, backpackIndex, true)
 		end
 	end
+
+    -- Dynamic hotbar UX: dropping a storage item over hotbar (not over a visible slot)
+    -- inserts into the first empty real hotbar slot.
+    if OverHotbar and not hotbarSlot and FromType == "Storage" and Settings.Hotbar.Type == "Dynamic" then
+        local firstEmptyHotbar = InventoryStore:FindFirstEmptyHotbarSlot()
+        if firstEmptyHotbar then
+            InventoryController.Swap(FromType, index, "Hotbar", firstEmptyHotbar, true)
+        end
+    end
 
 	if OverBackpack and not backpackSlot and FromType == "Hotbar" then
 		if  BackpackFrame.Visible then

@@ -14,30 +14,16 @@ type SlotProps = {
     Parent: Instance,
 	GuiFOLDER: any,
     KeybindDisplay: string,
+    GetKeybindDisplay: ((number) -> string?)?,
     OnDrag: (...any) -> (),
     hookManager: any
 }
 
-function CreateSlotFrameName(slotnumber:number): string
-    local numberstring = tostring(slotnumber) :: string
-    local slotframeName = ""
-    local len = numberstring:len()
-
-    if len > 1 then
-        for _=1, (len - 1) do
-            slotframeName ..= "_"
-        end
-    end
-
-    slotframeName..= numberstring
-
-    return slotframeName
-end
-
 function SlotFactory.Create(Scope: any, props: SlotProps)
 
 	local templateSlot = props.GuiFOLDER.Slot.template:Clone()
-	templateSlot.Name = CreateSlotFrameName(props.SlotIndex)
+	templateSlot.Name = InventoryStore.CreateSlotFrameName(props.SlotIndex)
+    local isDynamicHotbar = props.SlotType == "Hotbar" and Settings.Hotbar.Type == "Dynamic"
 
 	local slotbutton = templateSlot:FindFirstChild("slotbutton") :: ImageButton
 	local stackcount = templateSlot:FindFirstChild("stackcount") :: TextLabel
@@ -87,10 +73,57 @@ function SlotFactory.Create(Scope: any, props: SlotProps)
 		return use(currentItem) ~= nil
 	end)
 
+    local dynamicDisplayIndex = nil
+    if isDynamicHotbar then
+        dynamicDisplayIndex = scope:Computed(function(use)
+            local hotbarTable = use(InventoryStore.Hotbar)
+            local items = use(InventoryStore.Items)
+            local settings = use(InventoryStore.Settings)
+            local maxSlots = (settings and settings.MaxHotbarSlots) or #hotbarTable
+            local visibleIndex = 0
+
+            for slot = 1, maxSlots do
+                local uuid = hotbarTable[slot]
+                if uuid and items[uuid] then
+                    visibleIndex += 1
+                    if slot == props.SlotIndex then
+                        return visibleIndex
+                    end
+                end
+            end
+
+            return nil
+        end)
+
+        scope:Hydrate(templateSlot) {
+            Visible = hasItem,
+            LayoutOrder = scope:Computed(function(use)
+                local packedIndex = use(dynamicDisplayIndex)
+                return packedIndex or (1000 + props.SlotIndex)
+            end),
+        }
+    end
+
 	--// Keybind display (static)
 	if slotnumber then
-		slotnumber.Text = props.KeybindDisplay or ""
-		slotnumber.Visible = props.KeybindDisplay ~= nil
+        if isDynamicHotbar then
+            scope:Hydrate(slotnumber) {
+                Text = scope:Computed(function(use)
+                    local packedIndex = use(dynamicDisplayIndex)
+                    if not packedIndex then return "" end
+
+                    if props.GetKeybindDisplay then
+                        return props.GetKeybindDisplay(packedIndex) or ""
+                    end
+
+                    return tostring(packedIndex)
+                end),
+                Visible = hasItem,
+            }
+        else
+		    slotnumber.Text = props.KeybindDisplay or ""
+		    slotnumber.Visible = props.KeybindDisplay ~= nil
+        end
 	end
 
 	--// Hydrate slotbutton with reactive properties

@@ -11,11 +11,16 @@ export type RemoveResult = {
 	reason: string?,
 	slotType: string?,
 	slot: number?,
-	remaining: number?
+	remaining: number?,
+	hotbarCompacted: boolean?
+}
+
+export type RemoveOptions = {
+	SkipHotbarCompaction: boolean?
 }
 
 --// Destroy item completely from inventory
-local function DestroyItem(state: any, uuid: string, itemId: string, itemAmount: number): RemoveResult
+local function DestroyItem(state: any, uuid: string, itemId: string, itemAmount: number, options: RemoveOptions?): RemoveResult
 	-- Find which slot contains this item
 	local slotType, slot = SlotManager.FindSlotByUUID(state, uuid)
 	
@@ -45,17 +50,21 @@ local function DestroyItem(state: any, uuid: string, itemId: string, itemAmount:
 	end
 	
 	-- Remove from slot
+	local hotbarCompacted = false
 	if slotType == "Hotbar" and slot then
 		SlotManager.ClearHotbarSlot(state, slot) -- Preserves hole (Static)
+		if not (options and options.SkipHotbarCompaction) then
+			hotbarCompacted = SlotManager.CompactHotbar(state)
+		end
 	elseif slotType == "Storage" and slot then
 		SlotManager.RemoveStorageAt(state, slot) -- Shifts items (Dynamic)
 	end
 	
-	return { success = true, slotType = slotType, slot = slot, remaining = 0 }
+	return { success = true, slotType = slotType, slot = slot, remaining = 0, hotbarCompacted = hotbarCompacted }
 end
 
 --// Main Execute function
-function RemoveOperation.Execute(state: any, uuid: string, amount: number?): RemoveResult
+function RemoveOperation.Execute(state: any, uuid: string, amount: number?, options: RemoveOptions?): RemoveResult
 	local item = state.Items[uuid]
 	if not item then
 		return { success = false, reason = "ITEM_NOT_FOUND" }
@@ -79,20 +88,20 @@ function RemoveOperation.Execute(state: any, uuid: string, amount: number?): Rem
 		item.Amount -= _amount
 		LimitChecker.RemoveWeight(state, _amount :: number)
 		local slotType, slot = SlotManager.FindSlotByUUID(state, uuid)
-		return { success = true, slotType = slotType, slot = slot, remaining = item.Amount }
+		return { success = true, slotType = slotType, slot = slot, remaining = item.Amount, hotbarCompacted = false }
 	else
 		-- Full removal
-		return DestroyItem(state, uuid, item.Id, item.Amount)
+		return DestroyItem(state, uuid, item.Id, item.Amount, options)
 	end
 end
 
 --// Remove by slot (convenience wrapper)
-function RemoveOperation.ExecuteBySlot(state: any, slotType: string, slot: number, amount: number?): RemoveResult
+function RemoveOperation.ExecuteBySlot(state: any, slotType: string, slot: number, amount: number?, options: RemoveOptions?): RemoveResult
 	local uuid = SlotManager.GetUUIDFromSlot(state, slotType, slot)
 	if not uuid then
 		return { success = false, reason = "SLOT_EMPTY" }
 	end
-	return RemoveOperation.Execute(state, uuid, amount)
+	return RemoveOperation.Execute(state, uuid, amount, options)
 end
 
 return RemoveOperation

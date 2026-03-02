@@ -14,63 +14,90 @@ local ConsoleModeManager = require(script.Parent.ConsoleModeManager)
 
 local connection = nil
 local scrollConnection = nil
+local hotbarEnterConnection = nil
+local hotbarLeaveConnection = nil
 
 --// Helper: Zoom Management
 local player = Players.LocalPlayer
-local zoomResetThread = nil
-local DEFAULT_MIN_ZOOM = 5 -- User provided default
-local DEFAULT_MAX_ZOOM = 50 -- User provided default
+local DefaultMinZoom = player.CameraMinZoomDistance
+local DefaultMaxZoom = player.CameraMaxZoomDistance
+local IsZoomLocked = false
 
 local function getCameraDistance()
 	local camera = workspace.CurrentCamera
-	local character = player.Character
-	if not character then return nil end
-	local head = character:FindFirstChild("Head")
-	if not head then return nil end
+	local character = player.Character; if not character then return nil end
+	local CamPos = camera.CFrame.Position
+	local CharPos = character:GetPivot().Position
 
-	return (head.Position - camera.CFrame.Position).Magnitude
+	--this is the best I can do there is still some zooming in/out ;((
+	return math.floor((CamPos - CharPos).Magnitude)
 end
 
-local function lockZoom()
+local function lockZoomAtCurrentDistance(): boolean
+	if IsZoomLocked then return true end
+
 	local currentDist = getCameraDistance()
-	if not currentDist then return end
+	if not currentDist then return false end
+
+	-- Snapshot current defaults so external changes are restored correctly.
+	DefaultMinZoom = player.CameraMinZoomDistance
+	DefaultMaxZoom = player.CameraMaxZoomDistance
 
 	-- Lock to current distance
 	player.CameraMinZoomDistance = currentDist
 	player.CameraMaxZoomDistance = currentDist
+	IsZoomLocked = true
 
-	-- Cancel any pending reset
-	if zoomResetThread then
-		task.cancel(zoomResetThread)
-		zoomResetThread = nil
-	end
-
-	-- Schedule reset
-	zoomResetThread = task.delay(0.2, function()
-		player.CameraMinZoomDistance = DEFAULT_MIN_ZOOM
-		player.CameraMaxZoomDistance = DEFAULT_MAX_ZOOM
-		zoomResetThread = nil
-	end)
+	return true
 end
 
---// Helper: Bounds Checking
-local function isMouseOverFrame(frame: GuiObject?)
-    if not frame then return false end
+local function unlockZoom()
+	if not IsZoomLocked then return end
+	player.CameraMinZoomDistance = DefaultMinZoom
+	player.CameraMaxZoomDistance = DefaultMaxZoom
+	IsZoomLocked = false
+end
 
-    local mousePos = player:GetMouse()
-    local absPos = frame.AbsolutePosition
-    local absSize = frame.AbsoluteSize
+local function disconnectHotbarHoverConnections()
+	if hotbarEnterConnection then
+		hotbarEnterConnection:Disconnect()
+		hotbarEnterConnection = nil
+	end
+	if hotbarLeaveConnection then
+		hotbarLeaveConnection:Disconnect()
+		hotbarLeaveConnection = nil
+	end
+end
 
-    local xBound = (mousePos.X >= absPos.X and mousePos.X < absPos.X + absSize.X)
-    local yBound = (mousePos.Y >= absPos.Y and mousePos.Y < absPos.Y + absSize.Y)
+local function hotbarHasItems(): boolean
+	local hotbar = InventoryStore:GetHotbar()
+	for _, uuid in pairs(hotbar) do
+		if uuid then
+			return true
+		end
+	end
+	return false
+end
 
-    return (xBound and yBound)
+local function connectHotbarHoverConnections()
+	disconnectHotbarHoverConnections()
+	if not HotbarFrameRef then return end
+
+	hotbarEnterConnection = HotbarFrameRef.MouseEnter:Connect(function()
+		if hotbarHasItems() then
+			lockZoomAtCurrentDistance()
+		end
+	end)
+
+	hotbarLeaveConnection = HotbarFrameRef.MouseLeave:Connect(function()
+		unlockZoom()
+	end)
 end
 
 --// Helper: Hotbar Cycling
 local function handleScroll(input)
     -- 1. Check if Mouse is over Hotbar (User Request)
-    if not isMouseOverFrame(HotbarFrameRef) then return end
+    if not IsZoomLocked then return end
 
     -- 2. Check if Hotbar has items
     local hotbar = InventoryStore:GetHotbar()
@@ -81,13 +108,14 @@ local function handleScroll(input)
 
     if not hasItems then return end
 
-    -- 3. Lock Zoom (User Request)
-    lockZoom()
+    -- 3. Ensure zoom is locked while cycling.
+    lockZoomAtCurrentDistance()
 
     -- 4. Determine Direction & Current State
     local direction = (input.Position.Z > 0) and 1 or -1 -- 1 = Up (Ascending), -1 = Down (Descending)
     local currentEquipped = InventoryStore:GetEquippedUUID()
     local currentSlotIndex = nil
+	local maxSlots = InventoryStore:GetMaxHotbarSlots()
 
     if currentEquipped then
         local slotType, slot = InventoryStore:FindSlotByUUID(currentEquipped)
@@ -102,23 +130,23 @@ local function handleScroll(input)
     if not currentSlotIndex then
         -- Nothing equipped: Find first occupied slot
         if direction == 1 then
-             for i = 1, Settings.Hotbar.MaxSlots do
+             for i = 1, maxSlots do
                 if hotbar[i] then nextSlot = i; break end
              end
         else
-            for i = Settings.Hotbar.MaxSlots, 1, -1 do
+            for i = maxSlots, 1, -1 do
                 if hotbar[i] then nextSlot = i; break end
             end
         end
     else
         -- Something equipped: Find next occupied slot in direction
         local checkSlot = currentSlotIndex
-        for _ = 1, Settings.Hotbar.MaxSlots do
+        for _ = 1, maxSlots do
             checkSlot = checkSlot + (direction == 1 and 1 or -1)
 
             -- Wrap around
-            if checkSlot > Settings.Hotbar.MaxSlots then checkSlot = 1 end
-            if checkSlot < 1 then checkSlot = Settings.Hotbar.MaxSlots end
+            if checkSlot > maxSlots then checkSlot = 1 end
+            if checkSlot < 1 then checkSlot = maxSlots end
 
             if hotbar[checkSlot] then
                 nextSlot = checkSlot
@@ -137,7 +165,10 @@ local function preferredInputChanged()
     local preferredInput = UserInputService.PreferredInput
     if not DragHandlerRef then return end
 
-    if preferredInput == Enum.PreferredInput.Gamepad then
+    local isGamepad = preferredInput == Enum.PreferredInput.Gamepad
+    local isMouseKeyboard = preferredInput == Enum.PreferredInput.KeyboardAndMouse
+
+    if isGamepad then
         warn("Gamepad detected, disabling DragHandler")
         DragHandlerRef.SetEnabled(false)
 
@@ -149,19 +180,34 @@ local function preferredInputChanged()
             scrollConnection:Disconnect()
             scrollConnection = nil
         end
+		disconnectHotbarHoverConnections()
+		unlockZoom()
     else
         warn("Mouse/Touch detected, enabling DragHandler")
         DragHandlerRef.SetEnabled(true)
 
         ConsoleModeManager.Destroy()
 
-        -- Enable Scroll on PC if setting allows
-        if Settings.Gameplay.MouseScroll and not scrollConnection then
+        -- Enable mouse-wheel behavior only on mouse+keyboard.
+        if isMouseKeyboard and Settings.Gameplay.MouseScroll and not scrollConnection then
              scrollConnection = UserInputService.InputChanged:Connect(function(input, gameProcessed)
                 if input.UserInputType == Enum.UserInputType.MouseWheel then
                     handleScroll(input)
                 end
             end)
+        end
+
+        if (not isMouseKeyboard) and scrollConnection then
+            scrollConnection:Disconnect()
+            scrollConnection = nil
+        end
+
+        -- Hover-based zoom lock only applies to mouse+keyboard.
+        if isMouseKeyboard then
+		    connectHotbarHoverConnections()
+        else
+            disconnectHotbarHoverConnections()
+            unlockZoom()
         end
     end
 end
@@ -169,6 +215,9 @@ end
 function InteractionManager.Init(dragHandler, hotbarFrame)
     DragHandlerRef = dragHandler
     HotbarFrameRef = hotbarFrame
+	DefaultMinZoom = player.CameraMinZoomDistance
+	DefaultMaxZoom = player.CameraMaxZoomDistance
+	IsZoomLocked = false
 
     preferredInputChanged()
     connection = UserInputService:GetPropertyChangedSignal("PreferredInput"):Connect(preferredInputChanged)
@@ -180,13 +229,15 @@ function InteractionManager.Destroy()
         connection = nil
     end
 
-    if scrollConnection then
-        scrollConnection:Disconnect()
-        scrollConnection = nil
-    end
+	if scrollConnection then
+		scrollConnection:Disconnect()
+		scrollConnection = nil
+	end
+	disconnectHotbarHoverConnections()
+	unlockZoom()
 
-    ConsoleModeManager.Destroy()
-    DragHandlerRef = nil
+	ConsoleModeManager.Destroy()
+	DragHandlerRef = nil
     HotbarFrameRef = nil
 end
 

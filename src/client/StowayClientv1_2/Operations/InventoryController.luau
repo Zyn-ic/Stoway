@@ -15,6 +15,31 @@ function Controller.Init(hooks)
     HookManager = hooks
 end
 
+local function IsDynamicHotbar(): boolean
+    return Settings.Hotbar.Type == "Dynamic"
+end
+
+local function CompactHotbarData(hotbar: { [number]: string? }): { [number]: string? }
+    if not IsDynamicHotbar() then
+        return hotbar
+    end
+
+    local settings = _peek(Store.Settings)
+    local maxSlots = (settings and settings.MaxHotbarSlots) or 10
+    local packed = {}
+    local writeIndex = 1
+
+    for slot = 1, maxSlots do
+        local uuid = hotbar[slot]
+        if uuid then
+            packed[writeIndex] = uuid
+            writeIndex += 1
+        end
+    end
+
+    return packed
+end
+
 --// Helper to safely get data
 
 function _CreateSlotFrameName(slotnumber:number): string
@@ -93,6 +118,7 @@ function Controller.AddToBackpack(fromType: string, fromIndex: number, REPLICATE
     if fromType == "Hotbar" then
         -- Clear the source slot
         hotbar[fromIndex] = nil
+        hotbar = CompactHotbarData(hotbar)
 
         -- Append to the end of storage
         table.insert(storage, uuidToMove)
@@ -132,6 +158,7 @@ function Controller.Remove(slotType: string, slotIndex: number, REPLICATE:boolea
 
         if uuidToRemove then
             newHotbar[slotIndex] = nil -- Just clear the value
+            newHotbar = CompactHotbarData(newHotbar)
             newItems[uuidToRemove] = nil
             Store.Items:set(newItems)
             Store.Hotbar:set(newHotbar)
@@ -270,6 +297,7 @@ function Controller.Swap(fromType: string, fromSlot: number, toType: string, toS
     --// LOGIC: If moving from Hotbar to Storage (Empty Slot)
     elseif fromType == "Hotbar" and toType == "Storage" and ListBValue == nil then
         newHotbar[fromSlot] = nil
+        newHotbar = CompactHotbarData(newHotbar)
         table.insert(newStorage, ListAValue)
         -- No cleanup needed for Hotbar source, it just becomes invisible
 

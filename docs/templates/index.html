@@ -58,7 +58,7 @@
             </div>
 
             <div class="template-grid">
-                <a href="server-operation-template.luau" class="template-card" download>
+                <a href="server-operation-template.luau" class="template-card" onclick="return confirmDownload(event, 'Server Operation Template')">
                     <div class="template-icon">&#9881;</div>
                     <div class="template-info">
                         <h3>Server Operation</h3>
@@ -400,7 +400,7 @@
                     <p>Step-by-step guide</p>
                 </a>
 
-                <a href="../server/api-reference.html" class="next-step-card">
+                <a href="../server/inventory-service.html" class="next-step-card">
                     <div class="next-step-icon">&#128187;</div>
                     <h4>API Reference</h4>
                     <p>Complete API docs</p>
@@ -418,6 +418,19 @@
     <div id="expand-overlay" class="expand-overlay" style="display: none;"></div>
 
     <script>
+        function confirmDownload(event, name) {
+            if (confirm(`Do you want to download the ${name}?`)) {
+                const link = event.currentTarget;
+                const downloadLink = document.createElement('a');
+                downloadLink.href = link.href;
+                downloadLink.download = link.getAttribute('href').split('/').pop();
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+            }
+            return false;
+        }
+
         (function() {
             const expandables = document.querySelectorAll('.pattern-card.expandable');
             const overlay = document.getElementById('expand-overlay');

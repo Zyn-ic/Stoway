@@ -127,7 +127,9 @@ function AddOperation.Execute(state: any, itemId: string, amount: number?, metad
 					-- If dropping is disabled but we are forcing a swap, we might need to override or just Remove.
 					-- Requirement says "drop that to the world".
 
-					DropOperation.Execute(state, state.Player, "Hotbar", targetSlot)
+					DropOperation.Execute(state, state.Player, "Hotbar", targetSlot, nil, {
+						SkipHotbarCompaction = true
+					})
 				end
 
 

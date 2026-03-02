@@ -114,14 +114,15 @@ function InventoryService.RemoveItem(player: Player, uuid: string, amount: numbe
 	local state = PlayerInventories[player]
 	if not state then return { success = false, reason = "NO_INVENTORY" } end
 
-	local slotType, slot = SlotManager.FindSlotByUUID(state, uuid)
 	local result = RemoveOperation.Execute(state, uuid, amount)
 
 	if result.success and REPLICATE then
 		if result.remaining and result.remaining > 0 then
 			Replicator.SendUpdateMeta(player, uuid, { Amount = result.remaining }, state.Weight)
-		elseif slotType and slot then
-			Replicator.SendRemove(player, slotType, slot, uuid)
+		elseif result.hotbarCompacted then
+			Replicator.SendInit(player, state)
+		elseif result.slotType and result.slot then
+			Replicator.SendRemove(player, result.slotType, result.slot, uuid)
 		end
 	end
 
@@ -137,7 +138,11 @@ function InventoryService.SwapSlots(player: Player, fromType: string, fromSlot: 
 	if not result.success then return {success = false, reason = "Server error while swapping"} end
 
 	if result.success and REPLICATE then
-		Replicator.SendSwap(player, fromType, fromSlot, toType, toSlot)
+		if result.hotbarCompacted then
+			Replicator.SendInit(player, state)
+		else
+			Replicator.SendSwap(player, fromType, fromSlot, toType, toSlot)
+		end
 	end
 
 	return result
@@ -178,6 +183,8 @@ function InventoryService.DropItem(player: Player, slotType: string, slot: numbe
 	if result.success and REPLICATE then
 		if result.remaining and result.remaining > 0 then
 			Replicator.SendUpdateMeta(player, result.UUID, { Amount = result.remaining }, state.Weight)
+		elseif result.hotbarCompacted then
+			Replicator.SendInit(player, state)
 		else
 			Replicator.SendRemove(player, slotType, slot, result.UUID)
 		end
@@ -457,19 +464,30 @@ local function SetupRemotes()
 	-- UNIFIED REMOTE: InventoryAction (All operations go through here)
 	local InventoryActionRemote = GetOrCreateRemote("InventoryAction", "RemoteEvent") :: RemoteEvent
 	InventoryActionRemote.OnServerEvent:Connect(function(player, operation: string, args: any)
+		local state = PlayerInventories[player]
+
 		-- Anti-exploit: Check if player is locked
 		if PlayerOperationLock[player] then
+			if state then
+				Replicator.SendInit(player, state)
+			end
 			return { success = false, reason = "OPERATION_IN_PROGRESS" }
 		end
 
 		-- Validate operation
 		local handler = OperationHandlers[operation]
 		if not handler then
+			if state then
+				Replicator.SendInit(player, state)
+			end
 			return { success = false, reason = "INVALID_OPERATION" }
 		end
 
 		-- Validate args
 		if args == nil or type(args) ~= "table" then
+			if state then
+				Replicator.SendInit(player, state)
+			end
 			return { success = false, reason = "INVALID_ARGS" }
 		end
 
@@ -494,7 +512,22 @@ local function SetupRemotes()
 		-- Handle pcall failure
 		if not success then
 			warn("[InventoryService] Operation error for", player.Name, ":", result)
+			if state then
+				Replicator.SendInit(player, state)
+			end
 			return { success = false, reason = "SERVER_ERROR" }
+		end
+
+		-- Client uses optimistic updates; force correction when server diverges or rejects.
+		if type(result) ~= "table" or result.success ~= true then
+			if state then
+				Replicator.SendInit(player, state)
+			end
+			return result
+		end
+
+		if result.hotbarCompacted then
+			Replicator.SendInit(player, state)
 		end
 
 		return result

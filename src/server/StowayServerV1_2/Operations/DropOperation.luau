@@ -13,11 +13,12 @@ export type DropResult = {
 	reason: string?,
 	droppedItem: any?,
 	remaining: number?,
-	UUID: string?
+	UUID: string?,
+	hotbarCompacted: boolean?
 }
 
 --// Main Execute function
-function DropOperation.Execute(state: any, player: Player, slotType: string, slot: number, amount: number?): DropResult
+function DropOperation.Execute(state: any, player: Player, slotType: string, slot: number, amount: number?, options: any?): DropResult
 	-- Get item
 	local uuid = SlotManager.GetUUIDFromSlot(state, slotType, slot)
 	if not uuid then
@@ -53,7 +54,7 @@ function DropOperation.Execute(state: any, player: Player, slotType: string, slo
 	end
 	
 	-- Remove from inventory
-	local removeResult = RemoveOperation.Execute(state, uuid, dropAmount)
+	local removeResult = RemoveOperation.Execute(state, uuid, dropAmount, options)
 	if not removeResult.success then
 		return { success = false, reason = removeResult.reason }
 	end
@@ -69,7 +70,8 @@ function DropOperation.Execute(state: any, player: Player, slotType: string, slo
 			Metadata = itemMetadata
 		},
 		remaining = removeResult.remaining,
-		UUID = uuid
+		UUID = uuid,
+		hotbarCompacted = removeResult.hotbarCompacted
 	}
 end
 

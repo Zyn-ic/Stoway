@@ -98,13 +98,21 @@ function SetUpBinds()
 
 	local currentSettings = Fusion.peek(Store.Settings)
 	local maxSlots = currentSettings and currentSettings.MaxHotbarSlots or 10
+    local isDynamicHotbar = Settings.Hotbar.Type == "Dynamic"
 
 	for i = 1, maxSlots do
         local action = InputManager.HotbarActions[i]
         if action then
             local conn = action.Activated:Connect(function(active, pressed)
                 if pressed then
-                    InventoryController.HandleEquipped(Store:GetUUidFromIndex(i, "Hotbar"), true)
+                    local targetUUID
+                    if isDynamicHotbar then
+                        targetUUID = Store:GetUUidFromVisibleHotbarIndex(i)
+                    else
+                        targetUUID = Store:GetUUidFromIndex(i, "Hotbar")
+                    end
+
+                    InventoryController.HandleEquipped(targetUUID, true)
                 end
             end)
              table.insert(InputConnections, conn)
@@ -226,6 +234,7 @@ function BuildHotbar()
             Parent = HotbarFrame,
             GuiFOLDER = GUIFOLDER,
             KeybindDisplay = GetKeybindDisplay(i),
+            GetKeybindDisplay = GetKeybindDisplay,
             OnDrag = DragHandler.StartDrag, -- Hook up drag handler here for passing scopes
             hookManager = HookManager -- hook manager should refresh or be reloaded per interface refresh
         })

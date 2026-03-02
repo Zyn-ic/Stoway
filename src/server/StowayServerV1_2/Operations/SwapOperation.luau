@@ -15,7 +15,8 @@ export type SlotRef = {
 
 export type SwapResult = {
 	success: boolean,
-	reason: string?
+	reason: string?,
+	hotbarCompacted: boolean?
 }
 
 --// Validate swap request
@@ -63,6 +64,7 @@ function SwapOperation.Execute(state: any, from: SlotRef, to: SlotRef): SwapResu
 	-- Get items
 	local fromUUID = SlotManager.GetUUIDFromSlot(state, from.type, from.slot)
 	local toUUID = SlotManager.GetUUIDFromSlot(state, to.type, to.slot)
+	local hotbarCompacted = false
 
 	-- Execute based on combination
 	if from.type == "Hotbar" and to.type == "Hotbar" then
@@ -86,6 +88,7 @@ function SwapOperation.Execute(state: any, from: SlotRef, to: SlotRef): SwapResu
 			if fromUUID then
 				table.insert(state.Storage, fromUUID)
 				state.Hotbar[from.slot] = nil
+				hotbarCompacted = SlotManager.CompactHotbar(state)
 			end
 		end
 
@@ -105,7 +108,7 @@ function SwapOperation.Execute(state: any, from: SlotRef, to: SlotRef): SwapResu
 	end
 
 	-- Note: EquippedItemUUID doesn't change - it follows the UUID, not the slot
-	return { success = true }
+	return { success = true, hotbarCompacted = hotbarCompacted }
 end
 
 --// Convenience wrapper with raw parameters

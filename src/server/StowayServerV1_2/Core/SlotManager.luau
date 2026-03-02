@@ -3,6 +3,8 @@
 -- Uses state.Settings (per-player) instead of global Settings
 
 local SlotManager = {}
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Settings = require(ReplicatedStorage.Shared.Settings)
 
 --// ═══════════════════════════════════════════════════════════════════════════
 --// HOTBAR (Static Logic)
@@ -36,6 +38,39 @@ function SlotManager.GetHotbarItemCount(state: any): number
 		end
 	end
 	return count
+end
+
+function SlotManager.IsDynamicHotbarEnabled(): boolean
+	return Settings.Hotbar.Type == "Dynamic"
+end
+
+-- Dynamic hotbar keeps server slot data packed (no holes) while preserving item order.
+function SlotManager.CompactHotbar(state: any): boolean
+	if not SlotManager.IsDynamicHotbarEnabled() then
+		return false
+	end
+
+	local maxSlots = state.Settings.MaxHotbarSlots
+	local writeIndex = 1
+	local changed = false
+	local packedHotbar = {}
+
+	for readIndex = 1, maxSlots do
+		local uuid = state.Hotbar[readIndex]
+		if uuid then
+			if readIndex ~= writeIndex then
+				changed = true
+			end
+			packedHotbar[writeIndex] = uuid
+			writeIndex += 1
+		end
+	end
+
+	if changed then
+		state.Hotbar = packedHotbar
+	end
+
+	return changed
 end
 
 --// ═══════════════════════════════════════════════════════════════════════════

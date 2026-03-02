@@ -2,6 +2,7 @@ local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local InputManager = require(script.Parent.InputManager)
 local InventoryController = require(script.Parent.Parent.Operations.InventoryController)
+local InventoryStore = require(script.Parent.Parent.CoreState.InventoryStore)
 local IllusionIAS = require(ReplicatedStorage.Packages.IllusionIAS)
 
 local SelectionManager = {}
@@ -21,7 +22,7 @@ local Binds = require(ReplicatedStorage.Shared.Binds)
 local ConsoleDropUI = require(script.Parent.ConsoleDropUI)
 
 local swapAction = nil
-local dropAction = nil 
+local dropAction = nil
 local quickMoveAction = nil
 local cancelAction = nil
 
@@ -37,12 +38,12 @@ function SelectionManager.Init(hotbarFrame, backpackFrame, hookManager)
     HotbarFrame = hotbarFrame
     BackpackFrame = backpackFrame
     HookManager = hookManager
-    
+
     if HotbarFrame then HotbarFrame.SelectionGroup = true end
     if BackpackFrame then BackpackFrame.SelectionGroup = true end
-    
+
     local inventoryActions = Binds.Global.InventoryActions
-    
+
     -- 1. Swap Bind (Y)
     swapAction = IllusionIAS.new("ConsoleSwapAction")
     Binds.ApplyToAction(swapAction, inventoryActions.Swap, "Console")
@@ -66,7 +67,7 @@ function SelectionManager.Init(hotbarFrame, backpackFrame, hookManager)
         if not SelectionState.enabled or not pressed then return end
         SelectionManager.HandleQuickMove()
     end)
-    
+
     -- 4. Cancel Bind (B)
     cancelAction = IllusionIAS.new("ConsoleCancelAction")
     Binds.ApplyToAction(cancelAction, inventoryActions.Cancel, "Console")
@@ -74,7 +75,7 @@ function SelectionManager.Init(hotbarFrame, backpackFrame, hookManager)
         if not SelectionState.enabled or not pressed then return end
         SelectionManager.CancelSelection()
     end)
-    
+
     IllusionIAS.addContext(InputManager.ContextInventory, swapAction, dropAction, quickMoveAction, cancelAction)
 end
 
@@ -120,25 +121,25 @@ end
 function SelectionManager.GetSelectedSlotInfo()
     local selected = GuiService.SelectedObject
     if not selected then return nil end
-    
-    local slotFrame = selected.Parent 
+
+    local slotFrame = selected.Parent
     if not slotFrame then return nil end
-    
+
     local slotType
     if slotFrame.Parent and slotFrame.Parent.Name == "Hotbar" then
         slotType = "Hotbar"
-    elseif slotFrame.Parent and slotFrame.Parent.Name == "ScrollingFrame" and slotFrame.Parent.Parent.Name == "Backpack" then 
+    elseif slotFrame.Parent and slotFrame.Parent.Name == "ScrollingFrame" and slotFrame.Parent.Parent.Name == "Backpack" then
         slotType = "Storage"
     elseif slotFrame.Parent and slotFrame.Parent.Name == "Storage" then
          slotType = "Storage"
     end
-    
+
     if not slotType then return nil end
-    
+
     local slotName = slotFrame.Name:gsub("_", "")
     local slotIndex = tonumber(slotName)
     if not slotIndex then return nil end
-    
+
     return {
         Type = slotType,
         Index = slotIndex,
@@ -165,7 +166,7 @@ end
 function SelectionManager.HandleSwap()
     local selected = SelectionManager.GetSelectedSlotInfo()
     if not selected then return end
-    
+
     if SelectionState.step == 2 then return end -- Block Swap while Dropping
 
     if SelectionState.step == 0 then
@@ -174,10 +175,10 @@ function SelectionManager.HandleSwap()
         SelectionState.sourceType = selected.Type
         SelectionState.sourceSlot = selected.Index
         SelectionState.sourceFrame = selected.Frame
-        
+
         SelectionManager.ApplySelectionHighlight(selected.Frame)
         SelectionManager.NotifyStateChanged()
-        
+
     elseif SelectionState.step == 1 then
         -- Step 2: Select destination
         if SelectionState.sourceType == selected.Type and SelectionState.sourceSlot == selected.Index then
@@ -185,7 +186,7 @@ function SelectionManager.HandleSwap()
              SelectionManager.CancelSelection()
              return
         end
-        
+
         InventoryController.Swap(
             SelectionState.sourceType,
             SelectionState.sourceSlot,
@@ -193,7 +194,7 @@ function SelectionManager.HandleSwap()
             selected.Index,
             true
         )
-        
+
         SelectionManager.CancelSelection()
     end
 end
@@ -201,38 +202,37 @@ end
 function SelectionManager.HandleDrop()
     local selected = SelectionManager.GetSelectedSlotInfo()
     if not selected then return end
-    
+
     if SelectionState.step == 1 then return end -- Block Drop while Swapping
-    
+
     -- Fetch Item Data using new helper
-    local store = require(script.Parent.Parent.CoreState.InventoryStore)
-    local item = store:GetItemFromSlot(selected.Type, selected.Index)
-    
+    local item = InventoryStore:GetItemFromSlot(selected.Type, selected.Index)
+
     if not item then return end
 
     SelectionState.step = 2 -- Dropping
     SelectionManager.NotifyStateChanged()
-    
+
     InputManager.SetInventoryEnabled(false)
     InputManager.SetDropEnabled(true)
-    
+
     SelectionManager.LoadDropBinds()
-    
+
     -- Set up callbacks for button clicks
     ConsoleDropUI.OnDrop = function(amount)
         InventoryController.Drop(selected.Type, selected.Index, amount, true)
         SelectionManager.CloseDropUI()
     end
-    
+
     ConsoleDropUI.OnDropAll = function()
         InventoryController.Drop(selected.Type, selected.Index, item.Amount, true)
         SelectionManager.CloseDropUI()
     end
-    
+
     ConsoleDropUI.OnCancel = function()
         SelectionManager.CloseDropUI()
     end
-    
+
     ConsoleDropUI.Show(item, 1)
 end
 
@@ -240,14 +240,14 @@ function SelectionManager.CloseDropUI()
     ConsoleDropUI.Hide()
     InputManager.SetDropEnabled(false)
     InputManager.SetInventoryEnabled(true)
-    
+
     SelectionManager.UnloadDropBinds()
-    
+
     -- Clear callbacks
     ConsoleDropUI.OnDrop = nil
     ConsoleDropUI.OnDropAll = nil
     ConsoleDropUI.OnCancel = nil
-    
+
     SelectionState.step = 0
     SelectionManager.NotifyStateChanged()
 end
@@ -255,25 +255,24 @@ end
 function SelectionManager.HandleQuickMove()
     local selected = SelectionManager.GetSelectedSlotInfo()
     if not selected then return end
-    
+
     -- If in middle of swap, cancel it
     if SelectionState.step == 1 then
         SelectionManager.CancelSelection()
     end
-    
+
     if SelectionState.step == 2 then return end -- Don't quick move while dropping
 
     -- Determine target type and find empty slot using helpers
-    local store = require(script.Parent.Parent.CoreState.InventoryStore)
     local targetType = (selected.Type == "Hotbar") and "Storage" or "Hotbar"
     local emptySlotIndex
-    
+
     if targetType == "Hotbar" then
-        emptySlotIndex = store:FindFirstEmptyHotbarSlot()
+        emptySlotIndex = InventoryStore:FindFirstEmptyHotbarSlot()
     else
-        emptySlotIndex = store:FindFirstEmptyStorageSlot()
+        emptySlotIndex = InventoryStore:FindFirstEmptyStorageSlot()
     end
-    
+
     if emptySlotIndex then
         InventoryController.Swap(
             selected.Type,
@@ -298,14 +297,22 @@ function SelectionManager.CancelSelection()
     SelectionState.sourceType = nil
     SelectionState.sourceSlot = nil
     SelectionState.sourceFrame = nil
-    
+
     SelectionManager.NotifyStateChanged()
 end
 
 function SelectionManager.SetEnabled(state: boolean)
     SelectionState.enabled = state
     GuiService.GuiNavigationEnabled = state
-    
+
+    if state then
+        local firstHotbarButton = InventoryStore:GetFirstOccupiedHotbarButton(HotbarFrame)
+        if firstHotbarButton then
+            GuiService.SelectedObject = firstHotbarButton
+        end
+        return
+    end
+
     if not state then
         SelectionManager.CancelSelection()
         SelectionManager.UnloadDropBinds() -- Cleanup drop binds if forced disabled
@@ -328,20 +335,20 @@ end
 function SelectionManager.Destroy()
     SelectionManager.CancelSelection()
     SelectionManager.UnloadDropBinds()
-    
+
     -- Destroy Drop UI completely
     ConsoleDropUI.Destroy()
-    
+
     if swapAction then swapAction:Destroy(); swapAction = nil end
     if dropAction then dropAction:Destroy(); dropAction = nil end
     if quickMoveAction then quickMoveAction:Destroy(); quickMoveAction = nil end
     if cancelAction then cancelAction:Destroy(); cancelAction = nil end
-    
+
     SelectionState.enabled = false
     GuiService.GuiNavigationEnabled = false
     HotbarFrame = nil
     BackpackFrame = nil
-    
+
     SelectionManager.OnStateChanged = nil
 end
 
