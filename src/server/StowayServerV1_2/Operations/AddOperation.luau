@@ -19,6 +19,35 @@ export type AddResult = {
 	equippedUUID: string?   -- UUID of the item that was automatically equipped
 }
 
+local function NormalizeMetadataOverrides(metadataOverrides: any?): (any?, number?)
+	if metadataOverrides == nil then
+		return nil, nil
+	end
+
+	if type(metadataOverrides) ~= "table" then
+		return nil, nil
+	end
+
+	local normalized = table.clone(metadataOverrides)
+	local amountFromMeta = normalized.Amount
+	if amountFromMeta == nil then
+		amountFromMeta = normalized.StackAmount
+	end
+
+	if type(amountFromMeta) == "string" then
+		amountFromMeta = tonumber(amountFromMeta)
+	end
+
+	if type(amountFromMeta) ~= "number" then
+		amountFromMeta = nil
+	end
+
+	normalized.Amount = nil
+	normalized.StackAmount = nil
+
+	return normalized, amountFromMeta
+end
+
 --// Create a new item instance
 local function CreateItem(state: any, itemId: string, amount: number, metadata: any?): any
 	local uuid = UUID.Generate()
@@ -48,13 +77,15 @@ end
 
 --// Main Execute function
 function AddOperation.Execute(state: any, itemId: string, amount: number?, metadataOverrides: any?): AddResult
+	local normalizedOverrides, metadataAmount = NormalizeMetadataOverrides(metadataOverrides)
+
 	-- Prepare metadata (parse from tool + merge overrides)
 	-- MetadataParser returns (metadata, defaultAmount) - Amount is excluded from metadata
 	local baseMeta, defaultAmount = MetadataParser.FromItemId(itemId)
-	local finalMetadata = MetadataParser.Merge(baseMeta, metadataOverrides)
+	local finalMetadata = MetadataParser.Merge(baseMeta, normalizedOverrides)
 
-	-- Use passed amount, or fall back to tool's Amount attribute, or default to 1
-	local finalAmount = amount or defaultAmount or 1
+	-- Use explicit amount first, then metadata-provided amount, then tool default, then 1
+	local finalAmount = amount or metadataAmount or defaultAmount or 1
 	local equippedUUID = nil
 
 	-- Validate amount

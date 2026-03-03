@@ -303,10 +303,30 @@ function InventoryService.AddToBackpack(player: Player, itemId: string, amount: 
 
 	if not ServerStorage.Tools:FindFirstChild(itemId) then return { success = false, reason = "ITEM_NOT_FOUND" } end
 
+	local normalizedMetadata = nil
+	local metadataAmount = nil
+	if type(metadata) == "table" then
+		normalizedMetadata = table.clone(metadata)
+		metadataAmount = normalizedMetadata.Amount
+		if metadataAmount == nil then
+			metadataAmount = normalizedMetadata.StackAmount
+		end
+
+		if type(metadataAmount) == "string" then
+			metadataAmount = tonumber(metadataAmount)
+		end
+		if type(metadataAmount) ~= "number" then
+			metadataAmount = nil
+		end
+
+		normalizedMetadata.Amount = nil
+		normalizedMetadata.StackAmount = nil
+	end
+
 	-- Get metadata
 	local baseMeta, defaultAmount = MetadataParser.FromItemId(itemId)
-	local finalMetadata = MetadataParser.Merge(baseMeta, metadata)
-	local finalAmount = amount or defaultAmount or 1
+	local finalMetadata = MetadataParser.Merge(baseMeta, normalizedMetadata)
+	local finalAmount = amount or metadataAmount or defaultAmount or 1
 
 	-- Validate
 	if finalAmount <= 0 then
@@ -368,8 +388,10 @@ function InventoryService.AddToBackpack(player: Player, itemId: string, amount: 
 	end
 
 	-- Replicate
-	if #addedItems > 0 and REPLICATE then
-		Replicator.SendAdd(player, addedItems, state.Items)
+	if REPLICATE then
+		if #addedItems > 0 then
+			Replicator.SendAdd(player, addedItems, state.Items)
+		end
 
 		for uuid, newAmount in pairs(updatedItems) do
 			Replicator.SendUpdateMeta(player, uuid, { Amount = newAmount }, state.Weight)

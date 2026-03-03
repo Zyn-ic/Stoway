@@ -11,6 +11,7 @@ local ToolStorage = ServerStorage:FindFirstChild("Tools") :: Folder?
 -- Fields that should NOT be in metadata (they're used as item properties)
 local EXCLUDED_FIELDS = {
 	Amount = true,  -- Amount is item.Amount, not metadata
+	StackAmount = true, -- Legacy drop attribute, normalize to Amount
 }
 
 --// Parse metadata from a Tool's attributes (excludes Amount and other reserved fields)
@@ -21,13 +22,23 @@ function MetadataParser.FromTool(tool: Tool): ({ [string]: any }?, number?)
 	
 	local attributes = tool:GetAttributes()
 	local metadata = {}
-	local amount = nil
+	local amount = attributes.Amount
+	if amount == nil then
+		-- Backward compatibility for older dropped pickups.
+		amount = attributes.StackAmount
+	end
+
+	if type(amount) == "string" then
+		amount = tonumber(amount)
+	end
+
+	if type(amount) ~= "number" then
+		amount = nil
+	end
 	if tool.TextureId ~= "" then metadata.Image = tool.TextureId end
 
 	for key, value in pairs(attributes) do
-		if key == "Amount" then
-			amount = value  -- Extract Amount separately
-		elseif not EXCLUDED_FIELDS[key] then
+		if not EXCLUDED_FIELDS[key] then
 			metadata[key] = value
 		end
 	end
