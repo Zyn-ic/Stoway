@@ -20,14 +20,33 @@ local Store = {
     Scope = Scope
 }
 
+local function ComputeWeightFromItems(items: { [string]: any }): number
+    local total = 0
+    for _, item in pairs(items) do
+        local amount = item and item.Amount
+        if type(amount) == "number" then
+            total += amount
+        end
+    end
+    return total
+end
+
 --// 2. Initialize Function (Called once by Main)
 function Store.Init(initialData)
     if not initialData then return end
-    Store.Items:set(initialData.Items or {})
+    local items = initialData.Items or {}
+
+    Store.Items:set(items)
     Store.Hotbar:set(initialData.Hotbar or {})
     Store.Storage:set(initialData.Storage or {})
     Store.EquippedUUID:set(initialData.EquippedUUID or initialData.EquippedItemUUID)
-    Store.Weight:set(initialData.Weight or 0)
+
+    local weight = initialData.Weight
+    if type(weight) ~= "number" then
+        weight = ComputeWeightFromItems(items)
+    end
+    Store.Weight:set(weight)
+
     Store.Settings:set(initialData.Settings or {})
 end
 
