@@ -518,7 +518,7 @@ local function SetupRemotes()
 		PlayerOperationLock[player] = true
 
 		-- In case a function is taking too long
-		task.delay(3, function()
+		local lock = task.delay(3, function()
 			if PlayerOperationLock[player] then
 				PlayerOperationLock[player] = nil
 			end
@@ -531,6 +531,7 @@ local function SetupRemotes()
 
 		-- Unlock player
 		PlayerOperationLock[player] = nil
+		task.cancel(lock)
 
 		-- Handle pcall failure
 		if not success then
