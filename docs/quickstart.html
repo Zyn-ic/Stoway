@@ -65,18 +65,31 @@
             <div class="video-header">
                 <div class="video-icon">&#127909;</div>
                 <div class="video-title">
-                    <h2>Video Walkthrough</h2>
-                    <p>Prefer watching? Follow along with this visual guide</p>
+                    <h2>Video Walkthroughs</h2>
+                    <p>Start with the beginner setup video, then continue to the advanced walkthrough.</p>
                 </div>
             </div>
-            <div class="video-container">
-                <iframe 
-                    src="https://player.vimeo.com/video/1153827249" 
-                    title="Stoway Setup Video"
-                    frameborder="0" 
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                    allowfullscreen>
-                </iframe>
+            <div class="video-grid">
+                <article class="video-card">
+                    <div class="video-badge">Beginner Walkthrough</div>
+                    <div class="video-container">
+                        <iframe 
+                            src="https://player.vimeo.com/video/1153827249" 
+                            title="Stoway Beginner Setup Video"
+                            frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                            allowfullscreen>
+                        </iframe>
+                    </div>
+                    <p class="video-card-copy">Covers installation, first-time setup, and the core project structure.</p>
+                </article>
+
+                <article class="video-card video-link-card">
+                    <div class="video-badge">Advanced Walkthrough</div>
+                    <h3>Deep-dive follow-up</h3>
+                    <p class="video-card-copy">Use this once the beginner setup is working and you want the longer walkthrough.</p>
+                    <a href="https://vimeo.com/1171249324" class="video-link-button">Watch Advanced Walkthrough</a>
+                </article>
             </div>
         </section>
 
@@ -497,6 +510,72 @@ ClientInventoryService.<span class="function">Init</span>()</code></pre>
             height: 100%;
         }
 
+        .video-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+            gap: 1.5rem;
+            align-items: stretch;
+        }
+
+        .video-card {
+            background: rgba(15, 13, 10, 0.35);
+            border: 1px solid rgba(196, 167, 125, 0.18);
+            border-radius: 14px;
+            padding: 1rem;
+        }
+
+        .video-badge {
+            display: inline-flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 0.35rem 0.8rem;
+            border-radius: 999px;
+            background: rgba(196, 167, 125, 0.16);
+            color: var(--accent-brown);
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .video-card h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .video-card-copy {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-top: 1rem;
+        }
+
+        .video-link-card {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background:
+                radial-gradient(circle at top right, rgba(212, 168, 83, 0.2), transparent 45%),
+                rgba(15, 13, 10, 0.45);
+        }
+
+        .video-link-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: fit-content;
+            margin-top: 1.25rem;
+            padding: 0.8rem 1.1rem;
+            border-radius: 10px;
+            background: var(--accent-gradient);
+            color: var(--bg-primary);
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .video-link-button:hover {
+            filter: brightness(1.05);
+        }
+
         .video-placeholder {
             position: absolute;
             top: 0;
@@ -538,6 +617,12 @@ ClientInventoryService.<span class="function">Init</span>()</code></pre>
             color: var(--text-secondary);
             font-size: 0.875rem;
             margin-top: 0.5rem;
+        }
+
+        @media (max-width: 900px) {
+            .video-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </body>

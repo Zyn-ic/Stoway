@@ -14,7 +14,7 @@
       "path": "quickstart.html",
       "title": "Quick Start",
       "category": "guides",
-      "tags": ["quick start", "setup", "installation", "getting started", "beginner", "5 minute"],
+      "tags": ["quick start", "setup", "installation", "getting started", "beginner", "5 minute", "video", "walkthrough", "advanced walkthrough", "vimeo"],
       "sections": []
     },
     {
@@ -151,7 +151,7 @@
       "path": "client/input/index.html",
       "title": "Input & Console",
       "category": "client",
-      "tags": ["input", "controls", "keyboard", "gamepad", "console", "gamepad"],
+      "tags": ["input", "controls", "keyboard", "gamepad", "console", "gamepad", "advanced walkthrough", "video", "vimeo"],
       "sections": []
     },
     {

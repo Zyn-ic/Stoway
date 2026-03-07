@@ -58,6 +58,29 @@
             <p>Cross-platform input handling with automatic switching between mouse/touch and gamepad. Features a context-based bind system that prevents conflicts between different modes.</p>
         </section>
 
+        <section class="walkthrough-section">
+            <div class="section-header">
+                <h2>Walkthroughs</h2>
+                <p>Use the beginner setup guide first, then continue with the advanced input walkthrough.</p>
+            </div>
+
+            <div class="walkthrough-grid">
+                <a href="../../quickstart.html" class="walkthrough-card">
+                    <div class="walkthrough-badge">Beginner</div>
+                    <h3>Quick Start Video</h3>
+                    <p>Open the setup guide with the embedded beginner walkthrough and install flow.</p>
+                    <span class="walkthrough-link">Open Quick Start &#8594;</span>
+                </a>
+
+                <a href="https://vimeo.com/1171249324" class="walkthrough-card featured">
+                    <div class="walkthrough-badge">Advanced</div>
+                    <h3>Advanced Walkthrough</h3>
+                    <p>Follow the longer Vimeo walkthrough for deeper console and input coverage.</p>
+                    <span class="walkthrough-link">Watch on Vimeo &#8594;</span>
+                </a>
+            </div>
+        </section>
+
         <div class="section-cards" style="margin-top: 2rem;">
             <a href="interaction-manager.html" class="section-card">
                 <div class="section-card-icon">&#128205;</div>
@@ -319,6 +342,66 @@
     </main>
 
     <style>
+        .walkthrough-section {
+            margin-top: 3rem;
+        }
+
+        .walkthrough-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1rem;
+        }
+
+        .walkthrough-card {
+            display: block;
+            background: linear-gradient(135deg, rgba(37, 32, 25, 0.88), rgba(26, 22, 18, 0.96));
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .walkthrough-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(196, 167, 125, 0.35);
+        }
+
+        .walkthrough-card.featured {
+            background:
+                radial-gradient(circle at top right, rgba(212, 168, 83, 0.18), transparent 42%),
+                linear-gradient(135deg, rgba(37, 32, 25, 0.92), rgba(26, 22, 18, 0.98));
+        }
+
+        .walkthrough-badge {
+            display: inline-block;
+            margin-bottom: 0.85rem;
+            padding: 0.3rem 0.75rem;
+            border-radius: 999px;
+            background: rgba(196, 167, 125, 0.16);
+            color: var(--accent-brown);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .walkthrough-card h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .walkthrough-card p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .walkthrough-link {
+            color: var(--accent-amber);
+            font-weight: 600;
+        }
+
         .context-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -472,6 +555,59 @@
         .branch-item span {
             color: var(--accent-amber);
             font-family: 'Fira Code', monospace;
+        }
+
+        .guide-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+        }
+
+        .guide-card {
+            background: linear-gradient(135deg, rgba(37, 32, 25, 0.8), rgba(26, 22, 18, 0.9));
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+        }
+
+        .guide-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(196, 167, 125, 0.3);
+        }
+
+        .guide-badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 50px;
+            background: rgba(196, 167, 125, 0.2);
+            color: var(--accent-brown);
+            margin-bottom: 0.75rem;
+            display: inline-block;
+        }
+
+        .guide-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .guide-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .guide-card p {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 768px) {
+            .walkthrough-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </body>
