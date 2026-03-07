@@ -89,6 +89,15 @@ Built-in chat commands for testing (do not leave unrestricted in production):
 
 ## Documentation
 Full docs: [https://zyn-ic.github.io/Stoway/](https://zyn-ic.github.io/Stoway/)
+<br>
+
+Basic Load Flow: [MermaidLiveView](https://shorturl.at/lkznn)
+<br>
+
+Cross Compatability Flow: [MermaidLiveView](https://shorturl.at/C41x2)
+<br>
+
+Different Console Modes Flow: [MermaidLiveView](https://shorturl.at/ALPBR)
 
 ## Credits
 1. <img src="https://www.iconpacks.net/icons/2/free-youtube-logo-icon-2431-thumb.png" width=15 height = 15>  [**HowToRoblox**](https://www.youtube.com/watch?v=kqa4u_9mSTQ&list=WL&index=6) - sourced a lot of core mechanics from him for backpack/hotbar in my ealier versions.

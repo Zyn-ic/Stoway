@@ -40,8 +40,6 @@ local function CompactHotbarData(hotbar: { [number]: string? }): { [number]: str
     return packed
 end
 
---// Helper to safely get data
-
 function _CreateSlotFrameName(slotnumber:number): string
     local numberstring = tostring(slotnumber) :: string
     local slotframeName = ""

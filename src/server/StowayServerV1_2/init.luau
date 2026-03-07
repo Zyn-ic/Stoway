@@ -468,7 +468,7 @@ local function SetupRemotes()
 		PlayerOperationLock[player] = true
 
 		-- only here for some reason execution takes too long
-		task.delay(3, function()
+		local lock = task.delay(3, function()
 			if PlayerOperationLock[player] then
 				PlayerOperationLock[player] = nil
 			end
@@ -477,6 +477,7 @@ local function SetupRemotes()
 		local state = PlayerInventories[player]
 		if state then
 			PlayerOperationLock[player] = nil
+			task.cancel(lock)
 			return { success = true, reason = "", data = state }
 		end
 

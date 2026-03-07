@@ -20,6 +20,7 @@ type SlotProps = {
 }
 
 function SlotFactory.Create(Scope: any, props: SlotProps)
+	local parentScope = Scope
 
 	local templateSlot = props.GuiFOLDER.Slot.template:Clone()
 	templateSlot.Name = InventoryStore.CreateSlotFrameName(props.SlotIndex)
@@ -31,7 +32,9 @@ function SlotFactory.Create(Scope: any, props: SlotProps)
 	local selecticon = templateSlot:FindFirstChild("selecticon") :: ImageLabel
 	local rarityframe = templateSlot:FindFirstChild("rarityframe") :: Frame
 
-	local scope = Scope:deriveScope()
+	local scope = parentScope:deriveScope()
+	-- Tie the slot scope to its parent so ForPairs and scope cleanup destroy the frame.
+	table.insert(parentScope, scope)
 	local IsActiveHover = false
 	table.insert(scope, IsActiveHover)
 	table.insert(scope, templateSlot)

@@ -18,7 +18,7 @@ Settings.Storage = {
 	CanStack = true, -- (perplayer setting)
 	Sorting = true, -- (global setting)
 	MaxStackSize = 5, -- (perplayer setting)
-	BackpackEnabled = true, -- (global setting)
+	BackpackEnabled = true, -- (global setting) can disable all backpack functions
 	SortOrder = "None" -- Name, Rarity, ItemType, None (global setting)
 }
 
@@ -33,14 +33,14 @@ Settings.Stacking = {
 		["Special"] = true,
 	},
 
-	Rarity = true -- (global setting)
+	Rarity = true -- (global setting) turned the rarity frame invisible (does not stop stacking with rarities/or sorting with rarities)
 }
 
 --// Gameplay Settings
 Settings.Gameplay = { -- (global settings)
 	Droppable = true,
 	DropDistance = 10,
-	MouseScroll = true,
+	MouseScroll = true, -- must hover mouse over hotbar
 }
 
 Settings.DifferentUIs = {
