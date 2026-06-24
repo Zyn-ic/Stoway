@@ -1,76 +1,95 @@
-local Types = require(script.Parent.Types)
-local Utils = require(script.Parent.Utils)
+--@author: yyumchi
+--@date: 2026-06-24
+--[[@description:
+	Metadata normalization and validation for item inputs
+]]
+-----------------------------
+-- VARIABLES --
+-----------------------------
 
-type ItemInput = Types.ItemInput
-type ItemMetadata = Types.ItemMetadata
+local Types = require("../CoreStore/Types")
+local Utils = require("../CoreStore/Utils")
 
 local Metadata = {}
 
-function Metadata.normalize(itemData: ItemInput): (string?, number?, ItemMetadata?, string?)
-    local itemId = itemData.Id or itemData.ID
+-- CONSTANTS --
+-----------------------------
 
-    if type(itemId) ~= "string" or itemId == "" then
-        return nil, nil, nil, "INVALID_ITEM_ID"
-    end
+-- PRIVATE FUNCTIONS --
+-----------------------------
 
-    local metadata: ItemMetadata = {}
+-- PUBLIC FUNCTIONS --
+-----------------------------
 
-    if type(itemData.Metadata) == "table" then
-        metadata = Utils.shallowCopy(itemData.Metadata) :: ItemMetadata
-    end
+function Metadata.normalize(itemData: Types.ItemInput): (string?, number?, Types.ItemMetadata?, string?)
+	local itemId = itemData.Id or itemData.ID
 
-    local rawAmount = itemData.Amount
+	if type(itemId) ~= "string" or itemId == "" then
+		return nil, nil, nil, "INVALID_ITEM_ID"
+	end
 
-    if rawAmount == nil then
-        rawAmount = metadata.Amount
-    end
+	local metadata: Types.ItemMetadata = {}
 
-    if rawAmount == nil then
-        rawAmount = metadata.StackAmount
-    end
+	if type(itemData.Metadata) == "table" then
+		metadata = Utils.shallowCopy(itemData.Metadata) :: Types.ItemMetadata
+	end
 
-    if type(rawAmount) == "string" then
-        rawAmount = tonumber(rawAmount)
-    end
+	local rawAmount = itemData.Amount
 
-    metadata.Amount = nil
-    metadata.StackAmount = nil
+	if rawAmount == nil then
+		rawAmount = metadata.Amount
+	end
 
-    local amount = rawAmount or 1
+	if rawAmount == nil then
+		rawAmount = metadata.StackAmount
+	end
 
-    if not Utils.isPositiveNumber(amount) then
-        return nil, nil, nil, "INVALID_AMOUNT"
-    end
+	if type(rawAmount) == "string" then
+		rawAmount = tonumber(rawAmount)
+	end
 
-    if metadata.Droppable == nil then
-        metadata.Droppable = true
-    end
+	metadata.Amount = nil
+	metadata.StackAmount = nil
 
-    return itemId, amount, metadata, nil
+	local amount = rawAmount or 1
+
+	if not Utils.isPositiveNumber(amount) then
+		return nil, nil, nil, "INVALID_AMOUNT"
+	end
+
+	if metadata.Droppable == nil then
+		metadata.Droppable = true
+	end
+
+	return itemId, amount, metadata, nil
 end
 
 function Metadata.matchesRequiredFields(
-    leftMetadata: ItemMetadata,
-    rightMetadata: ItemMetadata,
-    requiredFields: { string }
+	leftMetadata: Types.ItemMetadata,
+	rightMetadata: Types.ItemMetadata,
+	requiredFields: { string }
 ): boolean
-    for _, field in ipairs(requiredFields) do
-        if leftMetadata[field] ~= rightMetadata[field] then
-            return false
-        end
-    end
+	for _, field in ipairs(requiredFields) do
+		if leftMetadata[field] ~= rightMetadata[field] then
+			return false
+		end
+	end
 
-    return true
+	return true
 end
 
-function Metadata.isBlacklisted(metadata: ItemMetadata, blacklist: { boolean }): boolean
-    local rarity = metadata.Rarity
+function Metadata.isBlacklisted(metadata: Types.ItemMetadata, blacklist: { boolean }): boolean
+	local rarity = metadata.Rarity
 
-    if rarity ~= nil and blacklist[rarity] then
-        return true
-    end
+	if rarity ~= nil and blacklist[rarity] then
+		return true
+	end
 
-    return false
+	return false
 end
+
+-----------------------------
+--MAIN--
+-----------------------------
 
 return Metadata

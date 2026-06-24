@@ -72,21 +72,21 @@ export type SettingsOverrides = {
 }
 
 export type InventoryState = {
-    -- O(1): UUID -> Item
-    Items: { Item },
+	-- O(1): UUID -> Item
+	Items: { [string]: Item },
 
-    -- O(1) to get all stack UUIDs for an item id
-    -- ItemId -> array of UUIDs
-    ItemsByID: { { string } },
+	-- O(1) to get all stack UUIDs for an item id
+	-- ItemId -> array of UUIDs
+	ItemsByID: { [string]: { string } },
 
-    -- Slot -> UUID
-    Hotbar: { string? },
+	-- Slot -> UUID
+	Hotbar: { string? },
 
-    -- Array of UUIDs
-    Storage: { string },
+	-- Array of UUIDs
+	Storage: { string },
 
-    -- O(1): UUID -> where this item currently lives
-    LocationByUUID: { SlotRef },
+	-- O(1): UUID -> where this item currently lives
+	LocationByUUID: { [string]: SlotRef },
 
     EquippedItemUUID: string?,
     Weight: number,

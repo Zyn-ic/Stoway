@@ -1,48 +1,70 @@
+--@author: yyumchi
+--@date: 2026-06-24
+--[[@description:
+	Utility functions - deep copy, UUID generation, validation
+]]
+-----------------------------
+-- VARIABLES --
+-----------------------------
+
 local Utils = {}
 
 local uuidCounter = 0
 
+-- CONSTANTS --
+-----------------------------
+
+-- PRIVATE FUNCTIONS --
+-----------------------------
+
+-- PUBLIC FUNCTIONS --
+-----------------------------
+
 function Utils.deepCopy(value: any): any
-    if type(value) ~= "table" then
-        return value
-    end
+	if type(value) ~= "table" then
+		return value
+	end
 
-    local copy = {}
+	local copy = {}
 
-    for key, child in pairs(value) do
-        copy[key] = Utils.deepCopy(child)
-    end
+	for key, child in pairs(value) do
+		copy[key] = Utils.deepCopy(child)
+	end
 
-    return copy
+	return copy
 end
 
 function Utils.shallowCopy(value: any): any
-    if type(value) ~= "table" then
-        return value
-    end
+	if type(value) ~= "table" then
+		return value
+	end
 
-    local copy = {}
+	local copy = {}
 
-    for key, child in pairs(value) do
-        copy[key] = child
-    end
+	for key, child in pairs(value) do
+		copy[key] = child
+	end
 
-    return copy
+	return copy
 end
 
 function Utils.generateUUID(): string
-    uuidCounter += 1
+	uuidCounter += 1
 
-    local randomPart = math.random(100000, 999999)
-    return `core-{os.clock()}-{uuidCounter}-{randomPart}`
+	local randomPart = math.random(100000, 999999)
+	return `core-{os.clock()}-{uuidCounter}-{randomPart}`
 end
 
 function Utils.isPositiveNumber(value: any): boolean
-    return type(value) == "number" and value > 0 and value == value
+	return type(value) == "number" and value > 0 and value == value
 end
 
 function Utils.clampAmount(amount: number, minValue: number, maxValue: number): number
-    return math.max(minValue, math.min(amount, maxValue))
+	return math.max(minValue, math.min(amount, maxValue))
 end
+
+-----------------------------
+--MAIN--
+-----------------------------
 
 return Utils
