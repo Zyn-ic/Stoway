@@ -18,7 +18,7 @@ export type ItemMetadata = {
     Droppable: boolean?,
     Type: string?,
 
-    [any]: any
+    [string]: any
 }
 
 export type Item = {
@@ -47,6 +47,7 @@ export type Settings = {
     Sorting: boolean,
     SortOrder: SortOrder,
 
+    StackOnSwap: boolean,
     StackRequiredFields: { string },
     StackBlacklist: { boolean },
 
@@ -65,6 +66,7 @@ export type SettingsOverrides = {
     Sorting: boolean?,
     SortOrder: SortOrder?,
 
+    StackOnSwap: boolean?,
     StackRequiredFields: { string }?,
     StackBlacklist: { boolean }?,
 
@@ -126,6 +128,42 @@ export type RemoveResult = {
 
     slotType: SlotType?,
     slot: number?,
+}
+
+export type SwapResult = {
+    success: boolean,
+    reason: string?,
+    hotbarCompacted: boolean?,
+}
+
+export type MoveResult = {
+    success: boolean,
+    reason: string?,
+    hotbarCompacted: boolean?,
+}
+
+export type SplitResult = {
+    success: boolean,
+    reason: string?,
+    sourceUUID: string?,
+    newUUID: string?,
+    sourceAmount: number?,
+    newAmount: number?,
+    newSlotType: SlotType?,
+    newSlot: number?,
+    hotbarCompacted: boolean?,
+}
+
+export type MetadataUpdateResult = {
+    success: boolean,
+    reason: string?,
+    updatedFields: { string }?,
+}
+
+export type SortResult = {
+    success: boolean,
+    hotbarOrder: { string }?,
+    storageOrder: { string }?,
 }
 
 return Types

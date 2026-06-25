@@ -1,3 +1,4 @@
+--!native
 --@author: yyumchi
 --@date: 2026-06-24
 --[[@description:
@@ -37,11 +38,9 @@ local function removeFromIndex(state: Types.InventoryState, itemId: string, uuid
 		return
 	end
 
-	for index, indexedUUID in ipairs(uuids) do
-		if indexedUUID == uuid then
-			table.remove(uuids, index)
-			break
-		end
+	local index = table.find(uuids, uuid)
+	if index then
+		table.remove(uuids, index)
 	end
 
 	if #uuids == 0 then
@@ -151,6 +150,30 @@ local function addNewStacks(
 				slotType = "Hotbar"
 				placed = true
 			end
+		elseif placement == "Slot" and options.SlotRef then
+			local slotRef = options.SlotRef
+
+			if slotRef.Type == "Hotbar" then
+				if Slots.isValidHotbarSlot(state, slotRef.Slot) and not state.Hotbar[slotRef.Slot] then
+					Slots.setHotbarSlot(state, slotRef.Slot, item.UUID)
+					slotType = "Hotbar"
+					slot = slotRef.Slot
+					placed = true
+				else
+					reason = "INVALID_SLOT"
+				end
+			elseif slotRef.Type == "Storage" then
+				if state.Settings.BackpackEnabled then
+					Slots.moveToStorage(state, item.UUID, slotRef.Slot)
+					slotType = "Storage"
+					slot = slotRef.Slot
+					placed = true
+				else
+					reason = "BACKPACK_DISABLED"
+				end
+			else
+				reason = "INVALID_SLOT"
+			end
 		elseif placement == "Auto" then
 			slot, reason = placeItemInHotbar(state, item, nil)
 
@@ -225,7 +248,7 @@ function Operations.add(
 	local updatedItems: { number } = {}
 
 	if state.Settings.CanStack then
-		local stackedAmount, updates = Stack.tryStack(state, itemId, amountLeft, metadata)
+		local stackedAmount, updates = Stack.tryStack(state, itemId, amountLeft, metadata, opts.Placement)
 
 		amountLeft -= stackedAmount
 		updatedItems = updates
@@ -343,6 +366,352 @@ function Operations.remove(
 		slotType = slotType,
 		slot = slot,
 	}
+end
+
+function Operations.swap(
+	state: Types.InventoryState,
+	fromRef: Types.SlotRef,
+	toRef: Types.SlotRef
+): Types.SwapResult
+	if not state.Settings.BackpackEnabled then
+		if fromRef.Type == "Storage" or toRef.Type == "Storage" then
+			return {
+				success = false,
+				reason = "BACKPACK_DISABLED",
+			}
+		end
+	end
+
+	if fromRef.Type == "Hotbar" then
+		if not Slots.isValidHotbarSlot(state, fromRef.Slot) then
+			return { success = false, reason = "INVALID_HOTBAR_SLOT" }
+		end
+	end
+
+	if toRef.Type == "Hotbar" then
+		if not Slots.isValidHotbarSlot(state, toRef.Slot) then
+			return { success = false, reason = "INVALID_HOTBAR_SLOT" }
+		end
+	end
+
+	if fromRef.Type == "Storage" then
+		if not Slots.isValidStorageSlot(state, fromRef.Slot) then
+			return { success = false, reason = "INVALID_STORAGE_SLOT" }
+		end
+	end
+
+	local fromUUID = Slots.getUUIDFromSlot(state, fromRef.Type, fromRef.Slot)
+	local toUUID = Slots.getUUIDFromSlot(state, toRef.Type, toRef.Slot)
+
+	if not fromUUID then
+		return { success = false, reason = "SOURCE_EMPTY" }
+	end
+
+	if fromUUID == toUUID then
+		return { success = true }
+	end
+
+	if toUUID and state.Settings.StackOnSwap and state.Settings.CanStack then
+		local fromItem = state.Items[fromUUID]
+		local toItem = state.Items[toUUID]
+
+		if fromItem and toItem and Stack.canStack(state, toItem, fromItem.Id, fromItem.Metadata) then
+			local room = state.Settings.MaxStackSize - toItem.Amount
+			local transfer = math.min(fromItem.Amount, room)
+
+			toItem.Amount += transfer
+			fromItem.Amount -= transfer
+
+			if fromItem.Amount <= 0 then
+				local loc = Slots.getLocation(state, fromUUID)
+				state.Items[fromUUID] = nil
+				state.LocationByUUID[fromUUID] = nil
+				removeFromIndex(state, fromItem.Id, fromUUID)
+
+				if loc and loc.Type == "Hotbar" then
+					Slots.clearHotbarSlot(state, loc.Slot)
+					Slots.compactHotbar(state)
+				elseif loc and loc.Type == "Storage" then
+					Slots.removeStorageAt(state, loc.Slot)
+				end
+
+				if state.EquippedItemUUID == fromUUID then
+					state.EquippedItemUUID = nil
+				end
+			end
+
+			return { success = true }
+		end
+	end
+
+	local hotbarCompacted = Slots.swapSlots(state, fromRef, toRef)
+
+	if toRef.Type == "Storage" and not toUUID then
+		local fromItem = state.Items[fromUUID]
+		if fromItem then
+			if fromRef.Type == "Hotbar" then
+				Slots.clearHotbarSlot(state, fromRef.Slot)
+				hotbarCompacted = Slots.compactHotbar(state)
+			end
+		end
+	end
+
+	if fromRef.Type == "Storage" and not toUUID then
+		local fromItem = state.Items[fromUUID]
+		if fromItem then
+			Slots.removeStorageAt(state, fromRef.Slot)
+			Slots.appendStorage(state, fromUUID)
+		end
+	end
+
+	return { success = true, hotbarCompacted = hotbarCompacted }
+end
+
+function Operations.move(
+	state: Types.InventoryState,
+	fromRef: Types.SlotRef,
+	toRef: Types.SlotRef
+): Types.MoveResult
+	if not state.Settings.BackpackEnabled then
+		if fromRef.Type == "Storage" or toRef.Type == "Storage" then
+			return { success = false, reason = "BACKPACK_DISABLED" }
+		end
+	end
+
+	if fromRef.Type == "Hotbar" then
+		if not Slots.isValidHotbarSlot(state, fromRef.Slot) then
+			return { success = false, reason = "INVALID_HOTBAR_SLOT" }
+		end
+	end
+
+	if toRef.Type == "Hotbar" then
+		if not Slots.isValidHotbarSlot(state, toRef.Slot) then
+			return { success = false, reason = "INVALID_HOTBAR_SLOT" }
+		end
+	end
+
+	if fromRef.Type == "Storage" then
+		if not Slots.isValidStorageSlot(state, fromRef.Slot) then
+			return { success = false, reason = "INVALID_STORAGE_SLOT" }
+		end
+	end
+
+	local fromUUID = Slots.getUUIDFromSlot(state, fromRef.Type, fromRef.Slot)
+	if not fromUUID then
+		return { success = false, reason = "SOURCE_EMPTY" }
+	end
+
+	local toUUID = Slots.getUUIDFromSlot(state, toRef.Type, toRef.Slot)
+
+	if fromRef.Type == "Storage" and toRef.Type == "Storage" then
+		Slots.moveWithinStorage(state, fromRef.Slot, toRef.Slot)
+		return { success = true }
+	end
+
+	if toUUID then
+		return { success = false, reason = "DESTINATION_OCCUPIED" }
+	end
+
+	if fromRef.Type == "Hotbar" and toRef.Type == "Hotbar" then
+		state.Hotbar[fromRef.Slot] = nil
+		state.Hotbar[toRef.Slot] = fromUUID
+		state.LocationByUUID[fromUUID] = { Type = "Hotbar", Slot = toRef.Slot }
+		return { success = true }
+	end
+
+	if fromRef.Type == "Hotbar" and toRef.Type == "Storage" then
+		state.Hotbar[fromRef.Slot] = nil
+		local insertedSlot = Slots.appendStorage(state, fromUUID)
+		local hotbarCompacted = Slots.compactHotbar(state)
+		return { success = true, hotbarCompacted = hotbarCompacted }
+	end
+
+	if fromRef.Type == "Storage" and toRef.Type == "Hotbar" then
+		Slots.removeStorageAt(state, fromRef.Slot)
+		Slots.setHotbarSlot(state, toRef.Slot, fromUUID)
+		return { success = true }
+	end
+
+	return { success = false, reason = "INVALID_OPERATION" }
+end
+
+function Operations.split(
+	state: Types.InventoryState,
+	uuid: string,
+	amount: number,
+	destination: Types.SlotRef?
+): Types.SplitResult
+	local item = state.Items[uuid]
+
+	if not item then
+		return { success = false, reason = "ITEM_NOT_FOUND" }
+	end
+
+	if not Utils.isPositiveNumber(amount) then
+		return { success = false, reason = "INVALID_AMOUNT" }
+	end
+
+	if amount >= item.Amount then
+		return { success = false, reason = "CANNOT_SPLIT_FULL" }
+	end
+
+	-- Cap split amount at MaxStackSize. Excess stays in source.
+	local splitAmount = math.min(amount, state.Settings.MaxStackSize)
+
+	item.Amount -= splitAmount
+	State.removeWeight(state, splitAmount)
+
+	local newItem: Types.Item = {
+		UUID = Utils.generateUUID(),
+		Id = item.Id,
+		Amount = splitAmount,
+		Metadata = Utils.deepCopy(item.Metadata) :: Types.ItemMetadata,
+	}
+
+	state.Items[newItem.UUID] = newItem
+	addToIndex(state, newItem.Id, newItem.UUID)
+	State.addWeight(state, splitAmount)
+
+	local newSlotType: Types.SlotType? = nil
+	local newSlot: number? = nil
+	local hotbarCompacted = false
+
+	if destination then
+		if destination.Type == "Hotbar" then
+			if not Slots.isValidHotbarSlot(state, destination.Slot) then
+				state.Items[newItem.UUID] = nil
+				removeFromIndex(state, newItem.Id, newItem.UUID)
+				State.removeWeight(state, splitAmount)
+				item.Amount += splitAmount
+				return { success = false, reason = "INVALID_HOTBAR_SLOT" }
+			end
+
+			if state.Hotbar[destination.Slot] then
+				state.Items[newItem.UUID] = nil
+				removeFromIndex(state, newItem.Id, newItem.UUID)
+				State.removeWeight(state, splitAmount)
+				item.Amount += splitAmount
+				return { success = false, reason = "HOTBAR_SLOT_OCCUPIED" }
+			end
+
+			Slots.setHotbarSlot(state, destination.Slot, newItem.UUID)
+			newSlotType = "Hotbar"
+			newSlot = destination.Slot
+		elseif destination.Type == "Storage" then
+			if not state.Settings.BackpackEnabled then
+				state.Items[newItem.UUID] = nil
+				removeFromIndex(state, newItem.Id, newItem.UUID)
+				State.removeWeight(state, splitAmount)
+				item.Amount += splitAmount
+				return { success = false, reason = "BACKPACK_DISABLED" }
+			end
+
+			if not Slots.isValidStorageSlot(state, destination.Slot) then
+				state.Items[newItem.UUID] = nil
+				removeFromIndex(state, newItem.Id, newItem.UUID)
+				State.removeWeight(state, splitAmount)
+				item.Amount += splitAmount
+				return { success = false, reason = "INVALID_STORAGE_SLOT" }
+			end
+
+			Slots.moveToStorage(state, newItem.UUID, destination.Slot)
+			newSlotType = "Storage"
+			newSlot = destination.Slot
+		end
+	else
+		local slot = Slots.findEmptyHotbarSlot(state)
+		if slot then
+			Slots.setHotbarSlot(state, slot, newItem.UUID)
+			newSlotType = "Hotbar"
+			newSlot = slot
+		elseif state.Settings.BackpackEnabled then
+			Slots.appendStorage(state, newItem.UUID)
+			newSlotType = "Storage"
+			newSlot = #state.Storage
+		else
+			state.Items[newItem.UUID] = nil
+			removeFromIndex(state, newItem.Id, newItem.UUID)
+			State.removeWeight(state, splitAmount)
+			item.Amount += splitAmount
+			return { success = false, reason = "NO_SPACE" }
+		end
+	end
+
+	return {
+		success = true,
+		sourceUUID = uuid,
+		newUUID = newItem.UUID,
+		sourceAmount = item.Amount,
+		newAmount = splitAmount,
+		newSlotType = newSlotType,
+		newSlot = newSlot,
+		hotbarCompacted = hotbarCompacted,
+	}
+end
+
+function Operations.updateMetadata(
+	state: Types.InventoryState,
+	uuid: string,
+	updates: { [string]: any }
+): Types.MetadataUpdateResult
+	local item = state.Items[uuid]
+
+	if not item then
+		return { success = false, reason = "ITEM_NOT_FOUND" }
+	end
+
+	local updatedFields: { string } = {}
+
+	for key, value in updates do
+		if value == nil then
+			item.Metadata[key] = nil
+		else
+			item.Metadata[key] = value
+		end
+		table.insert(updatedFields, key)
+	end
+
+	return {
+		success = true,
+		updatedFields = updatedFields,
+	}
+end
+
+function Operations.sort(
+	state: Types.InventoryState
+): Types.SortResult
+	local sortOrder = state.Settings.SortOrder
+
+	if sortOrder == "None" then
+		return { success = true }
+	end
+
+	local hotbarChanged = Slots.sortHotbar(state, sortOrder)
+	local storageChanged = Slots.sortStorage(state, sortOrder)
+
+	return {
+		success = true,
+		hotbarOrder = if hotbarChanged then state.Hotbar :: { string } else nil,
+		storageOrder = if storageChanged then state.Storage else nil,
+	}
+end
+
+function Operations.removeBySlot(
+	state: Types.InventoryState,
+	slotType: Types.SlotType,
+	slot: number,
+	amount: number?
+): Types.RemoveResult
+	local uuid = Slots.getUUIDFromSlot(state, slotType, slot)
+
+	if not uuid then
+		return {
+			success = false,
+			reason = "SLOT_EMPTY",
+		}
+	end
+
+	return Operations.remove(state, uuid, amount)
 end
 
 -----------------------------

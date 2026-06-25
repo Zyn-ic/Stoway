@@ -8,7 +8,7 @@
 -----------------------------
 
 local Types = require("../CoreStore/Types")
-local Utils = require("../CoreStore/Utils")
+-- local Utils = require("../CoreStore/Utils")
 
 local State = {}
 
@@ -24,6 +24,7 @@ local DEFAULT_SETTINGS: Types.Settings = {
 	Sorting = false,
 	SortOrder = "None",
 
+	StackOnSwap = false,
 	StackRequiredFields = { "Rarity", "Type" },
 	StackBlacklist = {
 		Legendary = true,
@@ -41,10 +42,10 @@ local DEFAULT_SETTINGS: Types.Settings = {
 -----------------------------
 
 local function mergeSettings(overrides: Types.SettingsOverrides?): Types.Settings
-	local settings = Utils.deepCopy(DEFAULT_SETTINGS) :: Types.Settings
+	local settings = table.clone(DEFAULT_SETTINGS) :: Types.Settings
 
 	if overrides then
-		for key, value in pairs(overrides :: any) do
+		for key, value in overrides :: any do
 			(settings :: any)[key] = value
 		end
 	end
@@ -73,7 +74,7 @@ function State.new(settingsOverrides: Types.SettingsOverrides?): Types.Inventory
 end
 
 function State.getDefaultSettings(): Types.Settings
-	return Utils.deepCopy(DEFAULT_SETTINGS) :: Types.Settings
+	return table.clone(DEFAULT_SETTINGS) :: Types.Settings
 end
 
 function State.getCurrentWeight(state: Types.InventoryState): number
@@ -106,6 +107,24 @@ end
 
 function State.removeWeight(state: Types.InventoryState, amount: number)
 	state.Weight = math.max(0, state.Weight - amount)
+end
+
+function State.isEquipped(state: Types.InventoryState, uuid: string): boolean
+	return state.EquippedItemUUID == uuid
+end
+
+function State.isFull(state: Types.InventoryState): boolean
+	return State.getRemainingCapacity(state) == 0
+end
+
+function State.hasHotbarSpace(state: Types.InventoryState): boolean
+	for slot = 1, state.Settings.MaxHotbarSlots do
+		if not state.Hotbar[slot] then
+			return true
+		end
+	end
+
+	return false
 end
 
 -----------------------------

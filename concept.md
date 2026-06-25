@@ -599,15 +599,39 @@ Default behavior:
 ```txt
 1. Normalize item data
 2. Check capacity
-3. Try stacking
-4. Try hotbar
-5. Try storage/backpack
-6. Return result
+3. Try stacking (reduces amountLeft)
+4. Split remaining into multiple stacks (each capped at MaxStackSize)
+5. Place stacks via placement chain (Auto -> Hotbar -> Storage)
+6. If no space for next stack: overflow = remaining amount
+7. Return result
 ```
 
-This keeps the original hotbar-first idea from Stoway.
+### Overflow Handling
 
-Explicit add behavior should also exist:
+If the total amount exceeds what can fit (capacity or slot availability):
+
+```txt
+Add Apple x12, MaxStackSize = 5, Capacity = 10
+
+Stack 1: Apple x5 -> placed
+Stack 2: Apple x5 -> placed
+No room for remainder
+
+addedAmount = 10, overflow = 2
+```
+
+The overflow is returned in the result. The caller decides what to do with it (drop, notify, etc).
+
+### Placement Modes
+
+```txt
+Auto      -> Hotbar first, then Storage
+Backpack  -> Storage only
+Hotbar    -> Hotbar only (optional slot)
+Slot      -> Specific SlotRef (future)
+```
+
+### Explicit Add
 
 ```lua
 CoreStore.addToBackpack(state, itemData)
@@ -658,6 +682,199 @@ if result.success then
 	WorldDropAdapter.drop(player, result.removedItem)
 end
 ```
+
+***
+
+## Swap Behavior
+
+Swap exchanges the positions of two items in the inventory.
+
+CoreStore supports four swap combinations:
+
+```txt
+Hotbar <-> Hotbar
+Storage <-> Storage
+Hotbar <-> Storage
+Storage <-> Hotbar
+```
+
+### StackOnSwap
+
+A system-level setting `StackOnSwap` controls whether swap can trigger stacking.
+
+```txt
+StackOnSwap = false (default):
+  Swap is purely positional.
+  Items exchange slots regardless of whether they could stack.
+
+StackOnSwap = true AND CanStack = true:
+  Before swapping, CoreStore checks if the items can stack.
+  If they can, the source is absorbed into the destination stack.
+  If not, positional swap occurs as normal.
+
+StackOnSwap = true AND CanStack = false:
+  StackOnSwap is ignored. Swap is purely positional.
+```
+
+### Equipped Item Behavior
+
+EquippedItemUUID follows the UUID, not the slot. Swapping an equipped item from one slot to another does not unequip it.
+
+### Backpack Disabled
+
+If `BackpackEnabled = false`, any swap involving Storage is rejected.
+
+Full swap specification: `docs/SwapRules.md`
+
+***
+
+## Move Behavior
+
+Move transfers an item from one slot to another. Move is purely positional. Move never triggers stacking.
+
+```txt
+Move = swap where destination is empty
+Move = purely positional, no stacking
+```
+
+### Hotbar -> Hotbar
+
+Move item from one hotbar slot to another empty hotbar slot.
+
+### Hotbar -> Storage
+
+Move item from hotbar to storage. Appends to Storage array.
+
+### Storage -> Hotbar
+
+Move item from storage to an empty hotbar slot. Storage shifts left.
+
+### Storage -> Storage
+
+Reorder within storage by removing from one index and inserting at another.
+
+### Why Move Does Not Stack
+
+Stacking during slot operations only happens via add (always) or swap with `StackOnSwap = true`. Move is purely positional.
+
+Example:
+```
+Apple x3 in Storage, Apple x2 in Hotbar[1], Hotbar[2] is empty
+
+Move Storage -> Hotbar[2]:
+  Apple x3 moves to Hotbar[2]
+  Hotbar[1] still has Apple x2
+  Two separate stacks, no merging
+
+Swap Storage -> Hotbar[1] (with StackOnSwap = true):
+  Apple x3 absorbs into Apple x2
+  Stacked
+```
+
+Full move specification: `docs/MoveRules.md`
+
+***
+
+## Split Behavior
+
+Split divides an existing stack into two stacks.
+
+```txt
+1. Reduce source stack by split amount
+2. Create new stack with split amount
+3. New stack gets new UUID, same Id, deep-copied Metadata
+4. Place new stack following placement chain (Auto -> Hotbar -> Storage)
+5. If destination specified, place there instead
+```
+
+### Rules
+
+```txt
+Split amount must be >= 1
+Split amount must be < source stack amount
+Source keeps its UUID (important if equipped)
+New stack follows standard placement chain
+```
+
+### Stacking Interaction
+
+Before creating a new stack, split attempts to stack the split amount into existing stacks at the destination. If stacking absorbs the full amount, no new stack is created.
+
+Full split specification: `docs/SplitRules.md`
+
+***
+
+## Metadata Update Behavior
+
+All metadata is mutable in CoreStore. This allows external systems (shops, luck systems, admin commands) to modify items after creation.
+
+```lua
+CoreStore.updateMetadata(state, uuid, {
+    Rarity = "Legendary",
+    Damage = 50,
+    Description = "The sword of a thousand truths",
+})
+```
+
+### Stacking Impact
+
+Metadata changes do not automatically re-stack or un-stack items. If a metadata change makes an item no longer stackable with its siblings, the stack remains as-is until a future operation separates it.
+
+```txt
+Example:
+  Item has Rarity = "Common", stacked with other Commons
+  Update Rarity to "Legendary" (blacklisted)
+  Stack remains. Next add operation will not merge into this stack.
+```
+
+This avoids cascading side effects. Callers should explicitly split if they want separation.
+
+### Use Cases
+
+```txt
+Luck-based systems: Rare drop gets buffed stats
+Admin commands: Change item properties
+Quest systems: Upgrade item metadata on completion
+Shop systems: Apply modifiers on purchase
+```
+
+Full metadata update specification: `docs/MetadataUpdateRules.md`
+
+***
+
+## Sorting Behavior
+
+Sorting is automatic when `Settings.Sorting = true`. Any operation that modifies slot contents triggers a sort after completion.
+
+### Triggered By
+
+```txt
+add, addToBackpack, addToHotbar, remove, swap, move, split
+```
+
+### Scope
+
+```txt
+Hotbar: Only sorted if HotbarType = "Dynamic"
+Storage: Always sorted when enabled
+```
+
+### Sort Criteria
+
+Determined by `Settings.SortOrder`:
+
+```txt
+Name     -> Sort by item.Id alphabetically
+Rarity   -> Sort by Metadata.Rarity (Common < Uncommon < ... < Legendary)
+ItemType -> Sort by Metadata.Type alphabetically
+None     -> No sorting
+```
+
+### Sort Stability
+
+When two items have the same sort key, their relative order is preserved (stable sort).
+
+Full sorting specification: `docs/SortingRules.md`
 
 ***
 
@@ -771,21 +988,24 @@ This branch should focus on these features first:
 1. State.new
 2. CoreStore.add
 3. CoreStore.addToBackpack
-4. CoreStore.remove
-5. CoreStore.getItem
-6. CoreStore.find
-7. CoreStore.filter
+4. CoreStore.addToHotbar
+5. CoreStore.remove
+6. CoreStore.getItem
+7. CoreStore.find
+8. CoreStore.filter
+9. CoreStore.getAllItems
 ```
 
 Then add:
 
 ```txt
-8. swap
-9. move
-10. split
-11. updateMetadata
-12. sort
-13. serialize / deserialize
+10. CoreStore.addToSlot
+11. CoreStore.swap
+12. CoreStore.move
+13. CoreStore.split
+14. CoreStore.updateMetadata
+15. CoreStore.sort
+16. CoreStore.serialize / deserialize
 ```
 
 ***

@@ -1,0 +1,62 @@
+{
+  "Hotbar": [
+    "core-201984.9025776-1-620423",
+    "core-201984.902606-2-707570"
+  ],
+  "Items": {
+    "core-201984.9025776-1-620423": {
+      "Amount": 5,
+      "Id": "apple",
+      "Metadata": {
+        "Droppable": true
+      },
+      "UUID": "core-201984.9025776-1-620423"
+    },
+    "core-201984.902606-2-707570": {
+      "Amount": 5,
+      "Id": "apple",
+      "Metadata": {
+        "Droppable": true
+      },
+      "UUID": "core-201984.902606-2-707570"
+    }
+  },
+  "ItemsByID": {
+    "apple": [
+      "core-201984.9025776-1-620423",
+      "core-201984.902606-2-707570"
+    ]
+  },
+  "LocationByUUID": {
+    "core-201984.9025776-1-620423": {
+      "Slot": 1,
+      "Type": "Hotbar"
+    },
+    "core-201984.902606-2-707570": {
+      "Slot": 2,
+      "Type": "Hotbar"
+    }
+  },
+  "Settings": {
+    "BackpackEnabled": true,
+    "CanStack": true,
+    "DefaultDroppable": true,
+    "HotbarType": "Static",
+    "Limit": 20,
+    "MaxHotbarSlots": 10,
+    "MaxStackSize": 5,
+    "SortOrder": "None",
+    "Sorting": false,
+    "StackBlacklist": {
+      "Legendary": true,
+      "Mythic": true,
+      "Special": true
+    },
+    "StackRequiredFields": [
+      "Rarity",
+      "Type"
+    ]
+  },
+  "Storage": {},
+  "Weight": 10
+}

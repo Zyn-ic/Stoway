@@ -25,9 +25,9 @@ function Query.getItem(state: Types.InventoryState, uuid: string): Types.Item?
 end
 
 function Query.getAllItems(state: Types.InventoryState): { Types.Item }
-	local items: { Types.Item } = {}
+	local items = table.create(#state.Items)
 
-	for _, item in pairs(state.Items) do
+	for _, item in state.Items do
 		table.insert(items, item)
 	end
 
@@ -35,12 +35,13 @@ function Query.getAllItems(state: Types.InventoryState): { Types.Item }
 end
 
 function Query.findById(state: Types.InventoryState, itemId: string): { Types.Item }
-	local results: { Types.Item } = {}
 	local uuids = state.ItemsByID[itemId]
 
 	if not uuids then
-		return results
+		return {}
 	end
+
+	local results = table.create(#uuids)
 
 	for _, uuid in ipairs(uuids) do
 		local item = state.Items[uuid]
@@ -58,9 +59,9 @@ function Query.find(state: Types.InventoryState, query: string | { Id: string?, 
 		return Query.findById(state, query)
 	end
 
-	local results: { Types.Item } = {}
+	local results = table.create(math.min(#state.Items, 16))
 
-	for _, item in pairs(state.Items) do
+	for _, item in state.Items do
 		local matches = true
 
 		if query.Id and item.Id ~= query.Id then
@@ -68,7 +69,7 @@ function Query.find(state: Types.InventoryState, query: string | { Id: string?, 
 		end
 
 		if matches and query.Metadata then
-			for key, value in pairs(query.Metadata) do
+			for key, value in query.Metadata do
 				if item.Metadata[key] ~= value then
 					matches = false
 					break
@@ -85,9 +86,9 @@ function Query.find(state: Types.InventoryState, query: string | { Id: string?, 
 end
 
 function Query.filter(state: Types.InventoryState, predicate: (Types.Item) -> boolean): { Types.Item }
-	local results: { Types.Item } = {}
+	local results = table.create(math.min(#state.Items, 16))
 
-	for _, item in pairs(state.Items) do
+	for _, item in state.Items do
 		if predicate(item) then
 			table.insert(results, item)
 		end

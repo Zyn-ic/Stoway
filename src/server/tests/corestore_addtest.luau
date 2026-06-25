@@ -60,7 +60,7 @@ local function getFirstUUID(result): string
 	return result.addedItems[1].uuid
 end
 
-local function getAllUUIDs(result): { string }
+local function _getAllUUIDs(result): { string }
 	local uuids = {}
 	if result.addedItems then
 		for _, slot in result.addedItems do
@@ -295,7 +295,7 @@ end)
 
 runTest("[DELIBERATE] Storage not empty after backpack remove", false, function()
 	local state = CoreStore.new({ MaxHotbarSlots = 1, MaxStackSize = 1, CanStack = false, Limit = 10 })
-	local r1 = CoreStore.add(state, { Id = "A", Amount = 1 })
+	local _r1 = CoreStore.add(state, { Id = "A", Amount = 1 })
 	local r2 = CoreStore.addToBackpack(state, { Id = "B", Amount = 1 })
 	local uuid = getFirstUUID(r2)
 	CoreStore.remove(state, uuid)

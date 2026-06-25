@@ -69,7 +69,7 @@ function Metadata.matchesRequiredFields(
 	rightMetadata: Types.ItemMetadata,
 	requiredFields: { string }
 ): boolean
-	for _, field in ipairs(requiredFields) do
+	for _, field in requiredFields do
 		if leftMetadata[field] ~= rightMetadata[field] then
 			return false
 		end

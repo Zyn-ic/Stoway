@@ -1,3 +1,4 @@
+--!native
 --@author: yyumchi
 --@date: 2026-06-24
 --[[@description:
@@ -28,7 +29,9 @@ function Stack.canStack(
 	incomingItemId: string,
 	incomingMetadata: Types.ItemMetadata
 ): boolean
-	if not state.Settings.CanStack then
+	local settings = state.Settings
+
+	if not settings.CanStack then
 		return false
 	end
 
@@ -36,22 +39,22 @@ function Stack.canStack(
 		return false
 	end
 
-	if existingItem.Amount >= state.Settings.MaxStackSize then
+	if existingItem.Amount >= settings.MaxStackSize then
 		return false
 	end
 
-	if Metadata.isBlacklisted(existingItem.Metadata, state.Settings.StackBlacklist) then
+	if Metadata.isBlacklisted(existingItem.Metadata, settings.StackBlacklist) then
 		return false
 	end
 
-	if Metadata.isBlacklisted(incomingMetadata, state.Settings.StackBlacklist) then
+	if Metadata.isBlacklisted(incomingMetadata, settings.StackBlacklist) then
 		return false
 	end
 
 	return Metadata.matchesRequiredFields(
 		existingItem.Metadata,
 		incomingMetadata,
-		state.Settings.StackRequiredFields
+		settings.StackRequiredFields
 	)
 end
 
@@ -59,7 +62,8 @@ function Stack.tryStack(
 	state: Types.InventoryState,
 	itemId: string,
 	amount: number,
-	metadata: Types.ItemMetadata
+	metadata: Types.ItemMetadata,
+	placement: Types.PlacementMode?
 ): (number, { number })
 	local stackedAmount = 0
 	local updates: { number } = {}
@@ -70,15 +74,26 @@ function Stack.tryStack(
 		return stackedAmount, updates
 	end
 
+	local maxStackSize = state.Settings.MaxStackSize
+
 	for _, uuid in ipairs(uuids) do
 		if amount <= 0 then
 			break
 		end
 
+		if placement and placement ~= "Auto" then
+			local loc = state.LocationByUUID[uuid]
+			local matchesPlacement = (placement == "Backpack" and loc and loc.Type == "Storage")
+				or (placement == "Hotbar" and loc and loc.Type == "Hotbar")
+			if not matchesPlacement then
+				continue
+			end
+		end
+
 		local existingItem = state.Items[uuid]
 
 		if existingItem and Stack.canStack(state, existingItem, itemId, metadata) then
-			local room = state.Settings.MaxStackSize - existingItem.Amount
+			local room = maxStackSize - existingItem.Amount
 			local toStack = math.min(room, amount)
 
 			if toStack > 0 then
