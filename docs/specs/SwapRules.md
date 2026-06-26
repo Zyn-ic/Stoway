@@ -57,6 +57,8 @@ Before any swap executes, these checks run:
 
 Both slots are in the hotbar. Simple exchange.
 
+**Static mode:** Both slots are valid. Holes are allowed.
+
 ```
 fromUUID = Hotbar[fromSlot]
 toUUID = Hotbar[toSlot]
@@ -67,7 +69,12 @@ Hotbar[toSlot] = fromUUID
 Update LocationByUUID for both UUIDs
 ```
 
-No compaction needed (Static mode preserves holes).
+**Dynamic mode:** Only occupied slots are valid. The destination must contain an item (reorder). If the destination is nil (empty), the operation is rejected with `DESTINATION_UNAVAILABLE`. Dynamic hotbar is always packed — no holes exist, so swapping with an empty slot is meaningless.
+
+```
+if HotbarType == "Dynamic" and toUUID == nil:
+    return { success = false, reason = "DESTINATION_UNAVAILABLE" }
+```
 
 ### Storage <-> Storage
 

@@ -199,6 +199,10 @@ function CoreStore.hasHotbarSpace(state: Types.InventoryState): boolean
 	return State.hasHotbarSpace(state)
 end
 
+function CoreStore.compact(state: Types.InventoryState): boolean
+	return Slots.compactHotbar(state)
+end
+
 -----------------------------
 --MAIN--
 -----------------------------

@@ -48,6 +48,82 @@ local function removeFromIndex(state: Types.InventoryState, itemId: string, uuid
 	end
 end
 
+local INDEXED_METADATA_FIELDS: { string } = { "Rarity", "Type" }
+
+local function addToMetadataIndex(state: Types.InventoryState, uuid: string, metadata: Types.ItemMetadata)
+	for _, field in INDEXED_METADATA_FIELDS do
+		local value = metadata[field]
+
+		if value ~= nil then
+			local strValue = tostring(value)
+
+			if not state.MetadataIndex[field] then
+				state.MetadataIndex[field] = {}
+			end
+			if not state.MetadataIndex[field][strValue] then
+				state.MetadataIndex[field][strValue] = {}
+			end
+
+			table.insert(state.MetadataIndex[field][strValue], uuid)
+		end
+	end
+end
+
+local function removeFromMetadataIndex(state: Types.InventoryState, uuid: string, metadata: Types.ItemMetadata)
+	for _, field in INDEXED_METADATA_FIELDS do
+		local value = metadata[field]
+
+		if value ~= nil then
+			local strValue = tostring(value)
+			local bucket = state.MetadataIndex[field] and state.MetadataIndex[field][strValue]
+
+			if bucket then
+				local index = table.find(bucket, uuid)
+				if index then
+					table.remove(bucket, index)
+				end
+				if #bucket == 0 then
+					state.MetadataIndex[field][strValue] = nil
+				end
+			end
+		end
+	end
+end
+
+local function updateMetadataIndex(state: Types.InventoryState, uuid: string, oldMetadata: Types.ItemMetadata, newMetadata: Types.ItemMetadata)
+	for _, field in INDEXED_METADATA_FIELDS do
+		local oldValue = oldMetadata[field]
+		local newValue = newMetadata[field]
+
+		if oldValue ~= newValue then
+			if oldValue ~= nil then
+				local strValue = tostring(oldValue)
+				local bucket = state.MetadataIndex[field] and state.MetadataIndex[field][strValue]
+				if bucket then
+					local index = table.find(bucket, uuid)
+					if index then
+						table.remove(bucket, index)
+					end
+					if #bucket == 0 then
+						state.MetadataIndex[field][strValue] = nil
+					end
+				end
+			end
+
+			if newValue ~= nil then
+				local strValue = tostring(newValue)
+				if not state.MetadataIndex[field] then
+					state.MetadataIndex[field] = {}
+				end
+				if not state.MetadataIndex[field][strValue] then
+					state.MetadataIndex[field][strValue] = {}
+				end
+				table.insert(state.MetadataIndex[field][strValue], uuid)
+			end
+		end
+	end
+end
+
 local function createItem(
 	state: Types.InventoryState,
 	itemId: string,
@@ -66,6 +142,7 @@ local function createItem(
 
 	state.Items[uuid] = item
 	addToIndex(state, itemId, uuid)
+	addToMetadataIndex(state, uuid, item.Metadata)
 	State.addWeight(state, finalAmount)
 
 	return item
@@ -76,6 +153,7 @@ local function destroyUnplacedItem(state: Types.InventoryState, item: Types.Item
 	state.LocationByUUID[item.UUID] = nil
 
 	removeFromIndex(state, item.Id, item.UUID)
+	removeFromMetadataIndex(state, item.UUID, item.Metadata)
 	State.removeWeight(state, item.Amount)
 end
 
@@ -84,7 +162,7 @@ local function placeItemInHotbar(
 	item: Types.Item,
 	preferredSlot: number?
 ): (number?, string?)
-	if preferredSlot then
+	if preferredSlot and state.Settings.HotbarType ~= "Dynamic" then
 		if not Slots.isValidHotbarSlot(state, preferredSlot) then
 			return nil, "INVALID_HOTBAR_SLOT"
 		end
@@ -347,6 +425,7 @@ function Operations.remove(
 	state.Items[uuid] = nil
 	state.LocationByUUID[uuid] = nil
 	removeFromIndex(state, item.Id, uuid)
+	removeFromMetadataIndex(state, uuid, item.Metadata)
 
 	if state.EquippedItemUUID == uuid then
 		state.EquippedItemUUID = nil
@@ -444,6 +523,12 @@ function Operations.swap(
 		end
 	end
 
+	if fromRef.Type == "Hotbar" and toRef.Type == "Hotbar" then
+		if state.Settings.HotbarType == "Dynamic" and not toUUID then
+			return { success = false, reason = "DESTINATION_UNAVAILABLE" }
+		end
+	end
+
 	local hotbarCompacted = Slots.swapSlots(state, fromRef, toRef)
 
 	if toRef.Type == "Storage" and not toUUID then
@@ -513,6 +598,9 @@ function Operations.move(
 	end
 
 	if fromRef.Type == "Hotbar" and toRef.Type == "Hotbar" then
+		if state.Settings.HotbarType == "Dynamic" then
+			return { success = false, reason = "DESTINATION_UNAVAILABLE" }
+		end
 		state.Hotbar[fromRef.Slot] = nil
 		state.Hotbar[toRef.Slot] = fromUUID
 		state.LocationByUUID[fromUUID] = { Type = "Hotbar", Slot = toRef.Slot }
@@ -521,12 +609,18 @@ function Operations.move(
 
 	if fromRef.Type == "Hotbar" and toRef.Type == "Storage" then
 		state.Hotbar[fromRef.Slot] = nil
-		local insertedSlot = Slots.appendStorage(state, fromUUID)
-		local hotbarCompacted = Slots.compactHotbar(state)
+		--[[local insertedSlot =]] Slots.appendStorage(state, fromUUID)
+		local hotbarCompacted =    Slots.compactHotbar(state)
 		return { success = true, hotbarCompacted = hotbarCompacted }
 	end
 
 	if fromRef.Type == "Storage" and toRef.Type == "Hotbar" then
+		if state.Settings.HotbarType == "Dynamic" then
+			local appendSlot = Slots.findEmptyHotbarSlot(state)
+			if toRef.Slot ~= appendSlot then
+				return { success = false, reason = "DESTINATION_UNAVAILABLE" }
+			end
+		end
 		Slots.removeStorageAt(state, fromRef.Slot)
 		Slots.setHotbarSlot(state, toRef.Slot, fromUUID)
 		return { success = true }
@@ -592,6 +686,17 @@ function Operations.split(
 				State.removeWeight(state, splitAmount)
 				item.Amount += splitAmount
 				return { success = false, reason = "HOTBAR_SLOT_OCCUPIED" }
+			end
+
+			if state.Settings.HotbarType == "Dynamic" then
+				local appendSlot = Slots.findEmptyHotbarSlot(state)
+				if destination.Slot ~= appendSlot then
+					state.Items[newItem.UUID] = nil
+					removeFromIndex(state, newItem.Id, newItem.UUID)
+					State.removeWeight(state, splitAmount)
+					item.Amount += splitAmount
+					return { success = false, reason = "DESTINATION_UNAVAILABLE" }
+				end
 			end
 
 			Slots.setHotbarSlot(state, destination.Slot, newItem.UUID)
@@ -660,6 +765,7 @@ function Operations.updateMetadata(
 		return { success = false, reason = "ITEM_NOT_FOUND" }
 	end
 
+	local oldMetadata = table.clone(item.Metadata) :: Types.ItemMetadata
 	local updatedFields: { string } = {}
 
 	for key, value in updates do
@@ -670,6 +776,8 @@ function Operations.updateMetadata(
 		end
 		table.insert(updatedFields, key)
 	end
+
+	updateMetadataIndex(state, uuid, oldMetadata, item.Metadata)
 
 	return {
 		success = true,

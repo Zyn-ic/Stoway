@@ -90,6 +90,10 @@ export type InventoryState = {
 	-- O(1): UUID -> where this item currently lives
 	LocationByUUID: { [string]: SlotRef },
 
+	-- O(1): MetadataIndex[fieldName][fieldValue] -> array of UUIDs
+	-- Indexed fields: Rarity, Type
+	MetadataIndex: { [string]: { [string]: { string } } },
+
     EquippedItemUUID: string?,
     Weight: number,
 

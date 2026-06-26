@@ -66,6 +66,8 @@ function State.new(settingsOverrides: Types.SettingsOverrides?): Types.Inventory
 
 		LocationByUUID = {},
 
+		MetadataIndex = {},
+
 		EquippedItemUUID = nil,
 		Weight = 0,
 
@@ -102,7 +104,7 @@ function State.canAddAmount(state: Types.InventoryState, amount: number): boolea
 end
 
 function State.addWeight(state: Types.InventoryState, amount: number)
-	state.Weight += amount
+    state.Weight += amount
 end
 
 function State.removeWeight(state: Types.InventoryState, amount: number)

@@ -291,7 +291,7 @@ function Slots.sortStorage(state: Types.InventoryState, sortOrder: Types.SortOrd
 	if sortOrder == "Rarity" then
 		table.sort(items, function(a, b)
 			if a.rarityRank ~= b.rarityRank then
-				return a.rarityRank < b.rarityRank
+				return a.rarityRank > b.rarityRank
 			end
 			return a.key < b.key
 		end)
@@ -356,7 +356,7 @@ function Slots.sortHotbar(state: Types.InventoryState, sortOrder: Types.SortOrde
 	if sortOrder == "Rarity" then
 		table.sort(items, function(a, b)
 			if a.rarityRank ~= b.rarityRank then
-				return a.rarityRank < b.rarityRank
+				return a.rarityRank > b.rarityRank
 			end
 			return a.key < b.key
 		end)

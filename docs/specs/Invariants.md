@@ -99,11 +99,12 @@ forall i in [1, #Storage]:
 
 ### INV-10: Hotbar Static Holes
 
-In Static mode, Hotbar may contain nil values. In Dynamic mode, Hotbar has no nil holes after compaction.
+In Static mode, Hotbar may contain nil values. In Dynamic mode, Hotbar has no nil holes after compaction. The only available slot in Dynamic mode is the append position.
 
 ```
 HotbarType == "Dynamic" implies:
     forall i in [1, writeIndex-1]: Hotbar[i] ~= nil
+    findEmptyHotbarSlot(state) == writeIndex  (the append position)
 ```
 
 ---

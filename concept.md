@@ -627,9 +627,37 @@ The overflow is returned in the result. The caller decides what to do with it (d
 ```txt
 Auto      -> Hotbar first, then Storage
 Backpack  -> Storage only
-Hotbar    -> Hotbar only (optional slot)
+Hotbar    -> Hotbar only (optional slot, ignored in Dynamic mode)
 Slot      -> Specific SlotRef (future)
 ```
+
+### Dynamic Hotbar Rules
+
+In Dynamic mode, the hotbar is a packed array — always `[item1, item2, ..., itemN, nil, nil, ...]`. No holes exist. The only available slot is the append position (`findEmptyHotbarSlot`).
+
+```txt
+Static Hotbar:
+  [A, nil, C, nil, nil]  -- holes allowed, any empty slot is available
+  add fills first nil     -- slot 2 gets the new item
+
+Dynamic Hotbar:
+  [A, B, C, nil, nil]    -- packed left, no holes
+  add always appends      -- slot 4 gets the new item
+  preferred slot ignored  -- always appends regardless of Slot parameter
+```
+
+Operations that target a non-append slot in Dynamic mode are rejected:
+
+| Operation | Rejection |
+|-----------|-----------|
+| swap Hotbar→Hotbar, dest empty | DESTINATION_UNAVAILABLE |
+| move Hotbar→Hotbar | DESTINATION_UNAVAILABLE |
+| move Storage→Hotbar, dest != append | DESTINATION_UNAVAILABLE |
+| split to Hotbar, dest != append | DESTINATION_UNAVAILABLE |
+
+Occupied-slot swaps (reorder) within the packed portion are always allowed.
+
+When changing HotbarType from Static to Dynamic at runtime, call `CoreStore.compact(state)` to pack the hotbar.
 
 ### Explicit Add
 
@@ -724,7 +752,11 @@ EquippedItemUUID follows the UUID, not the slot. Swapping an equipped item from 
 
 If `BackpackEnabled = false`, any swap involving Storage is rejected.
 
-Full swap specification: `docs/SwapRules.md`
+### Dynamic Hotbar Constraint
+
+In Dynamic mode, Hotbar→Hotbar swap with an empty destination is rejected (`DESTINATION_UNAVAILABLE`). Dynamic hotbar is always packed — there are no empty slots within the packed portion. Only occupied-slot swaps (reorder) are allowed.
+
+Full swap specification: `docs/specs/SwapRules.md`
 
 ***
 
@@ -748,6 +780,8 @@ Move item from hotbar to storage. Appends to Storage array.
 ### Storage -> Hotbar
 
 Move item from storage to an empty hotbar slot. Storage shifts left.
+
+**Dynamic mode:** The destination must be the append position (`findEmptyHotbarSlot`). If `toRef.Slot != appendSlot`, the operation is rejected with `DESTINATION_UNAVAILABLE`.
 
 ### Storage -> Storage
 
@@ -796,11 +830,11 @@ Source keeps its UUID (important if equipped)
 New stack follows standard placement chain
 ```
 
-### Stacking Interaction
+### Dynamic Hotbar Constraint
 
-Before creating a new stack, split attempts to stack the split amount into existing stacks at the destination. If stacking absorbs the full amount, no new stack is created.
+In Dynamic mode, if the destination is a Hotbar slot, it must be the append position (`findEmptyHotbarSlot`). If `destination.Slot != appendSlot`, the operation is rejected with `DESTINATION_UNAVAILABLE`.
 
-Full split specification: `docs/SplitRules.md`
+Full split specification: `docs/specs/SplitRules.md`
 
 ***
 

@@ -26,6 +26,10 @@ export type InventoryState = {
     -- O(1): UUID -> where this item currently lives
     LocationByUUID: { [string]: SlotRef },
 
+    -- O(1): MetadataIndex[fieldName][fieldValue] -> array of UUIDs
+    -- Indexed fields: Rarity, Type
+    MetadataIndex: { [string]: { [string]: { string } } },
+
     EquippedItemUUID: string?,
     Weight: number,
 
@@ -42,6 +46,7 @@ export type InventoryState = {
 | Hotbar | `{ string? }` | Indexed from 1 to MaxHotbarSlots. Values are UUIDs or nil. Static mode preserves holes. Dynamic mode is packed. |
 | Storage | `{ string }` | Contiguous array of UUIDs. No nil holes. Indices shift on remove. |
 | LocationByUUID | `{ [string]: SlotRef }` | Every key is a UUID that exists in Items. Value matches actual placement. |
+| MetadataIndex | `{ [string]: { [string]: { string } } }` | Two-level index. First key is field name (e.g. "Rarity"). Second key is stringified field value (e.g. "Legendary"). Value is array of UUIDs with that metadata. Indexed fields: Rarity, Type. Updated on create, destroy, and metadata change. |
 | EquippedItemUUID | `string?` | UUID of equipped item or nil. Must reference an existing item or be nil. |
 | Weight | `number` | Sum of Amount across all items in Items. Always >= 0. |
 
@@ -285,24 +290,26 @@ This ensures `addToBackpack` does not accidentally stack onto hotbar items.
 
 ### findById(state, itemId)
 
-- **Complexity:** O(n) where n = number of stacks with this ItemId
+- **Complexity:** O(k) where k = number of stacks with this ItemId
 - **Returns:** Array of Items
 - **Behavior:** Reads ItemsByID[itemId], then looks up each UUID in Items
 
 ### find(state, query)
 
-- **String query:** Delegates to findById. O(n).
-- **Table query:** Scans all Items. O(total items).
+- **String query:** Delegates to findById. O(k).
+- **Table query with single indexed metadata field:** Uses MetadataIndex for O(k) lookup where k = items matching that field value.
+- **Table query with multiple indexed metadata fields:** Picks the smallest MetadataIndex bucket, then filters remaining fields. O(k) where k = smallest bucket size.
+- **Table query with no indexed metadata fields:** Falls back to full Items scan. O(n).
 - **Returns:** Array of Items matching all query fields
 
 ### filter(state, predicate)
 
-- **Complexity:** O(total items)
+- **Complexity:** O(n) where n = total items
 - **Returns:** Array of Items where predicate returns true
 
 ### getAllItems(state)
 
-- **Complexity:** O(total items)
+- **Complexity:** O(n) where n = total items
 - **Returns:** Array of all Items
 
 ---
@@ -321,10 +328,26 @@ This ensures `addToBackpack` does not accidentally stack onto hotbar items.
 ### Hotbar (Dynamic Mode)
 
 - Same fixed size
-- No nil holes allowed
+- No nil holes allowed — always packed left
+- The only available slot is the append position (first nil after the packed portion)
+- Operations that target a non-append slot are rejected with `DESTINATION_UNAVAILABLE`
 - `compactHotbar(state)` - shifts all items left to fill holes
   - Updates LocationByUUID for each shifted item
   - Only runs if HotbarType = "Dynamic"
+
+### Dynamic Hotbar Slot Availability
+
+In Dynamic mode, the hotbar is always `[item1, item2, ..., itemN, nil, nil, ...]`. The only "available" slot is `findEmptyHotbarSlot(state)` — the first nil after the packed portion.
+
+| Operation | Dynamic Mode Behavior |
+|-----------|----------------------|
+| `add` (no preferred slot) | Appends to end via `findEmptyHotbarSlot` |
+| `add` (preferred slot) | Preferred slot is ignored; always appends to end |
+| `swap` Hotbar→Hotbar, dest occupied | Allowed (reorder within packed portion) |
+| `swap` Hotbar→Hotbar, dest empty | Rejected: `DESTINATION_UNAVAILABLE` |
+| `move` Hotbar→Hotbar | Rejected: `DESTINATION_UNAVAILABLE` (no empty slots in packed portion) |
+| `move` Storage→Hotbar | Allowed only if `toRef.Slot == findEmptyHotbarSlot()` |
+| `split` to Hotbar | Allowed only if `destination.Slot == findEmptyHotbarSlot()` |
 
 ### Storage
 
@@ -411,14 +434,49 @@ LocationByUUID updated:
 
 | Operation | Target | Notes |
 |-----------|--------|-------|
+| **Queries** | | |
 | getItem | O(1) | Direct hash lookup |
-| findById | O(k) | k = matching stacks |
-| find (table) | O(n) | n = total items |
+| findById | O(k) | k = matching stacks with this ItemId |
+| find (string) | O(k) | Delegates to findById |
+| find (single metadata field) | O(k) | k = items in MetadataIndex bucket; O(1) when indexed field |
+| find (multi metadata field) | O(k) | k = smallest bucket, then filter remaining fields |
+| find (no metadata, table) | O(n) | Full scan when no indexed fields match |
 | filter | O(n) | n = total items |
 | getAllItems | O(n) | n = total items |
-| add (stack only) | O(k) | k = existing stacks of same item |
+| **Mutations** | | |
+| add (stack into existing) | O(k) | k = existing stacks of same item (via ItemsByID) |
 | add (new stack) | O(1) | Amortized |
-| remove (partial) | O(1) | In-place mutation |
-| remove (full) | O(h) | h = hotbar compaction (Dynamic only) |
-| canStack | O(f) | f = number of required fields |
-| Weight check | O(1) | Tracked incrementally |
+| remove (partial) | O(1) | In-place Amount decrement |
+| remove (full, hotbar) | O(h) | h = compactHotbar in Dynamic mode |
+| remove (full, storage) | O(n) | n = Storage shift left via table.remove |
+| removeBySlot | Same as remove | Delegates to remove after slot lookup |
+| **Slot Operations** | | |
+| swap (HH or SS) | O(1) | Direct slot exchange |
+| swap (HS, dest occupied) | O(1) | Direct slot exchange |
+| swap (HS, dest empty) | O(h) | Hotbar compaction in Dynamic mode |
+| swap (SH, dest occupied) | O(1) | Direct slot exchange |
+| swap (SH, dest empty) | O(n) | Storage shift left via table.remove |
+| swap (with StackOnSwap) | O(k) | k = candidate stacks for stacking |
+| move (HH) | O(1) | Direct slot assignment |
+| move (HS) | O(h) | Hotbar compaction in Dynamic mode |
+| move (SH) | O(n) | Storage shift left + set hotbar |
+| move (SS reorder) | O(n) | Storage shift within array |
+| split | O(1) | Creates new item + placement |
+| **Maintenance** | | |
+| compactHotbar | O(h) | h = MaxHotbarSlots; no-op in Static mode |
+| sort (hotbar) | O(h log h) | h = number of hotbar items; no-op in Static mode |
+| sort (storage) | O(s log s) | s = number of storage items |
+| updateMetadata | O(f) | f = number of fields updated; maintains MetadataIndex |
+| canStack | O(f) | f = number of StackRequiredFields |
+| Weight tracking | O(1) | Tracked incrementally via addWeight/removeWeight |
+| MetadataIndex (add/remove) | O(f) | f = number of indexed fields (currently 2: Rarity, Type) |
+| MetadataIndex (update) | O(f) | f = number of indexed fields; remove old + insert new |
+| ItemsByID (add/remove) | O(1) | Amortized array insert/remove |
+
+### Where h, s, n, k, f are defined:
+
+- **h** = MaxHotbarSlots (hotbar size)
+- **s** = #state.Storage (storage item count)
+- **n** = total items across both containers
+- **k** = matching items for a given ItemId or metadata value
+- **f** = number of fields (StackRequiredFields for canStack, indexed fields for MetadataIndex, keys in updates for updateMetadata)

@@ -59,6 +59,86 @@ function Query.find(state: Types.InventoryState, query: string | { Id: string?, 
 		return Query.findById(state, query)
 	end
 
+	if query.Metadata then
+		local metadataFields = {}
+
+		for key, value in query.Metadata do
+			table.insert(metadataFields, { key = key, value = value })
+		end
+
+		if #metadataFields == 1 then
+			local field = metadataFields[1]
+			local strValue = tostring(field.value)
+			local bucket = state.MetadataIndex[field.key] and state.MetadataIndex[field.key][strValue]
+
+			if bucket then
+				local results = table.create(#bucket)
+
+				for _, uuid in bucket do
+					local item = state.Items[uuid]
+					if item then
+						if not query.Id or item.Id == query.Id then
+							table.insert(results, item)
+						end
+					end
+				end
+
+				return results
+			end
+
+			return {}
+		end
+
+		if #metadataFields > 1 then
+			local smallestKey: string? = nil
+			local smallestBucket: { string }? = nil
+			local smallestSize = math.huge
+
+			for _, field in metadataFields do
+				local strValue = tostring(field.value)
+				local bucket = state.MetadataIndex[field.key] and state.MetadataIndex[field.key][strValue]
+
+				if bucket and #bucket < smallestSize then
+					smallestKey = field.key
+					smallestBucket = bucket
+					smallestSize = #bucket
+				end
+			end
+
+			if smallestBucket then
+				local results = table.create(#smallestBucket)
+
+				for _, uuid in smallestBucket do
+					local item = state.Items[uuid]
+					if item then
+						local matches = true
+
+						if query.Id and item.Id ~= query.Id then
+							matches = false
+						end
+
+						if matches then
+							for _, field in metadataFields do
+								if field.key ~= smallestKey and item.Metadata[field.key] ~= field.value then
+									matches = false
+									break
+								end
+							end
+						end
+
+						if matches then
+							table.insert(results, item)
+						end
+					end
+				end
+
+				return results
+			end
+
+			return {}
+		end
+	end
+
 	local results = table.create(math.min(#state.Items, 16))
 
 	for _, item in state.Items do
@@ -66,15 +146,6 @@ function Query.find(state: Types.InventoryState, query: string | { Id: string?, 
 
 		if query.Id and item.Id ~= query.Id then
 			matches = false
-		end
-
-		if matches and query.Metadata then
-			for key, value in query.Metadata do
-				if item.Metadata[key] ~= value then
-					matches = false
-					break
-				end
-			end
 		end
 
 		if matches then

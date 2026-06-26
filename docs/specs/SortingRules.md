@@ -89,19 +89,21 @@ Sort by `item.Id` alphabetically.
 
 ### SortOrder = "Rarity"
 
-Sort by `item.Metadata.Rarity` using a fixed rarity rank:
+Sort by `item.Metadata.Rarity` using a fixed rarity rank. Items are sorted **descending** (highest rarity first):
 
 ```
-Common = 1
-Uncommon = 2
-Rare = 3
-Epic = 4
-Legendary = 5
+Special = 7 (first)
 Mythic = 6
-Special = 7
+Legendary = 5
+Epic = 4
+Rare = 3
+Uncommon = 2
+Common = 1 (last)
 ```
 
-Unknown rarities sort after all known rarities.
+Unknown rarities sort after all known rarities (equivalent to rank 99).
+
+Ties (same rarity) are broken alphabetically by `item.Id`.
 
 ### SortOrder = "ItemType"
 

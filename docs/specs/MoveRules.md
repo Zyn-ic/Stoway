@@ -65,6 +65,8 @@ Stacking during move would create implicit behavior. If you want to stack, the c
 
 Move item from one hotbar slot to another empty hotbar slot.
 
+**Static mode:** Holes are allowed. The destination can be any empty slot.
+
 ```
 fromUUID = Hotbar[fromSlot]
 
@@ -72,6 +74,13 @@ Hotbar[fromSlot] = nil
 Hotbar[toSlot] = fromUUID
 
 Update LocationByUUID for fromUUID
+```
+
+**Dynamic mode:** The hotbar is always packed. There are no empty slots within the packed portion. Any move to an empty slot is rejected with `DESTINATION_UNAVAILABLE` because the destination does not exist in the packed array.
+
+```
+if HotbarType == "Dynamic":
+    return { success = false, reason = "DESTINATION_UNAVAILABLE" }
 ```
 
 ### Hotbar -> Storage (append)
@@ -92,7 +101,26 @@ hotbarCompacted = compactHotbar(state)
 
 Move item from storage to an empty hotbar slot. Storage shifts left.
 
+**Static mode:** The destination can be any empty hotbar slot.
+
 ```
+fromUUID = Storage[fromSlot]
+
+Hotbar[toSlot] = fromUUID
+table.remove(Storage, fromSlot)
+
+Update LocationByUUID for fromUUID
+Update LocationByUUID for all shifted storage items
+```
+
+**Dynamic mode:** The destination must be the append position (the first nil slot after the packed portion). If `toRef.Slot != findEmptyHotbarSlot(state)`, the operation is rejected with `DESTINATION_UNAVAILABLE`.
+
+```
+if HotbarType == "Dynamic":
+    appendSlot = findEmptyHotbarSlot(state)
+    if toRef.Slot != appendSlot:
+        return { success = false, reason = "DESTINATION_UNAVAILABLE" }
+
 fromUUID = Storage[fromSlot]
 
 Hotbar[toSlot] = fromUUID

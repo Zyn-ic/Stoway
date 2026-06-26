@@ -107,6 +107,12 @@ When a destination SlotRef is provided:
 ```
 If destination.Type == "Hotbar":
     Validate slot bounds and emptiness
+
+    If HotbarType == "Dynamic":
+        appendSlot = findEmptyHotbarSlot(state)
+        if destination.Slot != appendSlot:
+            fail with DESTINATION_UNAVAILABLE
+
     Set Hotbar[destination.Slot] = newUUID
 
 If destination.Type == "Storage":

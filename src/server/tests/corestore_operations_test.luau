@@ -463,9 +463,9 @@ runTest("Sort by rarity orders by rarity rank", true, function()
 	for _, uuid in ipairs(state.Storage) do
 		table.insert(rarities, state.Items[uuid].Metadata.Rarity)
 	end
-	assertEqual(rarities[1], "Common", "first should be Common")
+	assertEqual(rarities[1], "Legendary", "first should be Legendary")
 	assertEqual(rarities[2], "Rare", "second should be Rare")
-	assertEqual(rarities[3], "Legendary", "third should be Legendary")
+	assertEqual(rarities[3], "Common", "third should be Common")
 end)
 
 runTest("Sort preserves weight and item count", true, function()
@@ -512,6 +512,196 @@ runTest("Auto-sort triggers after add when Sorting = true", true, function()
 
 	local firstId = state.Items[state.Storage[1]].Id
 	assertEqual(firstId, "Apple", "auto-sort should place Apple first")
+end)
+
+-- ==================== METADATA INDEX TESTS ====================
+
+runTest("MetadataIndex tracks Rarity on add", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1, Metadata = { Rarity = "Legendary" } })
+	CoreStore.addToHotbar(state, { Id = "Shield", Amount = 1, Metadata = { Rarity = "Common" } })
+
+	local rarityIndex = state.MetadataIndex.Rarity
+	assertTrue(rarityIndex ~= nil, "should have Rarity index")
+	assertTrue(rarityIndex.Legendary ~= nil, "should have Legendary bucket")
+	assertEqual(#rarityIndex.Legendary, 1, "should have 1 Legendary item")
+	assertTrue(rarityIndex.Common ~= nil, "should have Common bucket")
+	assertEqual(#rarityIndex.Common, 1, "should have 1 Common item")
+end)
+
+runTest("MetadataIndex tracks Type on add", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1, Metadata = { Type = "Weapon" } })
+	CoreStore.addToHotbar(state, { Id = "Apple", Amount = 1, Metadata = { Type = "Consumable" } })
+
+	local typeIndex = state.MetadataIndex.Type
+	assertTrue(typeIndex ~= nil, "should have Type index")
+	assertTrue(typeIndex.Weapon ~= nil, "should have Weapon bucket")
+	assertEqual(#typeIndex.Weapon, 1, "should have 1 Weapon")
+	assertTrue(typeIndex.Consumable ~= nil, "should have Consumable bucket")
+	assertEqual(#typeIndex.Consumable, 1, "should have 1 Consumable")
+end)
+
+runTest("MetadataIndex removes on full remove", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	local r1 = CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1, Metadata = { Rarity = "Legendary" } })
+	local uuid1 = getFirstUUID(r1)
+
+	local legendary = state.MetadataIndex.Rarity.Legendary
+	assertEqual(#legendary, 1, "should have 1 Legendary before remove")
+
+	CoreStore.remove(state, uuid1)
+
+	assertEqual(#legendary, 0, "Legendary bucket should be empty after remove")
+end)
+
+runTest("MetadataIndex updates on metadata change", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	local r1 = CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1, Metadata = { Rarity = "Common" } })
+	local uuid1 = getFirstUUID(r1)
+
+	local common = state.MetadataIndex.Rarity.Common
+	assertEqual(#common, 1, "should have 1 Common")
+	local legendaryBucket = state.MetadataIndex.Rarity.Legendary
+	local legendaryCount = if legendaryBucket then #legendaryBucket else 0
+	assertEqual(legendaryCount, 0, "should have 0 Legendary")
+
+	CoreStore.updateMetadata(state, uuid1, { Rarity = "Legendary" })
+
+	local newCommon = state.MetadataIndex.Rarity.Common
+	local newCommonCount = if newCommon then #newCommon else 0
+	assertEqual(newCommonCount, 0, "Common bucket should be empty after update")
+
+	local newLegendary = state.MetadataIndex.Rarity.Legendary
+	assertTrue(newLegendary ~= nil, "should have Legendary bucket after update")
+	assertEqual(#newLegendary, 1, "should have 1 Legendary after update")
+end)
+
+runTest("find uses MetadataIndex for single field", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1, Metadata = { Rarity = "Legendary" } })
+	CoreStore.addToHotbar(state, { Id = "Shield", Amount = 1, Metadata = { Rarity = "Common" } })
+	CoreStore.addToHotbar(state, { Id = "Axe", Amount = 1, Metadata = { Rarity = "Legendary" } })
+
+	local results = CoreStore.find(state, { Metadata = { Rarity = "Legendary" } })
+	assertEqual(#results, 2, "should find 2 Legendary items")
+end)
+
+runTest("find uses MetadataIndex for multi-field", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1, Metadata = { Rarity = "Legendary", Type = "Weapon" } })
+	CoreStore.addToHotbar(state, { Id = "Shield", Amount = 1, Metadata = { Rarity = "Legendary", Type = "Armor" } })
+	CoreStore.addToHotbar(state, { Id = "Axe", Amount = 1, Metadata = { Rarity = "Common", Type = "Weapon" } })
+
+	local results = CoreStore.find(state, { Metadata = { Rarity = "Legendary", Type = "Weapon" } })
+	assertEqual(#results, 1, "should find 1 Legendary Weapon")
+	assertEqual(results[1].Id, "Sword", "should be Sword")
+end)
+
+	runTest("find returns empty for missing metadata value", true, function()
+		local state = CoreStore.new({ Limit = 100 })
+		CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1, Metadata = { Rarity = "Common" } })
+
+		local results = CoreStore.find(state, { Metadata = { Rarity = "Legendary" } })
+		assertEqual(#results, 0, "should find 0 Legendary items")
+	end)
+
+-- ==================== DYNAMIC HOTBAR REJECTION ==================
+
+runTest("swap Hotbar->Hotbar empty dest rejected in Dynamic mode", true, function()
+	local state = CoreStore.new({ Limit = 100, HotbarType = "Dynamic" })
+	CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1 })
+	CoreStore.addToHotbar(state, { Id = "Shield", Amount = 1 })
+	CoreStore.addToHotbar(state, { Id = "Potion", Amount = 1 })
+
+	local result = CoreStore.swap(state, { Type = "Hotbar", Slot = 2 }, { Type = "Hotbar", Slot = 5 })
+	assertEqual(result.success, false, "should fail")
+	assertEqual(result.reason, "DESTINATION_UNAVAILABLE", "should be DESTINATION_UNAVAILABLE")
+end)
+
+runTest("swap Hotbar->Hotbar occupied dest works in Dynamic mode", true, function()
+	local state = CoreStore.new({ Limit = 100, HotbarType = "Dynamic" })
+	CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1 })
+	CoreStore.addToHotbar(state, { Id = "Shield", Amount = 1 })
+	CoreStore.addToHotbar(state, { Id = "Potion", Amount = 1 })
+
+	local result = CoreStore.swap(state, { Type = "Hotbar", Slot = 1 }, { Type = "Hotbar", Slot = 3 })
+	assertEqual(result.success, true, "should succeed (reorder)")
+
+	local item1 = CoreStore.getItem(state, state.Hotbar[1])
+	local item3 = CoreStore.getItem(state, state.Hotbar[3])
+	assertEqual(item1.Id, "Potion", "slot 1 should now be Potion")
+	assertEqual(item3.Id, "Sword", "slot 3 should now be Sword")
+end)
+
+runTest("move Hotbar->Hotbar rejected in Dynamic mode", true, function()
+	local state = CoreStore.new({ Limit = 100, HotbarType = "Dynamic" })
+	CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1 })
+	CoreStore.addToHotbar(state, { Id = "Shield", Amount = 1 })
+
+	local result = CoreStore.move(state, { Type = "Hotbar", Slot = 1 }, { Type = "Hotbar", Slot = 5 })
+	assertEqual(result.success, false, "should fail")
+	assertEqual(result.reason, "DESTINATION_UNAVAILABLE", "should be DESTINATION_UNAVAILABLE")
+end)
+
+runTest("move Storage->Hotbar non-append slot rejected in Dynamic mode", true, function()
+	local state = CoreStore.new({ Limit = 100, HotbarType = "Dynamic" })
+	CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1 })
+	CoreStore.addToHotbar(state, { Id = "Shield", Amount = 1 })
+	CoreStore.addToBackpack(state, { Id = "Map", Amount = 1 })
+
+	local result = CoreStore.move(state, { Type = "Storage", Slot = 1 }, { Type = "Hotbar", Slot = 5 })
+	assertEqual(result.success, false, "should fail")
+	assertEqual(result.reason, "DESTINATION_UNAVAILABLE", "should be DESTINATION_UNAVAILABLE")
+end)
+
+runTest("move Storage->Hotbar append slot works in Dynamic mode", true, function()
+	local state = CoreStore.new({ Limit = 100, HotbarType = "Dynamic" })
+	CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1 })
+	CoreStore.addToHotbar(state, { Id = "Shield", Amount = 1 })
+	CoreStore.addToBackpack(state, { Id = "Map", Amount = 1 })
+
+	local result = CoreStore.move(state, { Type = "Storage", Slot = 1 }, { Type = "Hotbar", Slot = 3 })
+	assertEqual(result.success, true, "should succeed (slot 3 is append position)")
+
+	local item = CoreStore.getItem(state, state.Hotbar[3])
+	assertEqual(item.Id, "Map", "slot 3 should now be Map")
+end)
+
+runTest("add ignores preferred slot in Dynamic mode", true, function()
+	local state = CoreStore.new({ Limit = 100, HotbarType = "Dynamic" })
+	CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1 })
+	CoreStore.addToHotbar(state, { Id = "Shield", Amount = 1 })
+
+	CoreStore.addToHotbar(state, { Id = "Potion", Amount = 1 }, 5)
+
+	assertEqual(state.Hotbar[5], nil, "slot 5 should be nil (preferred ignored)")
+	local item = CoreStore.getItem(state, state.Hotbar[3])
+	assertEqual(item.Id, "Potion", "Potion should be at slot 3 (append position)")
+end)
+
+runTest("split to non-append hotbar slot rejected in Dynamic mode", true, function()
+	local state = CoreStore.new({ Limit = 100, HotbarType = "Dynamic", MaxStackSize = 10 })
+	CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1 })
+	CoreStore.addToHotbar(state, { Id = "Arrow", Amount = 10 })
+
+	local arrowUUID = state.Hotbar[2]
+	local result = CoreStore.split(state, arrowUUID, 3, { Type = "Hotbar", Slot = 5 })
+	assertEqual(result.success, false, "should fail")
+	assertEqual(result.reason, "DESTINATION_UNAVAILABLE", "should be DESTINATION_UNAVAILABLE")
+end)
+
+runTest("split to append hotbar slot works in Dynamic mode", true, function()
+	local state = CoreStore.new({ Limit = 100, HotbarType = "Dynamic", MaxStackSize = 10 })
+	CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1 })
+	CoreStore.addToHotbar(state, { Id = "Arrow", Amount = 10 })
+
+	local arrowUUID = state.Hotbar[2]
+	local result = CoreStore.split(state, arrowUUID, 3, { Type = "Hotbar", Slot = 3 })
+	assertEqual(result.success, true, "should succeed (slot 3 is append)")
+
+	local newItem = CoreStore.getItem(state, result.newUUID)
+	assertEqual(newItem.Amount, 3, "new stack should have 3")
 end)
 
 -- ==================== RESULTS ==================

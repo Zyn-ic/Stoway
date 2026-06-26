@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CoreStore Manual Test Tool</title>
+<style>
+:root {
+  --bg-primary: #0f0d0a;
+  --bg-secondary: #1a1612;
+  --bg-tertiary: #252019;
+  --bg-card: #1e1a14;
+  --accent-brown: #c4a77d;
+  --accent-amber: #d4a853;
+  --accent-copper: #b87333;
+  --accent-gold: #ffd700;
+  --text-primary: #f5f0e8;
+  --text-secondary: #c9bfb0;
+  --text-muted: #8c8177;
+  --border-color: #3d352a;
+  --success: #7cb342;
+  --warning: #ffb300;
+  --danger: #e53935;
+  --rarity-common: #9e9e9e;
+  --rarity-uncommon: #4caf50;
+  --rarity-rare: #2196f3;
+  --rarity-epic: #9c27b0;
+  --rarity-legendary: #ff9800;
+  --rarity-mythic: #f44336;
+  --rarity-special: #ffd700;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg-primary); color: var(--text-primary); display: flex; height: 100vh; overflow: hidden; font-size: 13px; }
+button { cursor: pointer; font-family: inherit; font-size: 12px; }
+input, select { font-family: inherit; font-size: 12px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; }
+input:focus, select:focus { outline: none; border-color: var(--accent-brown); }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+
+/* SIDEBAR */
+.sidebar { width: 220px; min-width: 220px; background: var(--bg-secondary); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; }
+.sidebar-header { padding: 12px 14px; border-bottom: 1px solid var(--border-color); font-weight: 700; font-size: 14px; color: var(--accent-brown); letter-spacing: 0.5px; }
+.sidebar-section { padding: 10px 14px; border-bottom: 1px solid var(--border-color); }
+.sidebar-section h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px; }
+.player-list { list-style: none; }
+.player-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; border-radius: 4px; cursor: pointer; margin-bottom: 2px; }
+.player-item:hover { background: var(--bg-tertiary); }
+.player-item.active { background: var(--bg-tertiary); border-left: 2px solid var(--accent-brown); }
+.player-item .name { flex: 1; }
+.player-item .badge { background: var(--bg-primary); color: var(--text-muted); padding: 1px 6px; border-radius: 8px; font-size: 10px; margin-left: 6px; }
+.player-item .del-btn { opacity: 0; background: none; border: none; color: var(--danger); font-size: 14px; padding: 0 4px; }
+.player-item:hover .del-btn { opacity: 1; }
+.btn-sm { padding: 4px 10px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-secondary); border-radius: 4px; }
+.btn-sm:hover { border-color: var(--accent-brown); color: var(--text-primary); }
+.btn-add { width: 100%; margin-top: 6px; }
+.scenario-btn { display: block; width: 100%; text-align: left; padding: 5px 8px; border: none; background: none; color: var(--text-secondary); border-radius: 4px; margin-bottom: 2px; }
+.scenario-btn:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+.sidebar-scroll { flex: 1; overflow-y: auto; }
+
+/* MAIN */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.main-header { padding: 10px 16px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px; }
+.main-header h2 { font-size: 14px; color: var(--accent-brown); }
+.weight-bar { flex: 1; height: 6px; background: var(--bg-tertiary); border-radius: 3px; overflow: hidden; }
+.weight-fill { height: 100%; background: var(--accent-amber); transition: width 0.3s; }
+.weight-text { font-size: 11px; color: var(--text-muted); min-width: 60px; text-align: right; }
+.inventory-area { flex: 1; overflow-y: auto; padding: 16px; }
+
+/* HOTBAR */
+.section-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px; }
+.hotbar-grid { display: flex; gap: 4px; margin-bottom: 16px; }
+.slot { width: 60px; height: 60px; border: 1px dashed var(--border-color); border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; transition: all 0.15s; font-size: 10px; color: var(--text-muted); }
+.slot:hover { border-color: var(--accent-brown); }
+.slot.selected { border: 2px solid var(--accent-gold); background: rgba(255,215,0,0.08); }
+.slot.filled { border-style: solid; background: var(--bg-card); }
+.slot .slot-num { position: absolute; top: 2px; left: 4px; font-size: 9px; color: var(--text-muted); }
+.slot .item-id { font-weight: 600; font-size: 11px; color: var(--text-primary); text-align: center; word-break: break-all; line-height: 1.2; }
+.slot .item-amt { position: absolute; bottom: 2px; right: 4px; background: var(--bg-primary); padding: 0 4px; border-radius: 6px; font-size: 9px; color: var(--accent-amber); }
+.slot .rarity-bar { position: absolute; top: 0; left: 0; right: 0; height: 2px; border-radius: 6px 6px 0 0; }
+
+/* STORAGE */
+.storage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; margin-bottom: 16px; }
+.storage-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; cursor: pointer; transition: all 0.15s; position: relative; }
+.storage-card:hover { border-color: var(--accent-brown); }
+.storage-card.selected { border: 2px solid var(--accent-gold); background: rgba(255,215,0,0.05); }
+.storage-card .card-id { font-weight: 600; font-size: 12px; margin-bottom: 2px; }
+.storage-card .card-meta { font-size: 10px; color: var(--text-muted); }
+.storage-card .card-uuid { font-size: 9px; color: var(--text-muted); opacity: 0.5; margin-top: 4px; word-break: break-all; }
+.storage-card .rarity-bar { position: absolute; top: 0; left: 0; right: 0; height: 2px; border-radius: 6px 6px 0 0; }
+
+/* DRAG AND DROP */
+.slot.dragging, .storage-card.dragging { opacity: 0.3; }
+.slot.drop-move { border-color: var(--success) !important; border-style: solid !important; box-shadow: 0 0 10px rgba(124,179,66,0.5); }
+.slot.drop-stack { border-color: var(--warning) !important; border-style: solid !important; box-shadow: 0 0 10px rgba(255,179,0,0.5); }
+.slot.drop-swap { border-color: var(--rarity-rare) !important; border-style: solid !important; box-shadow: 0 0 10px rgba(33,150,243,0.5); }
+.storage-card.drop-move { border-color: var(--success) !important; box-shadow: 0 0 10px rgba(124,179,66,0.5); }
+.storage-card.drop-stack { border-color: var(--warning) !important; box-shadow: 0 0 10px rgba(255,179,0,0.5); }
+.storage-card.drop-swap { border-color: var(--rarity-rare) !important; box-shadow: 0 0 10px rgba(33,150,243,0.5); }
+.slot.drop-zone { width: 60px; height: 28px; border: 1px dashed var(--success); border-radius: 6px; opacity: 0.5; display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--success); transition: all 0.15s; }
+.slot.drop-zone:hover { opacity: 1; background: rgba(124,179,66,0.1); }
+.storage-drop-bar { border: 2px dashed var(--border-color); border-radius: 6px; padding: 14px; text-align: center; color: var(--text-muted); font-size: 11px; transition: all 0.15s; margin-bottom: 16px; opacity: 0.3; }
+.storage-drop-bar.drag-active { border-color: var(--success); color: var(--success); background: rgba(124,179,66,0.05); opacity: 1; }
+.storage-drop-bar.drag-over { border-color: var(--success); color: var(--success); background: rgba(124,179,66,0.1); box-shadow: 0 0 12px rgba(124,179,66,0.3); opacity: 1; }
+
+/* SELECTED ITEM */
+.selected-panel { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; margin-bottom: 16px; }
+.selected-panel h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px; }
+.detail-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 12px; }
+.detail-row .label { color: var(--text-muted); }
+.detail-row .value { color: var(--text-primary); font-weight: 500; }
+.detail-actions { display: flex; gap: 6px; margin-top: 8px; }
+.detail-actions button { flex: 1; padding: 5px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-secondary); border-radius: 4px; }
+.detail-actions button:hover { border-color: var(--accent-brown); color: var(--text-primary); }
+.detail-actions button.danger { border-color: var(--danger); color: var(--danger); }
+.detail-actions button.danger:hover { background: var(--danger); color: white; }
+
+/* RIGHT PANEL */
+.right-panel { width: 280px; min-width: 280px; background: var(--bg-secondary); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; }
+.controls-scroll { flex: 1; overflow-y: auto; padding: 12px; }
+.control-section { margin-bottom: 12px; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; }
+.control-header { padding: 8px 10px; background: var(--bg-tertiary); cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 600; font-size: 12px; }
+.control-header:hover { background: var(--bg-card); }
+.control-body { padding: 10px; display: none; }
+.control-body.open { display: block; }
+.form-row { display: flex; gap: 6px; margin-bottom: 6px; align-items: center; }
+.form-row label { font-size: 11px; color: var(--text-muted); min-width: 55px; }
+.form-row input, .form-row select { flex: 1; }
+.btn-execute { width: 100%; padding: 6px; background: var(--accent-brown); color: var(--bg-primary); border: none; border-radius: 4px; font-weight: 600; margin-top: 6px; }
+.btn-execute:hover { background: var(--accent-amber); }
+.btn-execute:disabled { opacity: 0.4; cursor: not-allowed; }
+.result-msg { font-size: 11px; padding: 4px 8px; border-radius: 4px; margin-top: 6px; }
+.result-msg.success { background: rgba(124,179,66,0.15); color: var(--success); }
+.result-msg.error { background: rgba(229,57,53,0.15); color: var(--danger); }
+
+/* LOG */
+.log-panel { height: 180px; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; }
+.log-header { padding: 6px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
+.log-header h3 { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+.log-header button { background: none; border: none; color: var(--text-muted); font-size: 11px; }
+.log-header button:hover { color: var(--text-primary); }
+.log-output { flex: 1; overflow-y: auto; padding: 6px 12px; font-family: 'Consolas', 'Monaco', monospace; font-size: 11px; line-height: 1.6; }
+.log-entry { margin-bottom: 1px; }
+.log-entry .ts { color: var(--text-muted); }
+.log-entry .op { color: var(--accent-brown); }
+.log-entry .ok { color: var(--success); }
+.log-entry .fail { color: var(--danger); }
+.log-entry .info { color: var(--text-secondary); }
+
+/* TRANSFER MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; }
+.modal-overlay.show { display: flex; }
+.modal { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; width: 360px; }
+.modal h3 { color: var(--accent-brown); margin-bottom: 12px; }
+.modal .form-row { margin-bottom: 8px; }
+.modal .form-row label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 3px; }
+.modal .form-row input, .modal .form-row select { width: 100%; }
+.modal-actions { display: flex; gap: 8px; margin-top: 14px; }
+.modal-actions button { flex: 1; padding: 7px; border-radius: 4px; border: 1px solid var(--border-color); }
+.modal-actions .cancel { background: var(--bg-tertiary); color: var(--text-secondary); }
+.modal-actions .confirm { background: var(--accent-brown); color: var(--bg-primary); border: none; font-weight: 600; }
+
+/* SETTINGS PANEL */
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.settings-grid .form-row { flex-direction: column; gap: 2px; }
+.settings-grid .form-row label { min-width: unset; }
+.settings-grid .form-row input, .settings-grid .form-row select { width: 100%; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-header">CoreStore Test</div>
+  <div class="sidebar-scroll">
+    <div class="sidebar-section">
+      <h3>Players</h3>
+      <ul class="player-list" id="playerList"></ul>
+      <button class="btn-sm btn-add" onclick="addPlayer()">+ New Player</button>
+    </div>
+    <div class="sidebar-section">
+      <h3>Transfer</h3>
+      <button class="btn-sm btn-add" onclick="openTransfer()">Move item between players</button>
+    </div>
+    <div class="sidebar-section">
+      <h3>Scenarios</h3>
+      <div id="scenarioList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="main-header">
+    <h2 id="activePlayerName">Player 1</h2>
+    <div class="weight-bar"><div class="weight-fill" id="weightFill"></div></div>
+    <div class="weight-text" id="weightText">0 / 15</div>
+  </div>
+  <div class="inventory-area">
+    <div class="section-label">Hotbar</div>
+    <div class="hotbar-grid" id="hotbarGrid"></div>
+    <div class="section-label">Storage</div>
+    <div class="storage-grid" id="storageGrid"></div>
+    <div class="storage-drop-bar" id="storageDropBar">Drop item here to add to storage</div>
+    <div id="selectedPanel" class="selected-panel" style="display:none">
+      <h3>Selected Item</h3>
+      <div id="selectedDetails"></div>
+    </div>
+  </div>
+  <div class="log-panel">
+    <div class="log-header"><h3>Log</h3><button onclick="clearLog()">Clear</button></div>
+    <div class="log-output" id="logOutput"></div>
+  </div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="right-panel">
+  <div class="controls-scroll">
+    <!-- ADD -->
+    <div class="control-section">
+      <div class="control-header" onclick="toggleSection(this)">Add Item <span>&#9660;</span></div>
+      <div class="control-body">
+        <div class="form-row"><label>ID</label><input id="addId" placeholder="Sword"></div>
+        <div class="form-row"><label>Amount</label><input id="addAmount" type="number" value="1" min="1"></div>
+        <div class="form-row"><label>Rarity</label><select id="addRarity"><option value="">None</option><option>Common</option><option>Uncommon</option><option>Rare</option><option>Epic</option><option>Legendary</option><option>Mythic</option><option>Special</option></select></div>
+        <div class="form-row"><label>Type</label><input id="addMetaType" placeholder="Weapon"></div>
+        <div class="form-row"><label>Place</label><select id="addPlacement"><option>Auto</option><option>Hotbar</option><option>Backpack</option></select></div>
+        <div class="form-row"><label>Slot</label><input id="addSlot" type="number" placeholder="optional"></div>
+        <button class="btn-execute" onclick="doAdd()">Add</button>
+        <div id="addResult"></div>
+      </div>
+    </div>
+    <!-- REMOVE -->
+    <div class="control-section">
+      <div class="control-header" onclick="toggleSection(this)">Remove <span>&#9660;</span></div>
+      <div class="control-body">
+        <div class="form-row"><label>Amount</label><input id="removeAmount" type="number" placeholder="full"></div>
+        <button class="btn-execute" onclick="doRemove()">Remove Selected</button>
+        <div id="removeResult"></div>
+      </div>
+    </div>
+    <!-- SWAP -->
+    <div class="control-section">
+      <div class="control-header" onclick="toggleSection(this)">Swap <span>&#9660;</span></div>
+      <div class="control-body">
+        <p style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Select source slot, then destination slot</p>
+        <div class="form-row"><label>From</label><input id="swapFrom" placeholder="Hotbar 1"></div>
+        <div class="form-row"><label>To</label><input id="swapTo" placeholder="Storage 1"></div>
+        <div class="form-row"><label><input type="checkbox" id="swapStack"> StackOnSwap</label></div>
+        <button class="btn-execute" onclick="doSwap()">Swap</button>
+        <div id="swapResult"></div>
+      </div>
+    </div>
+    <!-- MOVE -->
+    <div class="control-section">
+      <div class="control-header" onclick="toggleSection(this)">Move <span>&#9660;</span></div>
+      <div class="control-body">
+        <p style="font-size:11px;color:var(--text-muted);margin-bottom:6px">Select source slot, then destination slot</p>
+        <div class="form-row"><label>From</label><input id="moveFrom" placeholder="Hotbar 1"></div>
+        <div class="form-row"><label>To</label><input id="moveTo" placeholder="Storage 1"></div>
+        <button class="btn-execute" onclick="doMove()">Move</button>
+        <div id="moveResult"></div>
+      </div>
+    </div>
+    <!-- SPLIT -->
+    <div class="control-section">
+      <div class="control-header" onclick="toggleSection(this)">Split <span>&#9660;</span></div>
+      <div class="control-body">
+        <div class="form-row"><label>Amount</label><input id="splitAmount" type="number" value="1" min="1"></div>
+        <div class="form-row"><label>Dest</label><select id="splitDest"><option value="">Auto</option><option value="hotbar">Hotbar Slot</option><option value="storage">Storage Slot</option></select></div>
+        <div class="form-row" id="splitSlotRow" style="display:none"><label>Slot</label><input id="splitSlot" type="number" value="1" min="1"></div>
+        <button class="btn-execute" onclick="doSplit()">Split Selected</button>
+        <div id="splitResult"></div>
+      </div>
+    </div>
+    <!-- METADATA -->
+    <div class="control-section">
+      <div class="control-header" onclick="toggleSection(this)">Update Metadata <span>&#9660;</span></div>
+      <div class="control-body">
+        <div id="metaFields"></div>
+        <div class="form-row" style="margin-top:6px"><input id="metaNewKey" placeholder="Key" style="width:45%"><input id="metaNewVal" placeholder="Value" style="width:45%"><button class="btn-sm" onclick="addMetaField()">+</button></div>
+        <button class="btn-execute" onclick="doUpdateMeta()">Update</button>
+        <div id="metaResult"></div>
+      </div>
+    </div>
+    <!-- SORT -->
+    <div class="control-section">
+      <div class="control-header" onclick="toggleSection(this)">Sort <span>&#9660;</span></div>
+      <div class="control-body">
+        <div class="form-row"><label>Order</label><select id="sortOrder"><option>None</option><option>Name</option><option>Rarity</option><option>ItemType</option></select></div>
+        <button class="btn-execute" onclick="doSort()">Sort</button>
+        <div id="sortResult"></div>
+      </div>
+    </div>
+    <!-- SETTINGS -->
+    <div class="control-section">
+      <div class="control-header" onclick="toggleSection(this)">Settings <span>&#9660;</span></div>
+      <div class="control-body">
+        <div class="settings-grid">
+          <div class="form-row"><label>Hotbar Type</label><select id="setHotbarType"><option>Static</option><option>Dynamic</option></select></div>
+          <div class="form-row"><label>Max Slots</label><input id="setMaxSlots" type="number" value="10"></div>
+          <div class="form-row"><label>Limit</label><input id="setLimit" type="number" value="15"></div>
+          <div class="form-row"><label>Max Stack</label><input id="setMaxStack" type="number" value="5"></div>
+          <div class="form-row"><label>Can Stack</label><input id="setCanStack" type="checkbox" checked></div>
+          <div class="form-row"><label>Backpack</label><input id="setBackpack" type="checkbox" checked></div>
+          <div class="form-row"><label>StackOnSwap</label><input id="setStackOnSwap" type="checkbox"></div>
+          <div class="form-row"><label>Sorting</label><input id="setSorting" type="checkbox"></div>
+        </div>
+        <button class="btn-execute" onclick="doApplySettings()" style="margin-top:8px">Apply Settings</button>
+        <div id="settingsResult"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TRANSFER MODAL -->
+<div class="modal-overlay" id="transferModal">
+  <div class="modal">
+    <h3>Transfer Item</h3>
+    <div class="form-row"><label>From Player</label><select id="transferFrom"></select></div>
+    <div class="form-row"><label>Item</label><select id="transferItem"></select></div>
+    <div class="form-row"><label>To Player</label><select id="transferTo"></select></div>
+    <div class="modal-actions">
+      <button class="cancel" onclick="closeTransfer()">Cancel</button>
+      <button class="confirm" onclick="doTransfer()">Transfer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CORESTORE JS PORT
+// ============================================================
+
+const CoreStore = (() => {
+
+// --- Utils ---
+let _uuidCounter = 0;
+const Utils = {
+  deepCopy(v) { return v == null || typeof v !== 'object' ? v : Array.isArray(v) ? v.map(x => Utils.deepCopy(x)) : Object.fromEntries(Object.entries(v).map(([k,x]) => [k, Utils.deepCopy(x)])); },
+  shallowCopy(v) { return v == null || typeof v !== 'object' ? v : { ...v }; },
+  generateUUID() { _uuidCounter++; return `core-${Date.now()}-${_uuidCounter}-${Math.floor(Math.random()*900000+100000)}`; },
+  isPositiveNumber(v) { return typeof v === 'number' && v > 0 && !isNaN(v); },
+  clampAmount(a, mn, mx) { return Math.max(mn, Math.min(a, mx)); },
+};
+
+// --- Metadata ---
+const Metadata = {
+  normalize(itemData) {
+    const itemId = itemData.Id || itemData.ID;
+    if (typeof itemId !== 'string' || itemId === '') return [null, null, null, 'INVALID_ITEM_ID'];
+    let metadata = itemData.Metadata ? Utils.shallowCopy(itemData.Metadata) : {};
+    let rawAmount = itemData.Amount ?? metadata.Amount ?? metadata.StackAmount;
+    if (typeof rawAmount === 'string') rawAmount = Number(rawAmount);
+    delete metadata.Amount; delete metadata.StackAmount;
+    const amount = rawAmount || 1;
+    if (!Utils.isPositiveNumber(amount)) return [null, null, null, 'INVALID_AMOUNT'];
+    if (metadata.Droppable == null) metadata.Droppable = true;
+    return [itemId, amount, metadata, null];
+  },
+  matchesRequiredFields(left, right, fields) {
+    for (const f of fields) if (left[f] !== right[f]) return false;
+    return true;
+  },
+  isBlacklisted(metadata, blacklist) {
+    const r = metadata.Rarity;
+    return r != null && !!blacklist[r];
+  },
+};
+
+// --- State ---
+const DEFAULT_SETTINGS = {
+  HotbarType: 'Static', MaxHotbarSlots: 10,
+  Limit: 15, CanStack: true, MaxStackSize: 5, BackpackEnabled: true,
+  Sorting: false, SortOrder: 'None',
+  StackOnSwap: false, StackRequiredFields: ['Rarity', 'Type'],
+  StackBlacklist: { Legendary: true, Mythic: true, Special: true },
+  DefaultDroppable: true,
+};
+function mergeSettings(overrides) { return { ...DEFAULT_SETTINGS, ...(overrides || {}) }; }
+const State = {
+  new(overrides) {
+    return { Items: {}, ItemsByID: {}, Hotbar: {}, Storage: [], LocationByUUID: {}, MetadataIndex: {}, EquippedItemUUID: null, Weight: 0, Settings: mergeSettings(overrides) };
+  },
+  getDefaultSettings() { return { ...DEFAULT_SETTINGS }; },
+  getCurrentWeight(s) { return s.Weight; },
+  isLimitEnabled(s) { return s.Settings.Limit > 0; },
+  getRemainingCapacity(s) { return State.isLimitEnabled(s) ? Math.max(0, s.Settings.Limit - s.Weight) : Infinity; },
+  canAddAmount(s, a) { return !State.isLimitEnabled(s) || State.getRemainingCapacity(s) >= a; },
+  isFull(s) { return State.getRemainingCapacity(s) === 0; },
+  hasHotbarSpace(s) { for (let i = 1; i <= s.Settings.MaxHotbarSlots; i++) if (!s.Hotbar[i]) return true; return false; },
+  isEquipped(s, uuid) { return s.EquippedItemUUID === uuid; },
+  addWeight(s, a) { s.Weight += a; },
+  removeWeight(s, a) { s.Weight = Math.max(0, s.Weight - a); },
+};
+
+// --- Slots ---
+const Slots = {
+  setHotbarSlot(s, slot, uuid) { s.Hotbar[slot] = uuid; s.LocationByUUID[uuid] = { Type: 'Hotbar', Slot: slot }; },
+  clearHotbarSlot(s, slot) { const u = s.Hotbar[slot]; if (u) delete s.LocationByUUID[u]; s.Hotbar[slot] = undefined; },
+  findEmptyHotbarSlot(s) { for (let i = 1; i <= s.Settings.MaxHotbarSlots; i++) if (!s.Hotbar[i]) return i; return null; },
+  getHotbarItemCount(s) { let c = 0; for (let i = 1; i <= s.Settings.MaxHotbarSlots; i++) if (s.Hotbar[i]) c++; return c; },
+  appendStorage(s, uuid) { s.Storage.push(uuid); const idx = s.Storage.length; s.LocationByUUID[uuid] = { Type: 'Storage', Slot: idx }; return idx; },
+  removeStorageAt(s, idx) { const u = s.Storage[idx - 1]; if (u) delete s.LocationByUUID[u]; s.Storage.splice(idx - 1, 1); for (let i = idx - 1; i < s.Storage.length; i++) s.LocationByUUID[s.Storage[i]] = { Type: 'Storage', Slot: i + 1 }; },
+  getUUIDFromSlot(s, type, slot) { return type === 'Hotbar' ? s.Hotbar[slot] : s.Storage[slot - 1]; },
+  getLocation(s, uuid) { return s.LocationByUUID[uuid] || null; },
+  findSlotByUUID(s, uuid) { const loc = s.LocationByUUID[uuid]; return loc ? [loc.Type, loc.Slot] : [null, null]; },
+  isValidHotbarSlot(s, slot) { return slot >= 1 && slot <= s.Settings.MaxHotbarSlots; },
+  isValidStorageSlot(s, slot) { return slot >= 1 && slot <= s.Storage.length; },
+  compactHotbar(s) {
+    if (s.Settings.HotbarType !== 'Dynamic') return false;
+    const packed = []; let changed = false;
+    for (let i = 1; i <= s.Settings.MaxHotbarSlots; i++) {
+      const u = s.Hotbar[i];
+      if (u) { if (i !== packed.length + 1) { changed = true; s.LocationByUUID[u] = { Type: 'Hotbar', Slot: packed.length + 1 }; } packed.push(u); }
+    }
+    if (changed) { s.Hotbar = {}; packed.forEach((u, idx) => s.Hotbar[idx + 1] = u); }
+    return changed;
+  },
+  swapSlots(s, fromRef, toRef) {
+    const fromU = Slots.getUUIDFromSlot(s, fromRef.Type, fromRef.Slot);
+    const toU = Slots.getUUIDFromSlot(s, toRef.Type, toRef.Slot);
+    if (fromRef.Type === 'Hotbar' && toRef.Type === 'Hotbar') {
+      s.Hotbar[fromRef.Slot] = toU; s.Hotbar[toRef.Slot] = fromU;
+      if (toU) s.LocationByUUID[toU] = { Type: 'Hotbar', Slot: fromRef.Slot };
+      if (fromU) s.LocationByUUID[fromU] = { Type: 'Hotbar', Slot: toRef.Slot };
+    } else if (fromRef.Type === 'Storage' && toRef.Type === 'Storage') {
+      s.Storage[fromRef.Slot - 1] = toU; s.Storage[toRef.Slot - 1] = fromU;
+      if (toU) s.LocationByUUID[toU] = { Type: 'Storage', Slot: fromRef.Slot };
+      if (fromU) s.LocationByUUID[fromU] = { Type: 'Storage', Slot: toRef.Slot };
+    } else if (fromRef.Type === 'Hotbar' && toRef.Type === 'Storage') {
+      s.Hotbar[fromRef.Slot] = toU; s.Storage[toRef.Slot - 1] = fromU;
+      if (toU) s.LocationByUUID[toU] = { Type: 'Hotbar', Slot: fromRef.Slot };
+      if (fromU) s.LocationByUUID[fromU] = { Type: 'Storage', Slot: toRef.Slot };
+    } else if (fromRef.Type === 'Storage' && toRef.Type === 'Hotbar') {
+      s.Storage[fromRef.Slot - 1] = toU; s.Hotbar[toRef.Slot] = fromU;
+      if (toU) s.LocationByUUID[toU] = { Type: 'Storage', Slot: fromRef.Slot };
+      if (fromU) s.LocationByUUID[fromU] = { Type: 'Hotbar', Slot: toRef.Slot };
+    }
+    return false;
+  },
+  moveWithinStorage(s, fromIdx, toIdx) {
+    const u = s.Storage[fromIdx - 1];
+    s.Storage.splice(fromIdx - 1, 1);
+    s.Storage.splice(toIdx - 1, 0, u);
+    const start = Math.min(fromIdx, toIdx), end = Math.max(fromIdx, toIdx);
+    for (let i = start; i <= end; i++) s.LocationByUUID[s.Storage[i - 1]] = { Type: 'Storage', Slot: i };
+  },
+  moveToStorage(s, uuid, toIdx) {
+    s.Storage.splice(toIdx - 1, 0, uuid);
+    s.LocationByUUID[uuid] = { Type: 'Storage', Slot: toIdx };
+    for (let i = toIdx; i <= s.Storage.length; i++) s.LocationByUUID[s.Storage[i - 1]] = { Type: 'Storage', Slot: i };
+  },
+  getStorageItemCount(s) { return s.Storage.length; },
+  sortStorage(s, order) {
+    if (order === 'None' || s.Storage.length <= 1) return false;
+    const RARITY_RANK = { Common: 1, Uncommon: 2, Rare: 3, Epic: 4, Legendary: 5, Mythic: 6, Special: 7 };
+    const items = s.Storage.map(u => { const it = s.Items[u]; return it ? { uuid: u, key: order === 'Name' ? it.Id : (order === 'Rarity' ? (it.Metadata.Rarity || '') : (it.Metadata.Type || '')), rarityRank: order === 'Rarity' ? (RARITY_RANK[it.Metadata.Rarity] || 99) : 0 } : null; }).filter(Boolean);
+    if (order === 'Rarity') items.sort((a, b) => a.rarityRank !== b.rarityRank ? b.rarityRank - a.rarityRank : a.key < b.key ? -1 : 1);
+    else items.sort((a, b) => a.key < b.key ? -1 : 1);
+    let changed = false;
+    const newOrder = items.map((e, i) => { if (s.Storage[i] !== e.uuid) changed = true; return e.uuid; });
+    if (changed) { s.Storage = newOrder; newOrder.forEach((u, i) => s.LocationByUUID[u] = { Type: 'Storage', Slot: i + 1 }); }
+    return changed;
+  },
+  sortHotbar(s, order) {
+    if (order === 'None' || s.Settings.HotbarType !== 'Dynamic') return false;
+    const RARITY_RANK = { Common: 1, Uncommon: 2, Rare: 3, Epic: 4, Legendary: 5, Mythic: 6, Special: 7 };
+    const items = [];
+    for (let i = 1; i <= s.Settings.MaxHotbarSlots; i++) { const u = s.Hotbar[i]; if (u) { const it = s.Items[u]; if (it) items.push({ uuid: u, key: order === 'Name' ? it.Id : (order === 'Rarity' ? (it.Metadata.Rarity || '') : (it.Metadata.Type || '')), rarityRank: order === 'Rarity' ? (RARITY_RANK[it.Metadata.Rarity] || 99) : 0 }); } }
+    if (items.length <= 1) return false;
+    if (order === 'Rarity') items.sort((a, b) => a.rarityRank !== b.rarityRank ? b.rarityRank - a.rarityRank : a.key < b.key ? -1 : 1);
+    else items.sort((a, b) => a.key < b.key ? -1 : 1);
+    const newH = {}; let changed = false;
+    items.forEach((e, i) => { newH[i + 1] = e.uuid; if (s.Hotbar[i + 1] !== e.uuid) changed = true; });
+    for (let i = items.length + 1; i <= s.Settings.MaxHotbarSlots; i++) { if (s.Hotbar[i]) changed = true; }
+    if (changed) { s.Hotbar = newH; items.forEach((e, i) => s.LocationByUUID[e.uuid] = { Type: 'Hotbar', Slot: i + 1 }); }
+    return changed;
+  },
+};
+
+// --- Stack ---
+const Stack = {
+  canStack(s, existing, inId, inMeta) {
+    if (!s.Settings.CanStack) return false;
+    if (existing.Id !== inId) return false;
+    if (existing.Amount >= s.Settings.MaxStackSize) return false;
+    if (Metadata.isBlacklisted(existing.Metadata, s.Settings.StackBlacklist)) return false;
+    if (Metadata.isBlacklisted(inMeta, s.Settings.StackBlacklist)) return false;
+    return Metadata.matchesRequiredFields(existing.Metadata, inMeta, s.Settings.StackRequiredFields);
+  },
+  tryStack(s, itemId, amount, metadata, placement) {
+    let stacked = 0; const updates = {};
+    const uuids = s.ItemsByID[itemId];
+    if (!uuids) return [stacked, updates];
+    const max = s.Settings.MaxStackSize;
+    for (const uuid of [...uuids]) {
+      if (amount <= 0) break;
+      if (placement && placement !== 'Auto') {
+        const loc = s.LocationByUUID[uuid];
+        const ok = (placement === 'Backpack' && loc && loc.Type === 'Storage') || (placement === 'Hotbar' && loc && loc.Type === 'Hotbar');
+        if (!ok) continue;
+      }
+      const it = s.Items[uuid];
+      if (it && Stack.canStack(s, it, itemId, metadata)) {
+        const room = max - it.Amount;
+        const toStack = Math.min(room, amount);
+        if (toStack > 0) { it.Amount += toStack; amount -= toStack; stacked += toStack; updates[uuid] = it.Amount; State.addWeight(s, toStack); }
+      }
+    }
+    return [stacked, updates];
+  },
+};
+
+// --- Operations (helpers) ---
+const INDEXED_FIELDS = ['Rarity', 'Type'];
+function addToIndex(s, itemId, uuid) { if (!s.ItemsByID[itemId]) s.ItemsByID[itemId] = []; s.ItemsByID[itemId].push(uuid); }
+function removeFromIndex(s, itemId, uuid) { const arr = s.ItemsByID[itemId]; if (!arr) return; const i = arr.indexOf(uuid); if (i !== -1) arr.splice(i, 1); if (arr.length === 0) delete s.ItemsByID[itemId]; }
+function addToMetadataIndex(s, uuid, meta) { for (const f of INDEXED_FIELDS) { const v = meta[f]; if (v != null) { const sv = String(v); if (!s.MetadataIndex[f]) s.MetadataIndex[f] = {}; if (!s.MetadataIndex[f][sv]) s.MetadataIndex[f][sv] = []; s.MetadataIndex[f][sv].push(uuid); } } }
+function removeFromMetadataIndex(s, uuid, meta) { for (const f of INDEXED_FIELDS) { const v = meta[f]; if (v != null) { const sv = String(v); const bucket = s.MetadataIndex[f] && s.MetadataIndex[f][sv]; if (bucket) { const i = bucket.indexOf(uuid); if (i !== -1) bucket.splice(i, 1); if (bucket.length === 0) delete s.MetadataIndex[f][sv]; } } } }
+function updateMetadataIndex(s, uuid, oldM, newM) { for (const f of INDEXED_FIELDS) { const ov = oldM[f], nv = newM[f]; if (ov !== nv) { if (ov != null) { const sv = String(ov); const bucket = s.MetadataIndex[f] && s.MetadataIndex[f][sv]; if (bucket) { const i = bucket.indexOf(uuid); if (i !== -1) bucket.splice(i, 1); if (bucket.length === 0) delete s.MetadataIndex[f][sv]; } } if (nv != null) { const sv = String(nv); if (!s.MetadataIndex[f]) s.MetadataIndex[f] = {}; if (!s.MetadataIndex[f][sv]) s.MetadataIndex[f][sv] = []; s.MetadataIndex[f][sv].push(uuid); } } } }
+function createItem(s, itemId, amount, meta) {
+  const uuid = Utils.generateUUID(); const finalAmt = Math.min(amount, s.Settings.MaxStackSize);
+  const item = { UUID: uuid, Id: itemId, Amount: finalAmt, Metadata: Utils.deepCopy(meta) };
+  s.Items[uuid] = item; addToIndex(s, itemId, uuid); addToMetadataIndex(s, uuid, item.Metadata); State.addWeight(s, finalAmt);
+  return item;
+}
+function destroyUnplacedItem(s, item) { delete s.Items[item.UUID]; delete s.LocationByUUID[item.UUID]; removeFromIndex(s, item.Id, item.UUID); removeFromMetadataIndex(s, item.UUID, item.Metadata); State.removeWeight(s, item.Amount); }
+function placeItemInHotbar(s, item, preferred) {
+  if (preferred && s.Settings.HotbarType !== 'Dynamic') { if (!Slots.isValidHotbarSlot(s, preferred)) return [null, 'INVALID_HOTBAR_SLOT']; if (s.Hotbar[preferred]) return [null, 'HOTBAR_SLOT_OCCUPIED']; Slots.setHotbarSlot(s, preferred, item.UUID); return [preferred, null]; }
+  const slot = Slots.findEmptyHotbarSlot(s); if (!slot) return [null, 'HOTBAR_FULL']; Slots.setHotbarSlot(s, slot, item.UUID); return [slot, null];
+}
+function placeItemInStorage(s, item) { if (!s.Settings.BackpackEnabled) return [null, 'BACKPACK_DISABLED']; const slot = Slots.appendStorage(s, item.UUID); return [slot, null]; }
+function addNewStacks(s, itemId, amount, meta, opts) {
+  const added = []; let remaining = amount;
+  while (remaining > 0) {
+    const item = createItem(s, itemId, remaining, meta); let placed = false, slotType = null, slot = null, reason = null;
+    const placement = opts.Placement || 'Auto';
+    if (placement === 'Backpack') { [slot, reason] = placeItemInStorage(s, item); if (slot) { slotType = 'Storage'; placed = true; } }
+    else if (placement === 'Hotbar') { [slot, reason] = placeItemInHotbar(s, item, opts.Slot); if (slot) { slotType = 'Hotbar'; placed = true; } }
+    else if (placement === 'Slot' && opts.SlotRef) {
+      const ref = opts.SlotRef;
+      if (ref.Type === 'Hotbar') { if (Slots.isValidHotbarSlot(s, ref.Slot) && !s.Hotbar[ref.Slot]) { Slots.setHotbarSlot(s, ref.Slot, item.UUID); slotType = 'Hotbar'; slot = ref.Slot; placed = true; } else reason = 'INVALID_SLOT'; }
+      else if (ref.Type === 'Storage') { if (s.Settings.BackpackEnabled) { Slots.moveToStorage(s, item.UUID, ref.Slot); slotType = 'Storage'; slot = ref.Slot; placed = true; } else reason = 'BACKPACK_DISABLED'; }
+      else reason = 'INVALID_SLOT';
+    }
+    else if (placement === 'Auto') { [slot, reason] = placeItemInHotbar(s, item, null); if (slot) { slotType = 'Hotbar'; placed = true; } else { [slot, reason] = placeItemInStorage(s, item); if (slot) { slotType = 'Storage'; placed = true; } } }
+    else reason = 'INVALID_PLACEMENT';
+    if (!placed || !slotType || !slot) { destroyUnplacedItem(s, item); return [added, remaining, reason]; }
+    added.push({ uuid: item.UUID, slotType, slot }); remaining -= item.Amount;
+  }
+  return [added, 0, null];
+}
+
+// --- Operations (public) ---
+const Operations = {
+  add(s, itemData, options) {
+    const opts = options || {};
+    const [itemId, amount, meta, err] = Metadata.normalize(itemData);
+    if (err || !itemId) return { success: false, reason: err || 'INVALID_ITEM_DATA', addedAmount: 0, overflow: 0 };
+    const origAmt = amount; const remCap = State.getRemainingCapacity(s);
+    if (remCap <= 0) return { success: false, reason: 'FULL', addedAmount: 0, overflow: amount };
+    const amtToAdd = Math.min(amount, remCap); let amtLeft = amtToAdd; const updatedItems = {};
+    if (s.Settings.CanStack) { const [stacked, updates] = Stack.tryStack(s, itemId, amtLeft, meta, opts.Placement); amtLeft -= stacked; Object.assign(updatedItems, updates); }
+    let addedItems = [];
+    if (amtLeft > 0) { const [created, leftover, placeErr] = addNewStacks(s, itemId, amtLeft, meta, opts); addedItems = created; amtLeft = leftover; if (addedItems.length === 0 && Object.keys(updatedItems).length === 0) return { success: false, reason: placeErr || 'ADD_FAILED', addedItems, updatedItems, addedAmount: 0, overflow: origAmt }; }
+    const added = amtToAdd - amtLeft; return { success: added > 0, reason: origAmt - added > 0 ? 'PARTIAL' : null, addedItems, updatedItems, addedAmount: added, overflow: origAmt - added };
+  },
+  remove(s, uuid, amount) {
+    const item = s.Items[uuid]; if (!item) return { success: false, reason: 'ITEM_NOT_FOUND' };
+    let amtR = amount ?? item.Amount; if (!Utils.isPositiveNumber(amtR)) return { success: false, reason: 'INVALID_AMOUNT' };
+    amtR = Math.min(amtR, item.Amount); const loc = Slots.getLocation(s, uuid); const sT = loc?.Type, sl = loc?.Slot;
+    const removed = { UUID: item.UUID, Id: item.Id, Amount: amtR, Metadata: Utils.deepCopy(item.Metadata) };
+    if (item.Amount > amtR) { item.Amount -= amtR; State.removeWeight(s, amtR); return { success: true, removedItem: removed, remaining: item.Amount, slotType: sT, slot: sl }; }
+    State.removeWeight(s, item.Amount); delete s.Items[uuid]; delete s.LocationByUUID[uuid]; removeFromIndex(s, item.Id, uuid); removeFromMetadataIndex(s, uuid, item.Metadata);
+    if (s.EquippedItemUUID === uuid) s.EquippedItemUUID = null;
+    if (sT === 'Hotbar' && sl) { Slots.clearHotbarSlot(s, sl); Slots.compactHotbar(s); }
+    else if (sT === 'Storage' && sl) Slots.removeStorageAt(s, sl);
+    return { success: true, removedItem: removed, remaining: 0, slotType: sT, slot: sl };
+  },
+  swap(s, fromRef, toRef) {
+    if (!s.Settings.BackpackEnabled && (fromRef.Type === 'Storage' || toRef.Type === 'Storage')) return { success: false, reason: 'BACKPACK_DISABLED' };
+    if (fromRef.Type === 'Hotbar' && !Slots.isValidHotbarSlot(s, fromRef.Slot)) return { success: false, reason: 'INVALID_HOTBAR_SLOT' };
+    if (toRef.Type === 'Hotbar' && !Slots.isValidHotbarSlot(s, toRef.Slot)) return { success: false, reason: 'INVALID_HOTBAR_SLOT' };
+    if (fromRef.Type === 'Storage' && !Slots.isValidStorageSlot(s, fromRef.Slot)) return { success: false, reason: 'INVALID_STORAGE_SLOT' };
+    const fromU = Slots.getUUIDFromSlot(s, fromRef.Type, fromRef.Slot);
+    const toU = Slots.getUUIDFromSlot(s, toRef.Type, toRef.Slot);
+    if (!fromU) return { success: false, reason: 'SOURCE_EMPTY' };
+    if (fromU === toU) return { success: true };
+    if (toU && s.Settings.StackOnSwap && s.Settings.CanStack) {
+      const fIt = s.Items[fromU], tIt = s.Items[toU];
+      if (fIt && tIt && Stack.canStack(s, tIt, fIt.Id, fIt.Metadata)) {
+        const room = s.Settings.MaxStackSize - tIt.Amount; const transfer = Math.min(fIt.Amount, room);
+        tIt.Amount += transfer; fIt.Amount -= transfer;
+        if (fIt.Amount <= 0) { const loc = s.LocationByUUID[fromU]; delete s.Items[fromU]; delete s.LocationByUUID[fromU]; removeFromIndex(s, fIt.Id, fromU); removeFromMetadataIndex(s, fromU, fIt.Metadata);
+          if (loc?.Type === 'Hotbar') { Slots.clearHotbarSlot(s, loc.Slot); Slots.compactHotbar(s); } else if (loc?.Type === 'Storage') Slots.removeStorageAt(s, loc.Slot);
+          if (s.EquippedItemUUID === fromU) s.EquippedItemUUID = null; }
+        return { success: true };
+      }
+    }
+    if (fromRef.Type === 'Hotbar' && toRef.Type === 'Hotbar') {
+      if (s.Settings.HotbarType === 'Dynamic' && !toU) return { success: false, reason: 'DESTINATION_UNAVAILABLE' };
+    }
+    let comp = Slots.swapSlots(s, fromRef, toRef);
+    if (toRef.Type === 'Storage' && !toU) { const fIt = s.Items[fromU]; if (fIt && fromRef.Type === 'Hotbar') { Slots.clearHotbarSlot(s, fromRef.Slot); comp = Slots.compactHotbar(s); } }
+    if (fromRef.Type === 'Storage' && !toU) { const fIt = s.Items[fromU]; if (fIt) { Slots.removeStorageAt(s, fromRef.Slot); Slots.appendStorage(s, fromU); } }
+    return { success: true, hotbarCompacted: comp };
+  },
+  move(s, fromRef, toRef) {
+    if (!s.Settings.BackpackEnabled && (fromRef.Type === 'Storage' || toRef.Type === 'Storage')) return { success: false, reason: 'BACKPACK_DISABLED' };
+    if (fromRef.Type === 'Hotbar' && !Slots.isValidHotbarSlot(s, fromRef.Slot)) return { success: false, reason: 'INVALID_HOTBAR_SLOT' };
+    if (toRef.Type === 'Hotbar' && !Slots.isValidHotbarSlot(s, toRef.Slot)) return { success: false, reason: 'INVALID_HOTBAR_SLOT' };
+    if (fromRef.Type === 'Storage' && !Slots.isValidStorageSlot(s, fromRef.Slot)) return { success: false, reason: 'INVALID_STORAGE_SLOT' };
+    const fromU = Slots.getUUIDFromSlot(s, fromRef.Type, fromRef.Slot); if (!fromU) return { success: false, reason: 'SOURCE_EMPTY' };
+    const toU = Slots.getUUIDFromSlot(s, toRef.Type, toRef.Slot);
+    if (fromRef.Type === 'Storage' && toRef.Type === 'Storage') { Slots.moveWithinStorage(s, fromRef.Slot, toRef.Slot); return { success: true }; }
+    if (toU) return { success: false, reason: 'DESTINATION_OCCUPIED' };
+    if (fromRef.Type === 'Hotbar' && toRef.Type === 'Hotbar') {
+      if (s.Settings.HotbarType === 'Dynamic') return { success: false, reason: 'DESTINATION_UNAVAILABLE' };
+      s.Hotbar[fromRef.Slot] = undefined; s.Hotbar[toRef.Slot] = fromU; s.LocationByUUID[fromU] = { Type: 'Hotbar', Slot: toRef.Slot }; return { success: true };
+    }
+    if (fromRef.Type === 'Hotbar' && toRef.Type === 'Storage') { s.Hotbar[fromRef.Slot] = undefined; Slots.appendStorage(s, fromU); const comp = Slots.compactHotbar(s); return { success: true, hotbarCompacted: comp }; }
+    if (fromRef.Type === 'Storage' && toRef.Type === 'Hotbar') {
+      if (s.Settings.HotbarType === 'Dynamic') {
+        const appendSlot = Slots.findEmptyHotbarSlot(s);
+        if (toRef.Slot !== appendSlot) return { success: false, reason: 'DESTINATION_UNAVAILABLE' };
+      }
+      Slots.removeStorageAt(s, fromRef.Slot); Slots.setHotbarSlot(s, toRef.Slot, fromU); return { success: true };
+    }
+    return { success: false, reason: 'INVALID_OPERATION' };
+  },
+  split(s, uuid, amount, destination) {
+    const item = s.Items[uuid]; if (!item) return { success: false, reason: 'ITEM_NOT_FOUND' };
+    if (!Utils.isPositiveNumber(amount)) return { success: false, reason: 'INVALID_AMOUNT' };
+    if (amount >= item.Amount) return { success: false, reason: 'CANNOT_SPLIT_FULL' };
+    const splitAmt = Math.min(amount, s.Settings.MaxStackSize);
+    item.Amount -= splitAmt; State.removeWeight(s, splitAmt);
+    const newItem = { UUID: Utils.generateUUID(), Id: item.Id, Amount: splitAmt, Metadata: Utils.deepCopy(item.Metadata) };
+    s.Items[newItem.UUID] = newItem; addToIndex(s, newItem.Id, newItem.UUID); addToMetadataIndex(s, newItem.UUID, newItem.Metadata); State.addWeight(s, splitAmt);
+    let newSlotType = null, newSlot = null;
+    if (destination) {
+      if (destination.Type === 'Hotbar') {
+        if (!Slots.isValidHotbarSlot(s, destination.Slot) || s.Hotbar[destination.Slot]) { /* rollback */ delete s.Items[newItem.UUID]; removeFromIndex(s, newItem.Id, newItem.UUID); removeFromMetadataIndex(s, newItem.UUID, newItem.Metadata); State.removeWeight(s, splitAmt); item.Amount += splitAmt; return { success: false, reason: !Slots.isValidHotbarSlot(s, destination.Slot) ? 'INVALID_HOTBAR_SLOT' : 'HOTBAR_SLOT_OCCUPIED' }; }
+        if (s.Settings.HotbarType === 'Dynamic') {
+          const appendSlot = Slots.findEmptyHotbarSlot(s);
+          if (destination.Slot !== appendSlot) { delete s.Items[newItem.UUID]; removeFromIndex(s, newItem.Id, newItem.UUID); removeFromMetadataIndex(s, newItem.UUID, newItem.Metadata); State.removeWeight(s, splitAmt); item.Amount += splitAmt; return { success: false, reason: 'DESTINATION_UNAVAILABLE' }; }
+        }
+        Slots.setHotbarSlot(s, destination.Slot, newItem.UUID); newSlotType = 'Hotbar'; newSlot = destination.Slot;
+      } else if (destination.Type === 'Storage') {
+        if (!s.Settings.BackpackEnabled) { delete s.Items[newItem.UUID]; removeFromIndex(s, newItem.Id, newItem.UUID); removeFromMetadataIndex(s, newItem.UUID, newItem.Metadata); State.removeWeight(s, splitAmt); item.Amount += splitAmt; return { success: false, reason: 'BACKPACK_DISABLED' }; }
+        if (!Slots.isValidStorageSlot(s, destination.Slot)) { delete s.Items[newItem.UUID]; removeFromIndex(s, newItem.Id, newItem.UUID); removeFromMetadataIndex(s, newItem.UUID, newItem.Metadata); State.removeWeight(s, splitAmt); item.Amount += splitAmt; return { success: false, reason: 'INVALID_STORAGE_SLOT' }; }
+        Slots.moveToStorage(s, newItem.UUID, destination.Slot); newSlotType = 'Storage'; newSlot = destination.Slot;
+      }
+    } else {
+      const slot = Slots.findEmptyHotbarSlot(s);
+      if (slot) { Slots.setHotbarSlot(s, slot, newItem.UUID); newSlotType = 'Hotbar'; newSlot = slot; }
+      else if (s.Settings.BackpackEnabled) { Slots.appendStorage(s, newItem.UUID); newSlotType = 'Storage'; newSlot = s.Storage.length; }
+      else { delete s.Items[newItem.UUID]; removeFromIndex(s, newItem.Id, newItem.UUID); removeFromMetadataIndex(s, newItem.UUID, newItem.Metadata); State.removeWeight(s, splitAmt); item.Amount += splitAmt; return { success: false, reason: 'NO_SPACE' }; }
+    }
+    return { success: true, sourceUUID: uuid, newUUID: newItem.UUID, sourceAmount: item.Amount, newAmount: splitAmt, newSlotType, newSlot };
+  },
+  updateMetadata(s, uuid, updates) {
+    const item = s.Items[uuid]; if (!item) return { success: false, reason: 'ITEM_NOT_FOUND' };
+    const oldMeta = Utils.deepCopy(item.Metadata); const fields = [];
+    for (const [k, v] of Object.entries(updates)) { if (v === undefined || v === null) delete item.Metadata[k]; else item.Metadata[k] = v; fields.push(k); }
+    updateMetadataIndex(s, uuid, oldMeta, item.Metadata);
+    return { success: true, updatedFields: fields };
+  },
+  sort(s) {
+    const order = s.Settings.SortOrder; if (order === 'None') return { success: true };
+    const hc = Slots.sortHotbar(s, order); const sc = Slots.sortStorage(s, order);
+    return { success: true, hotbarOrder: hc ? [...Array(s.Settings.MaxHotbarSlots).keys()].map(i => s.Hotbar[i + 1]).filter(Boolean) : null, storageOrder: sc ? [...s.Storage] : null };
+  },
+  removeBySlot(s, slotType, slot, amount) {
+    const uuid = Slots.getUUIDFromSlot(s, slotType, slot);
+    if (!uuid) return { success: false, reason: 'SLOT_EMPTY' };
+    return Operations.remove(s, uuid, amount);
+  },
+};
+
+// --- Query ---
+const Query = {
+  getItem(s, uuid) { return s.Items[uuid] || null; },
+  getAllItems(s) { return Object.values(s.Items); },
+  findById(s, itemId) { const uuids = s.ItemsByID[itemId]; if (!uuids) return []; return uuids.map(u => s.Items[u]).filter(Boolean); },
+  find(s, query) {
+    if (typeof query === 'string') return Query.findById(s, query);
+    if (query.Metadata) {
+      const fields = Object.entries(query.Metadata).map(([k, v]) => ({ key: k, value: v }));
+      if (fields.length === 1) { const f = fields[0]; const bucket = s.MetadataIndex[f.key] && s.MetadataIndex[f.key][String(f.value)]; if (bucket) return bucket.map(u => s.Items[u]).filter(it => it && (!query.Id || it.Id === query.Id)); return []; }
+      if (fields.length > 1) {
+        let smallest = null, smallestSize = Infinity;
+        for (const f of fields) { const bucket = s.MetadataIndex[f.key] && s.MetadataIndex[f.key][String(f.value)]; if (bucket && bucket.length < smallestSize) { smallest = f.key; smallestSize = bucket.length; } }
+        if (smallest !== null) {
+          const bucket = s.MetadataIndex[smallest][String(fields.find(f => f.key === smallest).value)];
+          return bucket.map(u => s.Items[u]).filter(it => {
+            if (!it) return false; if (query.Id && it.Id !== query.Id) return false;
+            for (const f of fields) { if (f.key !== smallest && it.Metadata[f.key] !== f.value) return false; }
+            return true;
+          });
+        }
+        return [];
+      }
+    }
+    return Object.values(s.Items).filter(it => !query.Id || it.Id === query.Id);
+  },
+  filter(s, pred) { return Object.values(s.Items).filter(pred); },
+};
+
+// --- Facade ---
+return {
+  new: State.new,
+  getDefaultSettings: State.getDefaultSettings,
+  add: Operations.add, addToBackpack: (s, d, o) => Operations.add(s, d, { ...(o||{}), Placement: 'Backpack' }),
+  addToHotbar: (s, d, slot) => Operations.add(s, d, { Placement: 'Hotbar', Slot: slot }),
+  addToSlot: (s, d, ref) => Operations.add(s, d, { Placement: 'Slot', SlotRef: ref }),
+  remove: Operations.remove, removeBySlot: Operations.removeBySlot,
+  swap: Operations.swap, move: Operations.move, split: Operations.split,
+  updateMetadata: Operations.updateMetadata, sort: Operations.sort,
+  getItem: Query.getItem, findById: Query.findById, find: Query.find, filter: Query.filter, getAllItems: Query.getAllItems,
+  getHotbarItemCount: Slots.getHotbarItemCount, getStorageItemCount: Slots.getStorageItemCount,
+  isEquipped: State.isEquipped, isFull: State.isFull, hasHotbarSpace: State.hasHotbarSpace,
+  compact: Slots.compactHotbar,
+  getCurrentWeight: State.getCurrentWeight, getRemainingCapacity: State.getRemainingCapacity,
+  // Expose internals for UI
+  _Slots: Slots, _State: State, _Utils: Utils,
+};
+})();
+
+// ============================================================
+// UI CONTROLLER
+// ============================================================
+
+const RARITY_COLORS = { Common: '#9e9e9e', Uncommon: '#4caf50', Rare: '#2196f3', Epic: '#9c27b0', Legendary: '#ff9800', Mythic: '#f44336', Special: '#ffd700' };
+
+let players = {};
+let activePlayer = null;
+let selectedUUID = null;
+let pendingMetaUpdates = {};
+
+function addPlayer(name) {
+  if (!name) { name = prompt('Player name:', `Player ${Object.keys(players).length + 1}`); if (!name) return; }
+  players[name] = CoreStore.new();
+  activePlayer = name;
+  selectedUUID = null;
+  renderAll();
+}
+function switchPlayer(name) { activePlayer = name; selectedUUID = null; renderAll(); }
+function removePlayer(name) { if (Object.keys(players).length <= 1) return; delete players[name]; if (activePlayer === name) activePlayer = Object.keys(players)[0]; selectedUUID = null; renderAll(); }
+function getState() { return players[activePlayer]; }
+
+function renderAll() {
+  renderPlayerList();
+  renderInventory();
+  renderSelected();
+  renderMetaFields();
+  updateWeight();
+}
+function renderPlayerList() {
+  const el = document.getElementById('playerList');
+  el.innerHTML = '';
+  for (const name of Object.keys(players)) {
+    const li = document.createElement('li');
+    li.className = 'player-item' + (name === activePlayer ? ' active' : '');
+    const count = Object.keys(players[name].Items).length;
+    li.innerHTML = `<span class="name">${name}</span><span class="badge">${count}</span><button class="del-btn" onclick="event.stopPropagation();removePlayer('${name}')">&times;</button>`;
+    li.onclick = () => switchPlayer(name);
+    el.appendChild(li);
+  }
+  document.getElementById('activePlayerName').textContent = activePlayer || 'No Players';
+}
+function renderInventory() {
+  const s = getState(); if (!s) return;
+  const maxSlots = s.Settings.MaxHotbarSlots;
+  // Hotbar
+  const hg = document.getElementById('hotbarGrid');
+  hg.innerHTML = '';
+  for (let i = 1; i <= maxSlots; i++) {
+    const uuid = s.Hotbar[i];
+    if (!uuid && s.Settings.HotbarType === 'Dynamic') continue;
+    const div = document.createElement('div');
+    div.className = 'slot' + (uuid ? ' filled' : '') + (uuid === selectedUUID ? ' selected' : '');
+    div.dataset.type = 'Hotbar';
+    div.dataset.slot = String(i);
+    if (uuid) {
+      div.dataset.uuid = uuid;
+      div.draggable = true;
+      const item = s.Items[uuid];
+      if (item) {
+        const rarity = item.Metadata.Rarity;
+        const color = RARITY_COLORS[rarity] || 'var(--border-color)';
+        div.innerHTML = `<div class="rarity-bar" style="background:${color}"></div><span class="slot-num">${i}</span><span class="item-id">${item.Id}</span><span class="item-amt">x${item.Amount}</span>`;
+        div.onclick = () => selectItem(uuid);
+      } else {
+        div.innerHTML = `<span class="slot-num">${i}</span>`;
+      }
+    } else {
+      div.innerHTML = `<span class="slot-num">${i}</span>`;
+    }
+    hg.appendChild(div);
+  }
+  // Storage
+  const sg = document.getElementById('storageGrid');
+  sg.innerHTML = '';
+  for (let idx = 0; idx < s.Storage.length; idx++) {
+    const uuid = s.Storage[idx];
+    const item = s.Items[uuid];
+    if (!item) continue;
+    const div = document.createElement('div');
+    div.className = 'storage-card' + (uuid === selectedUUID ? ' selected' : '');
+    div.dataset.uuid = uuid;
+    div.dataset.type = 'Storage';
+    div.dataset.slot = String(idx + 1);
+    div.draggable = true;
+    const rarity = item.Metadata.Rarity;
+    const color = RARITY_COLORS[rarity] || 'var(--border-color)';
+    div.innerHTML = `<div class="rarity-bar" style="background:${color}"></div><div class="card-id">${item.Id}</div><div class="card-meta">x${item.Amount}${rarity ? ' ' + rarity : ''}${item.Metadata.Type ? ' ' + item.Metadata.Type : ''}</div><div class="card-uuid">${uuid}</div>`;
+    div.onclick = () => selectItem(uuid);
+    sg.appendChild(div);
+  }
+  if (s.Storage.length === 0) sg.innerHTML = '<div style="color:var(--text-muted);font-size:11px;padding:8px">No items in storage</div>';
+}
+function selectItem(uuid) { selectedUUID = selectedUUID === uuid ? null : uuid; renderInventory(); renderSelected(); renderMetaFields(); }
+function renderSelected() {
+  const s = getState(); const panel = document.getElementById('selectedPanel');
+  if (!selectedUUID) { panel.style.display = 'none'; return; }
+  const item = s.Items[selectedUUID];
+  if (!item) { panel.style.display = 'none'; selectedUUID = null; return; }
+  panel.style.display = 'block';
+  const loc = CoreStore._Slots.getLocation(s, selectedUUID);
+  const locStr = loc ? `${loc.Type} ${loc.Slot}` : 'Unknown';
+  document.getElementById('selectedDetails').innerHTML = `
+    <div class="detail-row"><span class="label">UUID</span><span class="value" style="font-size:10px;word-break:break-all">${item.UUID}</span></div>
+    <div class="detail-row"><span class="label">ID</span><span class="value">${item.Id}</span></div>
+    <div class="detail-row"><span class="label">Amount</span><span class="value">${item.Amount}</span></div>
+    <div class="detail-row"><span class="label">Location</span><span class="value">${locStr}</span></div>
+    ${Object.entries(item.Metadata).map(([k, v]) => `<div class="detail-row"><span class="label">${k}</span><span class="value">${v}</span></div>`).join('')}
+    <div class="detail-actions">
+      <button onclick="doRemove()">Delete</button>
+      <button onclick="doQuickSplit()">Split</button>
+    </div>
+  `;
+}
+function updateWeight() {
+  const s = getState(); if (!s) return;
+  const w = s.Weight, lim = s.Settings.Limit;
+  const pct = lim > 0 ? Math.min(100, (w / lim) * 100) : 0;
+  document.getElementById('weightFill').style.width = pct + '%';
+  document.getElementById('weightText').textContent = lim > 0 ? `${w} / ${lim}` : `${w} / inf`;
+}
+function renderMetaFields() {
+  const s = getState(); const el = document.getElementById('metaFields');
+  if (!selectedUUID || !s.Items[selectedUUID]) { el.innerHTML = '<div style="color:var(--text-muted);font-size:11px">Select an item first</div>'; return; }
+  const item = s.Items[selectedUUID];
+  let html = '';
+  for (const [k, v] of Object.entries(item.Metadata)) {
+    html += `<div class="form-row"><label>${k}</label><input value="${v}" onchange="pendingMetaUpdates['${k}']=this.value" style="flex:1"><button class="btn-sm" onclick="pendingMetaUpdates['${k}']=undefined;this.parentElement.querySelector('input').value=''">&times;</button></div>`;
+  }
+  el.innerHTML = html;
+}
+
+// --- Operations ---
+function doAdd() {
+  const s = getState(); if (!s) return;
+  const id = document.getElementById('addId').value;
+  const amt = Number(document.getElementById('addAmount').value) || 1;
+  const rarity = document.getElementById('addRarity').value;
+  const type = document.getElementById('addMetaType').value;
+  const placement = document.getElementById('addPlacement').value;
+  const slotVal = document.getElementById('addSlot').value;
+  const meta = {}; if (rarity) meta.Rarity = rarity; if (type) meta.Type = type;
+  const opts = { Placement: placement }; if (slotVal) opts.Slot = Number(slotVal);
+  const r = CoreStore.add(s, { Id: id, Amount: amt, Metadata: meta }, opts);
+  showResult('addResult', r.success, `Added ${r.addedAmount || 0}${r.overflow ? `, overflow ${r.overflow}` : ''}`);
+  logOp('add', `{id:"${id}", amt:${amt}}`, r.success, r.reason);
+  renderAll();
+}
+function doRemove() {
+  const s = getState(); if (!selectedUUID) { showResult('removeResult', false, 'Select an item first'); return; }
+  const amt = document.getElementById('removeAmount').value ? Number(document.getElementById('removeAmount').value) : undefined;
+  const r = CoreStore.remove(s, selectedUUID, amt);
+  showResult('removeResult', r.success, r.success ? `Removed ${r.removedItem?.Amount || 0}` : r.reason);
+  logOp('remove', `{uuid:"${selectedUUID?.slice(0,12)}..."}`, r.success, r.reason);
+  if (r.success) selectedUUID = null;
+  renderAll();
+}
+function doSwap() {
+  const s = getState();
+  const fromRef = parseSlotRef(document.getElementById('swapFrom').value);
+  const toRef = parseSlotRef(document.getElementById('swapTo').value);
+  if (!fromRef || !toRef) { showResult('swapResult', false, 'Invalid slot format (e.g. "Hotbar 1" or "Storage 2")'); return; }
+  const oldVal = s.Settings.StackOnSwap;
+  s.Settings.StackOnSwap = document.getElementById('swapStack').checked;
+  const r = CoreStore.swap(s, fromRef, toRef);
+  s.Settings.StackOnSwap = oldVal;
+  showResult('swapResult', r.success, r.success ? 'Swapped' : r.reason);
+  logOp('swap', `${fmtRef(fromRef)} -> ${fmtRef(toRef)}`, r.success, r.reason);
+  renderAll();
+}
+function doMove() {
+  const s = getState();
+  const fromRef = parseSlotRef(document.getElementById('moveFrom').value);
+  const toRef = parseSlotRef(document.getElementById('moveTo').value);
+  if (!fromRef || !toRef) { showResult('moveResult', false, 'Invalid slot format'); return; }
+  const r = CoreStore.move(s, fromRef, toRef);
+  showResult('moveResult', r.success, r.success ? 'Moved' : r.reason);
+  logOp('move', `${fmtRef(fromRef)} -> ${fmtRef(toRef)}`, r.success, r.reason);
+  renderAll();
+}
+function doSplit() {
+  const s = getState(); if (!selectedUUID) { showResult('splitResult', false, 'Select an item first'); return; }
+  const amt = Number(document.getElementById('splitAmount').value) || 1;
+  const destType = document.getElementById('splitDest').value;
+  let dest = null;
+  if (destType === 'hotbar') dest = { Type: 'Hotbar', Slot: Number(document.getElementById('splitSlot').value) || 1 };
+  else if (destType === 'storage') dest = { Type: 'Storage', Slot: Number(document.getElementById('splitSlot').value) || 1 };
+  const r = CoreStore.split(s, selectedUUID, amt, dest);
+  showResult('splitResult', r.success, r.success ? `Split: ${r.newAmount} -> new item` : r.reason);
+  logOp('split', `{uuid:"${selectedUUID?.slice(0,12)}...", amt:${amt}}`, r.success, r.reason);
+  renderAll();
+}
+function doQuickSplit() {
+  const s = getState(); if (!selectedUUID) return;
+  const item = s.Items[selectedUUID]; if (!item || item.Amount < 2) return;
+  const amt = Math.floor(item.Amount / 2);
+  const r = CoreStore.split(s, selectedUUID, amt);
+  logOp('split (quick)', `{amt:${amt}}`, r.success, r.reason);
+  renderAll();
+}
+function doUpdateMeta() {
+  const s = getState(); if (!selectedUUID) { showResult('metaResult', false, 'Select an item first'); return; }
+  const updates = {};
+  for (const [k, v] of Object.entries(pendingMetaUpdates)) { updates[k] = v; }
+  const newKey = document.getElementById('metaNewKey').value;
+  const newVal = document.getElementById('metaNewVal').value;
+  if (newKey) updates[newKey] = newVal;
+  const r = CoreStore.updateMetadata(s, selectedUUID, updates);
+  showResult('metaResult', r.success, r.success ? `Updated: ${r.updatedFields?.join(', ')}` : r.reason);
+  logOp('updateMeta', `{uuid:"${selectedUUID?.slice(0,12)}...", fields:[${r.updatedFields?.join(',')}]} `, r.success, r.reason);
+  pendingMetaUpdates = {};
+  document.getElementById('metaNewKey').value = '';
+  document.getElementById('metaNewVal').value = '';
+  renderAll();
+}
+function addMetaField() {
+  const k = document.getElementById('metaNewKey').value;
+  const v = document.getElementById('metaNewVal').value;
+  if (!k) return;
+  pendingMetaUpdates[k] = v;
+  renderMetaFields();
+}
+function doSort() {
+  const s = getState();
+  const order = document.getElementById('sortOrder').value;
+  const oldOrder = s.Settings.SortOrder;
+  s.Settings.SortOrder = order;
+  const r = CoreStore.sort(s);
+  s.Settings.SortOrder = oldOrder;
+  showResult('sortResult', true, r.success ? 'Sorted' : 'No change');
+  logOp('sort', `{order:"${order}"}`, true);
+  renderAll();
+}
+function doApplySettings() {
+  const s = getState(); if (!s) return;
+  s.Settings.HotbarType = document.getElementById('setHotbarType').value;
+  s.Settings.MaxHotbarSlots = Number(document.getElementById('setMaxSlots').value) || 10;
+  s.Settings.Limit = Number(document.getElementById('setLimit').value) || 0;
+  s.Settings.MaxStackSize = Number(document.getElementById('setMaxStack').value) || 5;
+  s.Settings.CanStack = document.getElementById('setCanStack').checked;
+  s.Settings.BackpackEnabled = document.getElementById('setBackpack').checked;
+  s.Settings.StackOnSwap = document.getElementById('setStackOnSwap').checked;
+  s.Settings.Sorting = document.getElementById('setSorting').checked;
+  showResult('settingsResult', true, 'Settings applied');
+  logOp('settings', 'applied', true);
+  renderAll();
+}
+
+// --- Transfer ---
+function openTransfer() {
+  const modal = document.getElementById('transferModal');
+  const fromSel = document.getElementById('transferFrom');
+  const toSel = document.getElementById('transferTo');
+  const itemSel = document.getElementById('transferItem');
+  fromSel.innerHTML = ''; toSel.innerHTML = ''; itemSel.innerHTML = '';
+  for (const name of Object.keys(players)) {
+    fromSel.innerHTML += `<option value="${name}">${name}</option>`;
+    toSel.innerHTML += `<option value="${name}">${name}</option>`;
+  }
+  fromSel.onchange = () => {
+    const p = players[fromSel.value]; itemSel.innerHTML = '';
+    if (p) for (const uuid of Object.keys(p.Items)) { const it = p.Items[uuid]; itemSel.innerHTML += `<option value="${uuid}">${it.Id} x${it.Amount} (${uuid.slice(0,12)}...)</option>`; }
+  };
+  fromSel.onchange();
+  if (fromSel.value === activePlayer && toSel.options.length > 1) toSel.selectedIndex = 1;
+  modal.classList.add('show');
+}
+function closeTransfer() { document.getElementById('transferModal').classList.remove('show'); }
+function doTransfer() {
+  const fromName = document.getElementById('transferFrom').value;
+  const toName = document.getElementById('transferTo').value;
+  const uuid = document.getElementById('transferItem').value;
+  if (!fromName || !toName || !uuid) return;
+  const fromState = players[fromName]; const toState = players[toName];
+  if (!fromState || !toState) return;
+  const item = fromState.Items[uuid]; if (!item) return;
+  const itemCopy = { Id: item.Id, Amount: item.Amount, Metadata: CoreStore._Utils.deepCopy(item.Metadata) };
+  const rAdd = CoreStore.add(toState, itemCopy);
+  if (rAdd.success) {
+    CoreStore.remove(fromState, uuid);
+    logOp('transfer', `${fromName} -> ${toName}: ${item.Id} x${item.Amount}`, true);
+  } else {
+    logOp('transfer', `${fromName} -> ${toName}`, false, rAdd.reason);
+  }
+  closeTransfer();
+  if (fromName === activePlayer || toName === activePlayer) { selectedUUID = null; renderAll(); }
+  else renderPlayerList();
+}
+
+// --- Helpers ---
+function parseSlotRef(str) {
+  if (!str) return null;
+  const parts = str.trim().split(/\s+/);
+  if (parts.length < 2) return null;
+  const type = parts[0]; const slot = Number(parts[1]);
+  if ((type === 'Hotbar' || type === 'Storage') && slot > 0) return { Type: type, Slot: slot };
+  return null;
+}
+function fmtRef(r) { return `${r.Type} ${r.Slot}`; }
+function toggleSection(header) { header.nextElementSibling.classList.toggle('open'); }
+function showResult(id, success, msg) {
+  const el = document.getElementById(id);
+  el.className = 'result-msg ' + (success ? 'success' : 'error');
+  el.textContent = msg;
+  setTimeout(() => { el.textContent = ''; el.className = ''; }, 3000);
+}
+function logOp(op, params, success, reason) {
+  const el = document.getElementById('logOutput');
+  const ts = new Date().toLocaleTimeString();
+  const cls = success ? 'ok' : 'fail';
+  const msg = success ? 'OK' : (reason || 'FAIL');
+  el.innerHTML += `<div class="log-entry"><span class="ts">${ts}</span> <span class="op">${op}</span> ${params} <span class="${cls}">${msg}</span></div>`;
+  el.scrollTop = el.scrollHeight;
+}
+function clearLog() { document.getElementById('logOutput').innerHTML = ''; }
+
+// Split dest toggle
+document.getElementById('splitDest').addEventListener('change', function() {
+  document.getElementById('splitSlotRow').style.display = this.value ? 'flex' : 'none';
+});
+
+// ============================================================
+// TEST SCENARIOS
+// ============================================================
+
+const SCENARIOS = [
+  { name: 'Fill Hotbar', fn: () => {
+    const s = getState(); const items = ['Sword','Shield','Potion','Ring','Amulet','Bow','Staff','Dagger','Helmet','Boots'];
+    items.forEach((id, i) => CoreStore.addToHotbar(s, { Id: id, Amount: 1, Metadata: { Rarity: ['Common','Uncommon','Rare','Epic','Legendary'][i % 5], Type: 'Equipment' } }, i + 1));
+    return `Filled hotbar with ${items.length} items`;
+  }},
+  { name: 'Stack Test', fn: () => {
+    const s = getState(); CoreStore.add(s, { Id: 'Apple', Amount: 3 }); CoreStore.add(s, { Id: 'Apple', Amount: 3 });
+    return `Added 2 stacks of Apples. Total: ${CoreStore.find(s, 'Apple').length} stacks`;
+  }},
+  { name: 'Overflow Test', fn: () => {
+    const s = getState(); const r = CoreStore.add(s, { Id: 'Stone', Amount: 12 });
+    return `Added 12 Stone (MaxStack=5): ${r.addedAmount} added, ${r.overflow} overflow`;
+  }},
+  { name: 'Capacity Test', fn: () => {
+    const s = getState(); CoreStore.add(s, { Id: 'Gold', Amount: 15 });
+    const r = CoreStore.add(s, { Id: 'Gold', Amount: 5 });
+    return `Filled to limit (15). Try adding 5 more: ${r.success ? 'Added' : r.reason}`;
+  }},
+  { name: 'Blacklist Test', fn: () => {
+    const s = getState(); CoreStore.add(s, { Id: 'Excalibur', Amount: 1, Metadata: { Rarity: 'Legendary' } }); CoreStore.add(s, { Id: 'Excalibur', Amount: 1, Metadata: { Rarity: 'Legendary' } });
+    return `Added 2 Legendary Excaliburs: ${CoreStore.find(s, 'Excalibur').length} stacks (should be 2, not stacked)`;
+  }},
+  { name: 'Swap Test', fn: () => {
+    const s = getState(); CoreStore.addToHotbar(s, { Id: 'Sword', Amount: 1 }, 1); CoreStore.addToHotbar(s, { Id: 'Shield', Amount: 1 }, 2);
+    CoreStore.swap(s, { Type: 'Hotbar', Slot: 1 }, { Type: 'Hotbar', Slot: 2 });
+    const s1 = CoreStore.getItem(s, s.Hotbar[1]); const s2 = CoreStore.getItem(s, s.Hotbar[2]);
+    return `Swapped: Slot 1=${s1?.Id}, Slot 2=${s2?.Id}`;
+  }},
+  { name: 'Move Test', fn: () => {
+    const s = getState(); CoreStore.addToHotbar(s, { Id: 'Map', Amount: 1 }, 1);
+    CoreStore.move(s, { Type: 'Hotbar', Slot: 1 }, { Type: 'Storage', Slot: 1 });
+    return `Moved Map to Storage. Hotbar items: ${CoreStore.getHotbarItemCount(s)}, Storage items: ${CoreStore.getStorageItemCount(s)}`;
+  }},
+  { name: 'Split Test', fn: () => {
+    const s = getState(); CoreStore.addToHotbar(s, { Id: 'Arrow', Amount: 10 }, 1);
+    const uuid = s.Hotbar[1]; const r = CoreStore.split(s, uuid, 3);
+    return `Split 3 from Arrow x10: source=${r.sourceAmount}, new=${r.newAmount}`;
+  }},
+  { name: 'Sort by Rarity', fn: () => {
+    const s = getState(); s.Settings.SortOrder = 'Rarity';
+    CoreStore.addToBackpack(s, { Id: 'Sword', Amount: 1, Metadata: { Rarity: 'Legendary' } });
+    CoreStore.addToBackpack(s, { Id: 'Shield', Amount: 1, Metadata: { Rarity: 'Common' } });
+    CoreStore.addToBackpack(s, { Id: 'Axe', Amount: 1, Metadata: { Rarity: 'Rare' } });
+    CoreStore.sort(s);
+    const order = s.Storage.map(u => s.Items[u]?.Metadata.Rarity).join(', ');
+    return `Sorted by Rarity: ${order}`;
+  }},
+  { name: 'Multi-Player', fn: () => {
+    if (Object.keys(players).length < 2) addPlayer('Player 2');
+    const names = Object.keys(players);
+    CoreStore.addToHotbar(players[names[0]], { Id: 'Gem', Amount: 1, Metadata: { Rarity: 'Epic' } }, 1);
+    const uuid = players[names[0]].Hotbar[1];
+    if (uuid) {
+      const item = players[names[0]].Items[uuid];
+      CoreStore.add(players[names[1]], { Id: item.Id, Amount: item.Amount, Metadata: { ...item.Metadata } });
+      CoreStore.remove(players[names[0]], uuid);
+    }
+    return `Transferred Gem from ${names[0]} to ${names[1]}`;
+  }},
+  { name: 'Dynamic Hotbar', fn: () => {
+    const s = getState(); s.Settings.HotbarType = 'Dynamic';
+    CoreStore.addToHotbar(s, { Id: 'Item1', Amount: 1 }, 1); CoreStore.addToHotbar(s, { Id: 'Item2', Amount: 1 }, 3);
+    CoreStore.removeBySlot(s, 'Hotbar', 1);
+    return `Dynamic mode: removed slot 1, compaction ran. Slot 1 now=${s.Items[s.Hotbar[1]]?.Id || 'empty'}`;
+  }},
+  { name: 'Weight Tracking', fn: () => {
+    const s = getState(); CoreStore.add(s, { Id: 'Coin', Amount: 7 });
+    const w1 = s.Weight; CoreStore.remove(s, Object.keys(s.Items)[0], 3);
+    return `Added 7, weight=${w1}. Removed 3, weight=${s.Weight}`;
+  }},
+];
+
+function renderScenarios() {
+  const el = document.getElementById('scenarioList');
+  el.innerHTML = '';
+  SCENARIOS.forEach((sc, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'scenario-btn';
+    btn.textContent = sc.name;
+    btn.onclick = () => { try { const msg = sc.fn(); logOp('scenario', sc.name, true); showResult('settingsResult', true, msg); renderAll(); } catch(e) { logOp('scenario', sc.name, false, e.message); } };
+    el.appendChild(btn);
+  });
+}
+
+// --- Drag and Drop ---
+let dragData = null;
+let dropZoneContainer = null;
+
+function resolveDragAction(srcUUID, tgtUUID, state) {
+  if (!tgtUUID) return 'move';
+  if (srcUUID === tgtUUID) return 'none';
+  const src = state.Items[srcUUID];
+  const tgt = state.Items[tgtUUID];
+  if (!src || !tgt) return 'move';
+  if (src.Id === tgt.Id && tgt.Amount < state.Settings.MaxStackSize && state.Settings.CanStack) return 'stack';
+  return 'swap';
+}
+
+function setupDragHandlers() {
+  // Document-level delegation for dragstart/dragend — survives DOM re-renders
+  document.addEventListener('dragstart', e => {
+    const el = e.target.closest('[draggable="true"]');
+    if (!el || !el.dataset.uuid) return;
+    const s = getState(); if (!s) return;
+    dragData = { uuid: el.dataset.uuid, type: el.dataset.type, slot: Number(el.dataset.slot) };
+    el.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', el.dataset.uuid);
+    document.getElementById('storageDropBar').classList.add('drag-active');
+    if (s.Settings.HotbarType === 'Dynamic') renderDropZones();
+  });
+  document.addEventListener('dragend', e => {
+    const el = e.target.closest('[draggable="true"]');
+    if (el) el.classList.remove('dragging');
+    dragData = null;
+    clearAllDropIndicators();
+  });
+
+  // Storage grid delegation — drop targets for storage cards
+  const storageGrid = document.getElementById('storageGrid');
+  storageGrid.addEventListener('dragover', e => {
+    if (!dragData) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const card = e.target.closest('.storage-card');
+    storageGrid.querySelectorAll('.drop-move,.drop-stack,.drop-swap').forEach(el => el.classList.remove('drop-move','drop-stack','drop-swap'));
+    if (card && card.dataset.uuid) {
+      const s = getState();
+      const action = resolveDragAction(dragData.uuid, card.dataset.uuid, s);
+      if (action !== 'none') card.classList.add('drop-' + action);
+    }
+  });
+  storageGrid.addEventListener('dragleave', e => {
+    if (!storageGrid.contains(e.relatedTarget)) {
+      storageGrid.querySelectorAll('.drop-move,.drop-stack,.drop-swap').forEach(el => el.classList.remove('drop-move','drop-stack','drop-swap'));
+    }
+  });
+  storageGrid.addEventListener('drop', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!dragData) return;
+    const s = getState();
+    const card = e.target.closest('.storage-card');
+    if (card && card.dataset.uuid) {
+      const tgtUUID = card.dataset.uuid;
+      const tgtType = card.dataset.type;
+      const tgtSlot = Number(card.dataset.slot);
+      const action = resolveDragAction(dragData.uuid, tgtUUID, s);
+      executeDragDrop(dragData.uuid, tgtUUID, dragData.type, dragData.slot, tgtType, tgtSlot, action);
+    } else {
+      const fromRef = { Type: dragData.type, Slot: dragData.slot };
+      const nextSlot = s.Storage.length + 1;
+      const toRef = { Type: 'Storage', Slot: nextSlot };
+      const r = CoreStore.move(s, fromRef, toRef);
+      logOp('drag->storage', `${fmtRef(fromRef)} -> Storage ${nextSlot}`, r.success, r.reason);
+    }
+    clearAllDropIndicators();
+    renderAll();
+  });
+
+  // Hotbar grid delegation — drop targets for hotbar slots
+  const hotbarGrid = document.getElementById('hotbarGrid');
+  hotbarGrid.addEventListener('dragover', e => {
+    if (!dragData) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const slot = e.target.closest('.slot');
+    hotbarGrid.querySelectorAll('.drop-move,.drop-stack,.drop-swap').forEach(el => el.classList.remove('drop-move','drop-stack','drop-swap'));
+    if (slot && slot.dataset.uuid) {
+      const s = getState();
+      const action = resolveDragAction(dragData.uuid, slot.dataset.uuid, s);
+      if (action !== 'none') slot.classList.add('drop-' + action);
+    }
+  });
+  hotbarGrid.addEventListener('dragleave', e => {
+    if (!hotbarGrid.contains(e.relatedTarget)) {
+      hotbarGrid.querySelectorAll('.drop-move,.drop-stack,.drop-swap').forEach(el => el.classList.remove('drop-move','drop-stack','drop-swap'));
+    }
+  });
+  hotbarGrid.addEventListener('drop', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!dragData) return;
+    const s = getState();
+    const slot = e.target.closest('.slot');
+    if (slot && slot.dataset.uuid) {
+      const tgtUUID = slot.dataset.uuid;
+      const tgtType = slot.dataset.type;
+      const tgtSlot = Number(slot.dataset.slot);
+      const action = resolveDragAction(dragData.uuid, tgtUUID, s);
+      executeDragDrop(dragData.uuid, tgtUUID, dragData.type, dragData.slot, tgtType, tgtSlot, action);
+    } else if (slot) {
+      const fromRef = { Type: dragData.type, Slot: dragData.slot };
+      const toRef = { Type: 'Hotbar', Slot: Number(slot.dataset.slot) };
+      const r = CoreStore.move(s, fromRef, toRef);
+      logOp('drag->hotbar', `${fmtRef(fromRef)} -> Hotbar ${toRef.Slot}`, r.success, r.reason);
+    }
+    clearAllDropIndicators();
+    renderAll();
+  });
+
+  // Storage drop bar
+  const dropBar = document.getElementById('storageDropBar');
+  dropBar.addEventListener('dragover', e => {
+    if (!dragData) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    dropBar.classList.add('drag-over');
+  });
+  dropBar.addEventListener('dragleave', () => {
+    dropBar.classList.remove('drag-over');
+  });
+  dropBar.addEventListener('drop', e => {
+    e.preventDefault();
+    if (!dragData) return;
+    const s = getState();
+    const fromRef = { Type: dragData.type, Slot: dragData.slot };
+    const nextSlot = s.Storage.length + 1;
+    const toRef = { Type: 'Storage', Slot: nextSlot };
+    const r = CoreStore.move(s, fromRef, toRef);
+    logOp('drag->storage', `${fmtRef(fromRef)} -> Storage ${nextSlot}`, r.success, r.reason);
+    clearAllDropIndicators();
+    renderAll();
+  });
+}
+
+function renderDropZones() {
+  const s = getState(); if (!s || s.Settings.HotbarType !== 'Dynamic') return;
+  const hg = document.getElementById('hotbarGrid');
+  // Remove existing drop zones
+  hg.querySelectorAll('.drop-zone').forEach(el => el.remove());
+  // Add drop zones for empty slots
+  for (let i = 1; i <= s.Settings.MaxHotbarSlots; i++) {
+    if (!s.Hotbar[i]) {
+      const zone = document.createElement('div');
+      zone.className = 'slot drop-zone';
+      zone.dataset.slot = String(i);
+      zone.textContent = `+${i}`;
+      hg.appendChild(zone);
+    }
+  }
+}
+
+function clearAllDropIndicators() {
+  document.querySelectorAll('.drop-move, .drop-stack, .drop-swap').forEach(el => {
+    el.classList.remove('drop-move', 'drop-stack', 'drop-swap');
+  });
+  document.querySelectorAll('.drop-zone').forEach(el => el.remove());
+  const dropBar = document.getElementById('storageDropBar');
+  dropBar.classList.remove('drag-active', 'drag-over');
+}
+
+function executeDragDrop(srcUUID, tgtUUID, srcType, srcSlot, tgtType, tgtSlot, action) {
+  const s = getState(); if (!s) return;
+  if (action === 'none') return;
+  if (action === 'move') {
+    const r = CoreStore.move(s, { Type: srcType, Slot: srcSlot }, { Type: tgtType, Slot: tgtSlot });
+    logOp('drag:move', `${srcType} ${srcSlot} -> ${tgtType} ${tgtSlot}`, r.success, r.reason);
+  } else if (action === 'swap') {
+    const r = CoreStore.swap(s, { Type: srcType, Slot: srcSlot }, { Type: tgtType, Slot: tgtSlot });
+    logOp('drag:swap', `${srcType} ${srcSlot} <-> ${tgtType} ${tgtSlot}`, r.success, r.reason);
+  } else if (action === 'stack') {
+    // Temporarily enable StackOnSwap
+    const old = s.Settings.StackOnSwap;
+    s.Settings.StackOnSwap = true;
+    const r = CoreStore.swap(s, { Type: srcType, Slot: srcSlot }, { Type: tgtType, Slot: tgtSlot });
+    s.Settings.StackOnSwap = old;
+    logOp('drag:stack', `${srcType} ${srcSlot} -> ${tgtType} ${tgtSlot}`, r.success, r.reason);
+  }
+  renderAll();
+}
+
+// Init
+addPlayer('Player 1');
+renderScenarios();
+setupDragHandlers();
+
+// Open first control section
+document.querySelector('.control-body')?.classList.add('open');
+</script>
+</body>
+</html>
