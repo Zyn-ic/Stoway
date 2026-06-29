@@ -12,9 +12,11 @@ local Utils = require("../CoreStore/Utils")
 
 local Metadata = {}
 
+-----------------------------
 -- CONSTANTS --
 -----------------------------
 
+-----------------------------
 -- PRIVATE FUNCTIONS --
 -----------------------------
 

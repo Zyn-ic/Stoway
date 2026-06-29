@@ -17,6 +17,7 @@ local Utils = require("../CoreStore/Utils")
 
 local Operations = {}
 
+-----------------------------
 -- CONSTANTS --
 -----------------------------
 
@@ -24,6 +25,7 @@ local Operations = {}
 -- Example: MetadataIndex["Rarity"]["Legendary"] = { "uuid-1", "uuid-5" }
 local INDEXED_METADATA_FIELDS: { string } = { "Rarity", "Type" }
 
+-----------------------------
 -- PRIVATE FUNCTIONS --
 -----------------------------
 

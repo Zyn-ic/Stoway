@@ -39,9 +39,11 @@ local DEFAULT_SETTINGS: Types.Settings = {
 	DefaultDroppable = true,
 }
 
+-----------------------------
 -- CONSTANTS --
 -----------------------------
 
+-----------------------------
 -- PRIVATE FUNCTIONS --
 -----------------------------
 

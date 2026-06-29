@@ -15,6 +15,7 @@ local Slots = require("./CoreStore/Slots")
 
 local CoreStore = {}
 
+-----------------------------
 -- CONSTANTS --
 -----------------------------
 
@@ -29,6 +30,7 @@ local function triggerAutoSort(state: Types.InventoryState)
 	end
 end
 
+-----------------------------
 -- PUBLIC FUNCTIONS --
 -----------------------------
 

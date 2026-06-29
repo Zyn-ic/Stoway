@@ -11,12 +11,14 @@ local Types = require("../CoreStore/Types")
 
 local Query = {}
 
+-----------------------------
 -- CONSTANTS --
 -----------------------------
 
 -- PRIVATE FUNCTIONS --
 -----------------------------
 
+-----------------------------
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
