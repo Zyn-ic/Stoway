@@ -48,6 +48,9 @@ function Utils.shallowCopy(value: any): any
 	return copy
 end
 
+-- Generates a unique ID: core-{timestamp}-{counter}-{random6}
+-- Not cryptographically unique, but sufficient for inventory UUIDs.
+-- Example: "core-1719686400.5-42-738291"
 function Utils.generateUUID(): string
 	uuidCounter += 1
 
@@ -55,6 +58,7 @@ function Utils.generateUUID(): string
 	return `core-{os.clock()}-{uuidCounter}-{randomPart}`
 end
 
+-- Checks if value is a number > 0. value == value catches NaN.
 function Utils.isPositiveNumber(value: any): boolean
 	return type(value) == "number" and value > 0 and value == value
 end

@@ -668,8 +668,8 @@ const Operations = {
   },
   sort(s) {
     const order = s.Settings.SortOrder; if (order === 'None') return { success: true };
-    const hc = Slots.sortHotbar(s, order); const sc = Slots.sortStorage(s, order);
-    return { success: true, hotbarOrder: hc ? [...Array(s.Settings.MaxHotbarSlots).keys()].map(i => s.Hotbar[i + 1]).filter(Boolean) : null, storageOrder: sc ? [...s.Storage] : null };
+    const sc = Slots.sortStorage(s, order);
+    return { success: true, storageOrder: sc ? [...s.Storage] : null };
   },
   removeBySlot(s, slotType, slot, amount) {
     const uuid = Slots.getUUIDFromSlot(s, slotType, slot);
@@ -962,7 +962,9 @@ function doSort() {
 }
 function doApplySettings() {
   const s = getState(); if (!s) return;
-  s.Settings.HotbarType = document.getElementById('setHotbarType').value;
+  const newHotbarType = document.getElementById('setHotbarType').value;
+  s.Settings.HotbarType = newHotbarType;
+  if (newHotbarType === 'Dynamic') CoreStore.compact(s);
   s.Settings.MaxHotbarSlots = Number(document.getElementById('setMaxSlots').value) || 10;
   s.Settings.Limit = Number(document.getElementById('setLimit').value) || 0;
   s.Settings.MaxStackSize = Number(document.getElementById('setMaxStack').value) || 5;

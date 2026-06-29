@@ -1,6 +1,6 @@
 # Sorting Rules
 
-Sorting reorders items within containers based on configurable criteria. In CoreStore, sorting is automatic when enabled via `Settings.Sorting = true`.
+Sorting reorders items within containers based on configurable criteria. In CoreStore, sorting applies to **Storage only**. The Hotbar is never sorted — it is always user-controlled.
 
 ---
 
@@ -15,7 +15,6 @@ CoreStore.sort(state) -> SortResult
 ```luau
 {
     success: boolean,
-    hotbarOrder: { string }?,    -- New hotbar UUID order (if changed)
     storageOrder: { string }?,   -- New storage UUID order (if changed)
 }
 ```
@@ -30,13 +29,13 @@ Sorting is automatic. It runs after any operation that mutates slot contents whe
 
 | Operation | Triggers Sort | Scope |
 |-----------|--------------|-------|
-| add | Yes | Both Hotbar and Storage |
+| add | Yes | Storage only |
 | addToBackpack | Yes | Storage only |
-| addToHotbar | Yes | Hotbar only |
-| remove | Yes | Both (reorder remaining) |
-| swap | Yes | Both (reorder affected container) |
-| move | Yes | Both (reorder affected container) |
-| split | Yes | Both (reorder destination container) |
+| addToHotbar | Yes | Storage only |
+| remove | Yes | Storage (reorder remaining) |
+| swap | Yes | Storage (if affected) |
+| move | Yes | Storage (if affected) |
+| split | Yes | Storage (if destination) |
 | sort | No (already sorting) | N/A |
 
 ### Trigger Timing
@@ -54,24 +53,11 @@ Sort runs **after** the primary operation completes and all invariants are satis
 
 ## Scope
 
-### Default: Both Containers
+### Storage Only
 
-When `Settings.Sorting = true`, both Hotbar and Storage are sorted independently.
+Sorting only affects Storage. The Hotbar is never sorted — it is always user-controlled.
 
-### Hotbar Sorting
-
-Only affects Hotbar if HotbarType = "Dynamic". In Static mode, hotbar order is fixed by the player and should not be auto-sorted.
-
-```
-If HotbarType == "Static":
-    Skip hotbar sorting
-If HotbarType == "Dynamic":
-    Sort hotbar items
-```
-
-### Storage Sorting
-
-Always sorts Storage when enabled.
+`Slots.sortHotbar()` exists as a utility function for callers who need it, but `Operations.sort()` and `triggerAutoSort()` only sort Storage.
 
 ---
 
@@ -131,19 +117,10 @@ When two items have the same sort key, their relative order is preserved (stable
 ## Sort Algorithm
 
 ```
-1. Read current item order from container
+1. Read current item order from Storage
 2. Sort items by SortOrder criteria
-3. Write new UUID order back to container
+3. Write new UUID order back to Storage
 4. Update LocationByUUID for all moved items
-```
-
-### Hotbar Sort (Dynamic)
-
-```
-currentUUIDs = [uuid for uuid in Hotbar if uuid ~= nil]
-sortedUUIDs = stableSort(currentUUIDs, by SortOrder)
-Hotbar = sortedUUIDs
-Update LocationByUUID for each UUID
 ```
 
 ### Storage Sort
@@ -171,7 +148,7 @@ Sorting preserves all state invariants:
 
 ## Manual Sort
 
-In the future, `CoreStore.sort(state, { Order = "Rarity", Scope = "Storage" })` may accept options to override Settings for a one-time sort. This is not yet implemented.
+In the future, `CoreStore.sort(state, { Order = "Rarity" })` may accept options to override Settings for a one-time sort. This is not yet implemented.
 
 ---
 
@@ -181,4 +158,4 @@ In the future, `CoreStore.sort(state, { Order = "Rarity", Scope = "Storage" })` 
 - Sorting: O(n log n)
 - Writing back: O(n)
 - LocationByUUID updates: O(n)
-- Total: O(n log n) where n = number of items in container
+- Total: O(n log n) where n = number of items in Storage

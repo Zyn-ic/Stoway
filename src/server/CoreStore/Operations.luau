@@ -2,7 +2,7 @@
 --@author: yyumchi
 --@date: 2026-06-24
 --[[@description:
-	Core inventory operations - add and remove items
+	Core inventory operations - add, remove, swap, move, split, sort
 ]]
 -----------------------------
 -- VARIABLES --
@@ -20,9 +20,16 @@ local Operations = {}
 -- CONSTANTS --
 -----------------------------
 
+-- These fields get a reverse index in MetadataIndex for O(1) bucket lookups.
+-- Example: MetadataIndex["Rarity"]["Legendary"] = { "uuid-1", "uuid-5" }
+local INDEXED_METADATA_FIELDS: { string } = { "Rarity", "Type" }
+
 -- PRIVATE FUNCTIONS --
 -----------------------------
 
+-- Adds a UUID to the ItemsByID reverse index.
+-- ItemsByID lets you find all UUIDs for a given ItemId without scanning all items.
+-- Example: ItemsByID["Sword"] = { "uuid-1", "uuid-3" }
 local function addToIndex(state: Types.InventoryState, itemId: string, uuid: string)
 	if not state.ItemsByID[itemId] then
 		state.ItemsByID[itemId] = {}
@@ -31,6 +38,8 @@ local function addToIndex(state: Types.InventoryState, itemId: string, uuid: str
 	table.insert(state.ItemsByID[itemId], uuid)
 end
 
+-- Removes a UUID from the ItemsByID reverse index.
+-- Cleans up the bucket entirely if it becomes empty.
 local function removeFromIndex(state: Types.InventoryState, itemId: string, uuid: string)
 	local uuids = state.ItemsByID[itemId]
 
@@ -48,8 +57,11 @@ local function removeFromIndex(state: Types.InventoryState, itemId: string, uuid
 	end
 end
 
-local INDEXED_METADATA_FIELDS: { string } = { "Rarity", "Type" }
-
+-- Inserts a UUID into the MetadataIndex for each indexed field.
+-- MetadataIndex is a 3-level nested table: field -> stringValue -> UUID array.
+-- Example:
+--   MetadataIndex["Rarity"]["Legendary"] = { "uuid-1", "uuid-5" }
+--   MetadataIndex["Type"]["Weapon"] = { "uuid-1", "uuid-3", "uuid-7" }
 local function addToMetadataIndex(state: Types.InventoryState, uuid: string, metadata: Types.ItemMetadata)
 	for _, field in INDEXED_METADATA_FIELDS do
 		local value = metadata[field]
@@ -69,6 +81,8 @@ local function addToMetadataIndex(state: Types.InventoryState, uuid: string, met
 	end
 end
 
+-- Removes a UUID from the MetadataIndex for each indexed field.
+-- Cleans up empty buckets to avoid memory leaks.
 local function removeFromMetadataIndex(state: Types.InventoryState, uuid: string, metadata: Types.ItemMetadata)
 	for _, field in INDEXED_METADATA_FIELDS do
 		local value = metadata[field]
@@ -90,12 +104,18 @@ local function removeFromMetadataIndex(state: Types.InventoryState, uuid: string
 	end
 end
 
+-- Moves a UUID between MetadataIndex buckets when metadata changes.
+-- Removes from the old bucket, inserts into the new bucket.
+-- Example: Rarity changed from "Common" to "Legendary"
+--   Removes uuid from MetadataIndex["Rarity"]["Common"]
+--   Inserts uuid into MetadataIndex["Rarity"]["Legendary"]
 local function updateMetadataIndex(state: Types.InventoryState, uuid: string, oldMetadata: Types.ItemMetadata, newMetadata: Types.ItemMetadata)
 	for _, field in INDEXED_METADATA_FIELDS do
 		local oldValue = oldMetadata[field]
 		local newValue = newMetadata[field]
 
 		if oldValue ~= newValue then
+			-- Remove from old bucket
 			if oldValue ~= nil then
 				local strValue = tostring(oldValue)
 				local bucket = state.MetadataIndex[field] and state.MetadataIndex[field][strValue]
@@ -110,6 +130,7 @@ local function updateMetadataIndex(state: Types.InventoryState, uuid: string, ol
 				end
 			end
 
+			-- Insert into new bucket
 			if newValue ~= nil then
 				local strValue = tostring(newValue)
 				if not state.MetadataIndex[field] then
@@ -124,6 +145,9 @@ local function updateMetadataIndex(state: Types.InventoryState, uuid: string, ol
 	end
 end
 
+-- Creates a new item and registers it across all lookup tables.
+-- Touches: Items, ItemsByID, MetadataIndex, Weight.
+-- Amount is capped at MaxStackSize unconditionally.
 local function createItem(
 	state: Types.InventoryState,
 	itemId: string,
@@ -148,6 +172,9 @@ local function createItem(
 	return item
 end
 
+-- Rolls back an item that failed to place (no room in hotbar or storage).
+-- Removes from all 4 tables: Items, LocationByUUID, ItemsByID, MetadataIndex.
+-- Also subtracts weight. Used when addNewStacks hits a wall mid-loop.
 local function destroyUnplacedItem(state: Types.InventoryState, item: Types.Item)
 	state.Items[item.UUID] = nil
 	state.LocationByUUID[item.UUID] = nil
@@ -157,6 +184,10 @@ local function destroyUnplacedItem(state: Types.InventoryState, item: Types.Item
 	State.removeWeight(state, item.Amount)
 end
 
+-- Places an item into the hotbar.
+-- Static mode: preferred slot first (if valid and empty), then scan for first nil.
+-- Dynamic mode: preferred slot is ignored, always appends to end.
+-- Returns (slot, nil) on success or (nil, reason) on failure.
 local function placeItemInHotbar(
 	state: Types.InventoryState,
 	item: Types.Item,
@@ -185,6 +216,8 @@ local function placeItemInHotbar(
 	return slot, nil
 end
 
+-- Places an item into storage (appends to end).
+-- Returns (slot, nil) on success or (nil, reason) if backpack is disabled.
 local function placeItemInStorage(state: Types.InventoryState, item: Types.Item): (number?, string?)
 	if not state.Settings.BackpackEnabled then
 		return nil, "BACKPACK_DISABLED"
@@ -194,6 +227,18 @@ local function placeItemInStorage(state: Types.InventoryState, item: Types.Item)
 	return slot, nil
 end
 
+-- Creates and places new stacks in a loop until amountLeft = 0 or overflow.
+--
+-- Flow for each iteration:
+--   1. createItem (capped at MaxStackSize)
+--   2. Place via placement chain: Backpack -> Hotbar -> Auto (hotbar first, then storage)
+--   3. If placement fails: destroyUnplacedItem (rollback), return overflow
+--   4. If success: record AddedSlot, subtract from remaining, loop again
+--
+-- Example: Add Apple x12, MaxStackSize = 5, Capacity = 10
+--   Iteration 1: createItem(5) -> placed in Hotbar[1], remaining = 7
+--   Iteration 2: createItem(5) -> placed in Storage[1], remaining = 2
+--   Iteration 3: createItem(2) -> no room -> destroyUnplacedItem, return overflow = 2
 local function addNewStacks(
 	state: Types.InventoryState,
 	itemId: string,
@@ -215,6 +260,7 @@ local function addNewStacks(
 		local placement = options.Placement or "Auto"
 
 		if placement == "Backpack" then
+			-- Storage only — skip hotbar stacking entirely
 			slot, reason = placeItemInStorage(state, item)
 
 			if slot then
@@ -222,6 +268,7 @@ local function addNewStacks(
 				placed = true
 			end
 		elseif placement == "Hotbar" then
+			-- Hotbar only — preferred slot (Static) or append (Dynamic)
 			slot, reason = placeItemInHotbar(state, item, options.Slot)
 
 			if slot then
@@ -229,6 +276,7 @@ local function addNewStacks(
 				placed = true
 			end
 		elseif placement == "Slot" and options.SlotRef then
+			-- Exact slot placement — must be empty
 			local slotRef = options.SlotRef
 
 			if slotRef.Type == "Hotbar" then
@@ -253,6 +301,7 @@ local function addNewStacks(
 				reason = "INVALID_SLOT"
 			end
 		elseif placement == "Auto" then
+			-- Placement chain: Hotbar first, then Storage
 			slot, reason = placeItemInHotbar(state, item, nil)
 
 			if slot then
@@ -270,6 +319,7 @@ local function addNewStacks(
 			reason = "INVALID_PLACEMENT"
 		end
 
+		-- Placement failed — rollback this item and return what we added so far
 		if not placed or not slotType or not slot then
 			destroyUnplacedItem(state, item)
 			return addedItems, remaining, reason
@@ -290,6 +340,14 @@ end
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
+-- Adds item(s) to the inventory.
+--
+-- 3-step flow:
+--   1. Normalize input (validate Id, extract Amount, default Metadata)
+--   2. Try stacking into existing stacks (if CanStack = true)
+--   3. Create new stacks for any remaining amount
+--
+-- Returns overflow if the total exceeds capacity.
 function Operations.add(
 	state: Types.InventoryState,
 	itemData: Types.ItemInput,
@@ -297,6 +355,7 @@ function Operations.add(
 ): Types.AddResult
 	local opts: Types.AddOptions = options or {}
 
+	-- Step 1: Normalize input
 	local itemId, amount, metadata, normalizeError = Metadata.normalize(itemData)
 
 	if normalizeError or not itemId or not amount or not metadata then
@@ -320,9 +379,11 @@ function Operations.add(
 		}
 	end
 
+	-- Cap at remaining capacity — excess becomes overflow
 	local amountToAdd = math.min(amount, remainingCapacity)
 	local amountLeft = amountToAdd
 
+	-- Step 2: Try stacking into existing stacks (reduces amountLeft)
 	local updatedItems: { number } = {}
 
 	if state.Settings.CanStack then
@@ -332,6 +393,7 @@ function Operations.add(
 		updatedItems = updates
 	end
 
+	-- Step 3: Create new stacks for whatever didn't stack
 	local addedItems: { Types.AddedSlot } = {}
 
 	if amountLeft > 0 then
@@ -346,6 +408,7 @@ function Operations.add(
 		addedItems = createdItems
 		amountLeft = leftover
 
+		-- Nothing placed and nothing stacked — total failure
 		if #addedItems == 0 and next(updatedItems) == nil then
 			return {
 				success = false,
@@ -371,6 +434,11 @@ function Operations.add(
 	}
 end
 
+-- Removes an item (partial or full).
+--
+-- Partial: reduces Amount, item stays in place.
+-- Full: destroys item from all tables (Items, LocationByUUID, ItemsByID,
+--       MetadataIndex, EquippedItemUUID), clears slot, compacts hotbar in Dynamic.
 function Operations.remove(
 	state: Types.InventoryState,
 	uuid: string,
@@ -400,6 +468,7 @@ function Operations.remove(
 	local slotType = if location then location.Type else nil
 	local slot = if location then location.Slot else nil
 
+	-- Snapshot of what we're removing (returned to caller)
 	local removedItem: Types.Item = {
 		UUID = item.UUID,
 		Id = item.Id,
@@ -407,6 +476,7 @@ function Operations.remove(
 		Metadata = Utils.deepCopy(item.Metadata) :: Types.ItemMetadata,
 	}
 
+	-- Partial removal — item still has Amount > 0
 	if item.Amount > amountToRemove then
 		item.Amount -= amountToRemove
 		State.removeWeight(state, amountToRemove)
@@ -420,6 +490,7 @@ function Operations.remove(
 		}
 	end
 
+	-- Full removal — destroy item from all tables
 	State.removeWeight(state, item.Amount)
 
 	state.Items[uuid] = nil
@@ -431,6 +502,7 @@ function Operations.remove(
 		state.EquippedItemUUID = nil
 	end
 
+	-- Clear the slot and compact if Dynamic hotbar
 	if slotType == "Hotbar" and slot then
 		Slots.clearHotbarSlot(state, slot)
 		Slots.compactHotbar(state)
@@ -447,6 +519,17 @@ function Operations.remove(
 	}
 end
 
+-- Swaps two slot positions. Handles 4 container combos:
+--
+--   Hotbar <-> Hotbar: exchange UUIDs in Hotbar table
+--   Storage <-> Storage: exchange UUIDs in Storage array
+--   Hotbar -> Storage: hotbar slot cleared, storage overwritten
+--   Storage -> Hotbar: storage cleared (shifts left), hotbar overwritten
+--
+-- StackOnSwap path: if enabled and items can stack, source is absorbed
+-- into destination stack. Source slot is destroyed on full absorption.
+--
+-- Dynamic Hotbar: H->H swap with empty dest is rejected (no holes allowed).
 function Operations.swap(
 	state: Types.InventoryState,
 	fromRef: Types.SlotRef,
@@ -490,6 +573,7 @@ function Operations.swap(
 		return { success = true }
 	end
 
+	-- StackOnSwap: if both items can stack, absorb source into destination
 	if toUUID and state.Settings.StackOnSwap and state.Settings.CanStack then
 		local fromItem = state.Items[fromUUID]
 		local toItem = state.Items[toUUID]
@@ -501,6 +585,7 @@ function Operations.swap(
 			toItem.Amount += transfer
 			fromItem.Amount -= transfer
 
+			-- Source fully absorbed — destroy it
 			if fromItem.Amount <= 0 then
 				local loc = Slots.getLocation(state, fromUUID)
 				state.Items[fromUUID] = nil
@@ -523,14 +608,17 @@ function Operations.swap(
 		end
 	end
 
+	-- Dynamic Hotbar: reject swap to empty slot (no holes allowed)
 	if fromRef.Type == "Hotbar" and toRef.Type == "Hotbar" then
 		if state.Settings.HotbarType == "Dynamic" and not toUUID then
 			return { success = false, reason = "DESTINATION_UNAVAILABLE" }
 		end
 	end
 
+	-- Positional swap — exchange UUIDs in both slots
 	local hotbarCompacted = Slots.swapSlots(state, fromRef, toRef)
 
+	-- Hotbar -> Storage (empty dest): clear old hotbar slot, compact if Dynamic
 	if toRef.Type == "Storage" and not toUUID then
 		local fromItem = state.Items[fromUUID]
 		if fromItem then
@@ -541,6 +629,7 @@ function Operations.swap(
 		end
 	end
 
+	-- Storage -> Hotbar (empty dest): remove from old storage index, append to end
 	if fromRef.Type == "Storage" and not toUUID then
 		local fromItem = state.Items[fromUUID]
 		if fromItem then
@@ -552,6 +641,14 @@ function Operations.swap(
 	return { success = true, hotbarCompacted = hotbarCompacted }
 end
 
+-- Moves an item from one slot to another. Move is purely positional — never stacks.
+--
+-- 5 paths:
+--   HH (Static): clear source, set dest, update LocationByUUID
+--   HH (Dynamic): rejected (no empty slots in packed portion)
+--   HS: clear source, append to storage, compact hotbar
+--   SH: remove from storage, set hotbar slot. Dynamic: only if dest == append position
+--   SS: reorder via moveWithinStorage (remove + insert at index)
 function Operations.move(
 	state: Types.InventoryState,
 	fromRef: Types.SlotRef,
@@ -588,6 +685,7 @@ function Operations.move(
 
 	local toUUID = Slots.getUUIDFromSlot(state, toRef.Type, toRef.Slot)
 
+	-- Storage -> Storage: reorder within the array
 	if fromRef.Type == "Storage" and toRef.Type == "Storage" then
 		Slots.moveWithinStorage(state, fromRef.Slot, toRef.Slot)
 		return { success = true }
@@ -597,6 +695,7 @@ function Operations.move(
 		return { success = false, reason = "DESTINATION_OCCUPIED" }
 	end
 
+	-- Hotbar -> Hotbar: Static allows, Dynamic rejects
 	if fromRef.Type == "Hotbar" and toRef.Type == "Hotbar" then
 		if state.Settings.HotbarType == "Dynamic" then
 			return { success = false, reason = "DESTINATION_UNAVAILABLE" }
@@ -607,6 +706,7 @@ function Operations.move(
 		return { success = true }
 	end
 
+	-- Hotbar -> Storage: clear hotbar, append to storage, compact
 	if fromRef.Type == "Hotbar" and toRef.Type == "Storage" then
 		state.Hotbar[fromRef.Slot] = nil
 		--[[local insertedSlot =]] Slots.appendStorage(state, fromUUID)
@@ -614,6 +714,7 @@ function Operations.move(
 		return { success = true, hotbarCompacted = hotbarCompacted }
 	end
 
+	-- Storage -> Hotbar: Dynamic only allows append position
 	if fromRef.Type == "Storage" and toRef.Type == "Hotbar" then
 		if state.Settings.HotbarType == "Dynamic" then
 			local appendSlot = Slots.findEmptyHotbarSlot(state)
@@ -629,6 +730,18 @@ function Operations.move(
 	return { success = false, reason = "INVALID_OPERATION" }
 end
 
+-- Splits a stack into two. Source keeps its UUID (important if equipped).
+--
+-- Flow:
+--   1. Validate (amount < source.Amount, positive number)
+--   2. Cap splitAmount at MaxStackSize (excess stays in source)
+--   3. Reduce source Amount, create new item
+--   4. Place new item: destination slot if specified, else placement chain
+--   5. On any failure: rollback (destroy new item, restore source Amount)
+--
+-- Rollback pattern (repeated in split):
+--   delete Items[uuid], removeFromIndex, removeFromMetadataIndex,
+--   removeWeight, item.Amount += splitAmount
 function Operations.split(
 	state: Types.InventoryState,
 	uuid: string,
@@ -671,6 +784,7 @@ function Operations.split(
 	local hotbarCompacted = false
 
 	if destination then
+		-- Explicit destination — validate and place, or rollback
 		if destination.Type == "Hotbar" then
 			if not Slots.isValidHotbarSlot(state, destination.Slot) then
 				state.Items[newItem.UUID] = nil
@@ -688,6 +802,7 @@ function Operations.split(
 				return { success = false, reason = "HOTBAR_SLOT_OCCUPIED" }
 			end
 
+			-- Dynamic: only allow append position
 			if state.Settings.HotbarType == "Dynamic" then
 				local appendSlot = Slots.findEmptyHotbarSlot(state)
 				if destination.Slot ~= appendSlot then
@@ -724,6 +839,7 @@ function Operations.split(
 			newSlot = destination.Slot
 		end
 	else
+		-- No destination — placement chain: Hotbar first, then Storage
 		local slot = Slots.findEmptyHotbarSlot(state)
 		if slot then
 			Slots.setHotbarSlot(state, slot, newItem.UUID)
@@ -734,6 +850,7 @@ function Operations.split(
 			newSlotType = "Storage"
 			newSlot = #state.Storage
 		else
+			-- No room anywhere — rollback
 			state.Items[newItem.UUID] = nil
 			removeFromIndex(state, newItem.Id, newItem.UUID)
 			State.removeWeight(state, splitAmount)
@@ -754,6 +871,9 @@ function Operations.split(
 	}
 end
 
+-- Updates metadata fields on an item. All fields are mutable.
+-- Nil values in updates delete the key. The MetadataIndex is maintained.
+-- No auto re-stack occurs (metadata changes don't trigger stacking).
 function Operations.updateMetadata(
 	state: Types.InventoryState,
 	uuid: string,
@@ -785,6 +905,9 @@ function Operations.updateMetadata(
 	}
 end
 
+-- Sorts Storage only. Hotbar is never sorted (user-controlled).
+-- Uses the SortOrder from Settings: Name, Rarity, or ItemType.
+-- Rarity sorts descending (highest first). Ties broken alphabetically.
 function Operations.sort(
 	state: Types.InventoryState
 ): Types.SortResult
@@ -794,16 +917,15 @@ function Operations.sort(
 		return { success = true }
 	end
 
-	local hotbarChanged = Slots.sortHotbar(state, sortOrder)
 	local storageChanged = Slots.sortStorage(state, sortOrder)
 
 	return {
 		success = true,
-		hotbarOrder = if hotbarChanged then state.Hotbar :: { string } else nil,
 		storageOrder = if storageChanged then state.Storage else nil,
 	}
 end
 
+-- Removes an item by slot reference. Delegates to Operations.remove after UUID lookup.
 function Operations.removeBySlot(
 	state: Types.InventoryState,
 	slotType: Types.SlotType,

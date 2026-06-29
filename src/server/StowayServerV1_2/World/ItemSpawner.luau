@@ -80,7 +80,7 @@ function ItemSpawner.DropTool(player: Player, itemId: string, amount: number, me
 	pickup:SetAttribute("Amount", amount)
 
 	-- Calculate drop position
-	local rootCframe = hrp.CFrame
+	local rootCframe = hrp.CFrame :: CFrame
 	local dropOffset = rootCframe.LookVector * Settings.Gameplay.DropDistance
 	local dropPosition = rootCframe.Position + dropOffset
 

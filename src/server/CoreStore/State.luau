@@ -13,20 +13,24 @@ local Types = require("../CoreStore/Types")
 local State = {}
 
 local DEFAULT_SETTINGS: Types.Settings = {
+	-- Hotbar: Static = fixed slots with holes, Dynamic = packed array, auto-compact
 	HotbarType = "Static",
 	MaxHotbarSlots = 10,
 
+	-- Capacity: Limit = 0 means infinite. Weight = sum of all item Amounts.
 	Limit = 15,
 	CanStack = true,
 	MaxStackSize = 5,
 	BackpackEnabled = true,
 
+	-- Sorting: when true, auto-sorts Storage after every mutating operation
 	Sorting = false,
 	SortOrder = "None",
 
+	-- Stacking: StackOnSwap absorbs items during swap (not move). System-level setting.
 	StackOnSwap = false,
-	StackRequiredFields = { "Rarity", "Type" },
-	StackBlacklist = {
+	StackRequiredFields = { "Rarity", "Type" },  -- Both must match for stacking
+	StackBlacklist = {                            -- These rarities cannot stack
 		Legendary = true,
 		Mythic = true,
 		Special = true,

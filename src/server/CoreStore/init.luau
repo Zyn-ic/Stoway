@@ -21,6 +21,8 @@ local CoreStore = {}
 -- PRIVATE FUNCTIONS --
 -----------------------------
 
+-- Called after every mutating operation (add, remove, swap, etc.) when Settings.Sorting = true.
+-- Sorts Storage only. Hotbar is never sorted (user-controlled).
 local function triggerAutoSort(state: Types.InventoryState)
 	if state.Settings.Sorting then
 		Operations.sort(state)
@@ -48,6 +50,8 @@ function CoreStore.add(
 	return result
 end
 
+-- Wrapper: forces Placement = "Backpack" so items go straight to storage.
+-- Bypasses hotbar stacking entirely — useful for chest looting, admin grants, etc.
 function CoreStore.addToBackpack(
 	state: Types.InventoryState,
 	itemData: Types.ItemInput,
@@ -201,6 +205,13 @@ end
 
 function CoreStore.compact(state: Types.InventoryState): boolean
 	return Slots.compactHotbar(state)
+end
+
+function CoreStore.setHotbarType(state: Types.InventoryState, newType: Types.HotbarType)
+	state.Settings.HotbarType = newType
+	if newType == "Dynamic" then
+		Slots.compactHotbar(state)
+	end
 end
 
 -----------------------------

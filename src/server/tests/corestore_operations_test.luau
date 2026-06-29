@@ -223,8 +223,8 @@ end)
 
 runTest("Move storage to storage reorders", true, function()
 	local state = CoreStore.new({ Limit = 100, CanStack = false })
-	local r1 = CoreStore.addToBackpack(state, { Id = "Potion", Amount = 1 })
-	local r2 = CoreStore.addToBackpack(state, { Id = "Scroll", Amount = 1 })
+	--[[ local r1 =]] CoreStore.addToBackpack(state, { Id = "Potion", Amount = 1 })
+	--[[ local r2 =]] CoreStore.addToBackpack(state, { Id = "Scroll", Amount = 1 })
 
 	assertTrue(#state.Storage >= 2, "should have 2 items in storage, got " .. #state.Storage)
 
@@ -244,8 +244,8 @@ end)
 
 runTest("Move fails when destination is occupied", true, function()
 	local state = CoreStore.new()
-	local r1 = CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1, Slot = 1 })
-	local r2 = CoreStore.addToHotbar(state, { Id = "Shield", Amount = 1, Slot = 2 })
+	--[[local r1 =]] CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1, Slot = 1 })
+	--[[local r2 =]] CoreStore.addToHotbar(state, { Id = "Shield", Amount = 1, Slot = 2 })
 
 	local result = CoreStore.move(state, { Type = "Hotbar", Slot = 1 }, { Type = "Hotbar", Slot = 2 })
 	assertFalse(result.success, "move to occupied slot should fail")
@@ -254,7 +254,7 @@ end)
 
 runTest("Move never stacks items", true, function()
 	local state = CoreStore.new({ Limit = 100, CanStack = false })
-	local r1 = CoreStore.addToBackpack(state, { Id = "Apple", Amount = 3 })
+	--[[local r1 =]] CoreStore.addToBackpack(state, { Id = "Apple", Amount = 3 })
 	local r2 = CoreStore.addToHotbar(state, { Id = "Apple", Amount = 2, Slot = 1 })
 	local uuid1 = state.Storage[1]
 	local uuid2 = getFirstUUID(r2)

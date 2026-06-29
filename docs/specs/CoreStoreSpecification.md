@@ -339,6 +339,8 @@ This ensures `addToBackpack` does not accidentally stack onto hotbar items.
 
 In Dynamic mode, the hotbar is always `[item1, item2, ..., itemN, nil, nil, ...]`. The only "available" slot is `findEmptyHotbarSlot(state)` — the first nil after the packed portion.
 
+Use `CoreStore.setHotbarType(state, "Dynamic")` to switch types — it auto-compacts the hotbar. Alternatively, call `CoreStore.compact(state)` after manually changing `Settings.HotbarType`.
+
 | Operation | Dynamic Mode Behavior |
 |-----------|----------------------|
 | `add` (no preferred slot) | Appends to end via `findEmptyHotbarSlot` |
@@ -417,7 +419,6 @@ LocationByUUID updated:
 | `remove()` | Yes | After clearing hotbar slot |
 | `move()` hotbar→storage | Yes | After setting hotbar slot to nil |
 | `swap()` hotbar→empty storage | Yes | After clearing hotbar slot |
-| `sort()` | Yes | Sorts then packs left |
 
 ### Static vs Dynamic Behavior
 
@@ -464,7 +465,6 @@ LocationByUUID updated:
 | split | O(1) | Creates new item + placement |
 | **Maintenance** | | |
 | compactHotbar | O(h) | h = MaxHotbarSlots; no-op in Static mode |
-| sort (hotbar) | O(h log h) | h = number of hotbar items; no-op in Static mode |
 | sort (storage) | O(s log s) | s = number of storage items |
 | updateMetadata | O(f) | f = number of fields updated; maintains MetadataIndex |
 | canStack | O(f) | f = number of StackRequiredFields |

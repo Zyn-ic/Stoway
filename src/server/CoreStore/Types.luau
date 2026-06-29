@@ -166,7 +166,6 @@ export type MetadataUpdateResult = {
 
 export type SortResult = {
     success: boolean,
-    hotbarOrder: { string }?,
     storageOrder: { string }?,
 }
 

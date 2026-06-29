@@ -21,6 +21,11 @@ local Metadata = {}
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
+-- Normalizes raw item input into (itemId, amount, metadata, error).
+--
+-- Amount fallback chain: itemData.Amount -> metadata.Amount -> metadata.StackAmount -> 1
+-- Cleans Amount/StackAmount from metadata after extraction.
+-- Defaults Droppable to true if not set.
 function Metadata.normalize(itemData: Types.ItemInput): (string?, number?, Types.ItemMetadata?, string?)
 	local itemId = itemData.Id or itemData.ID
 

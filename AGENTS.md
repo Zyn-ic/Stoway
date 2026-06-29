@@ -153,14 +153,14 @@ StackBlacklist = { Legendary = true, Mythic = true, Special = true }
 | move | Positional transfer, never stacks | O(1) HH, O(h) HS, O(n) SH/SS |
 | split | Divide stack, cap at MaxStackSize | O(1) + placement |
 | updateMetadata | Merge key-value pairs, all mutable | O(f) |
-| sort | Auto-triggered, Name/Rarity(ItemType | O(n log n) |
+| sort | Auto-triggered, sorts Storage only | O(n log n) |
 
 ### Key Behaviors
 
 - **Stacking:** Only via `add` (always) or `swap` with `StackOnSwap = true`. Move and split never stack.
 - **MaxStackSize:** Enforced unconditionally. No item Amount may exceed it after any operation.
-- **Dynamic hotbar:** Compacts after remove/swap/move/sort. Static preserves holes.
-- **Auto-sort:** Triggers after any mutating operation when `Sorting = true`.
+- **Dynamic hotbar:** Compacts after remove/swap/move. Static preserves holes. Use `CoreStore.setHotbarType(state, "Dynamic")` to switch types — it auto-compacts.
+- **Auto-sort:** Triggers after any mutating operation when `Sorting = true`. Sorts Storage only. Hotbar is never sorted (user-controlled).
 - **MetadataIndex:** Indexed fields: Rarity, Type. O(1) bucket lookups for find().
 
 ---
@@ -213,4 +213,4 @@ docs/
 7. **`StackOnSwap` does NOT stack during move** — only during swap. This is a common misconception.
 8. **Nil values in `updateMetadata`** — In Luau, `{ Key = nil }` creates empty table. Nil values are silently ignored.
 9. **MetadataIndex maintenance** — every `createItem`, `destroyUnplacedItem`, `remove`, and `updateMetadata` must update MetadataIndex.
-10. **Dynamic Hotbar slot availability** — The only available slot is the append position (`findEmptyHotbarSlot`). Operations targeting non-append slots are rejected with `DESTINATION_UNAVAILABLE`. Preferred slot is ignored in Dynamic mode. Use `CoreStore.compact()` explicitly after changing HotbarType from Static to Dynamic at runtime.
+10. **Dynamic Hotbar slot availability** — The only available slot is the append position (`findEmptyHotbarSlot`). Operations targeting non-append slots are rejected with `DESTINATION_UNAVAILABLE`. Preferred slot is ignored in Dynamic mode. Use `CoreStore.setHotbarType(state, "Dynamic")` to switch types — it auto-compacts the hotbar.

@@ -657,7 +657,7 @@ Operations that target a non-append slot in Dynamic mode are rejected:
 
 Occupied-slot swaps (reorder) within the packed portion are always allowed.
 
-When changing HotbarType from Static to Dynamic at runtime, call `CoreStore.compact(state)` to pack the hotbar.
+When changing HotbarType from Static to Dynamic at runtime, use `CoreStore.setHotbarType(state, "Dynamic")` — it auto-compacts the hotbar. Alternatively, call `CoreStore.compact(state)` after manually changing the setting.
 
 ### Explicit Add
 
@@ -878,7 +878,7 @@ Full metadata update specification: `docs/MetadataUpdateRules.md`
 
 ## Sorting Behavior
 
-Sorting is automatic when `Settings.Sorting = true`. Any operation that modifies slot contents triggers a sort after completion.
+Sorting applies to **Storage only** when `Settings.Sorting = true`. The Hotbar is never sorted — it is always user-controlled. Any operation that modifies slot contents triggers a sort after completion.
 
 ### Triggered By
 
@@ -889,7 +889,7 @@ add, addToBackpack, addToHotbar, remove, swap, move, split
 ### Scope
 
 ```txt
-Hotbar: Only sorted if HotbarType = "Dynamic"
+Hotbar: Never sorted (user-controlled)
 Storage: Always sorted when enabled
 ```
 
@@ -899,7 +899,7 @@ Determined by `Settings.SortOrder`:
 
 ```txt
 Name     -> Sort by item.Id alphabetically
-Rarity   -> Sort by Metadata.Rarity (Common < Uncommon < ... < Legendary)
+Rarity   -> Sort by Metadata.Rarity (Special > Mythic > ... > Common)
 ItemType -> Sort by Metadata.Type alphabetically
 None     -> No sorting
 ```
@@ -908,7 +908,7 @@ None     -> No sorting
 
 When two items have the same sort key, their relative order is preserved (stable sort).
 
-Full sorting specification: `docs/SortingRules.md`
+Full sorting specification: `docs/specs/SortingRules.md`
 
 ***
 
