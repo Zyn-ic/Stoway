@@ -946,6 +946,54 @@ function Operations.removeBySlot(
 	return Operations.remove(state, uuid, amount)
 end
 
+-- Sets EquippedItemUUID. Pure state change, no Roblox dependency.
+-- Idempotent: equipping the same item again returns success.
+function Operations.equip(
+	state: Types.InventoryState,
+	uuid: string
+): Types.EquipResult
+	local item = state.Items[uuid]
+
+	if not item then
+		return {
+			success = false,
+			reason = "ITEM_NOT_FOUND",
+		}
+	end
+
+	local previousUUID = state.EquippedItemUUID
+
+	if previousUUID == uuid then
+		return {
+			success = true,
+			uuid = uuid,
+			previousUUID = previousUUID,
+		}
+	end
+
+	state.EquippedItemUUID = uuid
+
+	return {
+		success = true,
+		uuid = uuid,
+		previousUUID = previousUUID,
+	}
+end
+
+-- Clears EquippedItemUUID. Pure state change, no Roblox dependency.
+-- Idempotent: unequipping when nothing is equipped returns success.
+function Operations.unequip(
+	state: Types.InventoryState
+): Types.UnequipResult
+	local previousUUID = state.EquippedItemUUID
+	state.EquippedItemUUID = nil
+
+	return {
+		success = true,
+		previousUUID = previousUUID,
+	}
+end
+
 -----------------------------
 --MAIN--
 -----------------------------

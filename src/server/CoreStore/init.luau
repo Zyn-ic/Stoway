@@ -216,6 +216,14 @@ function CoreStore.setHotbarType(state: Types.InventoryState, newType: Types.Hot
 	end
 end
 
+function CoreStore.equip(state: Types.InventoryState, uuid: string): Types.EquipResult
+	return Operations.equip(state, uuid)
+end
+
+function CoreStore.unequip(state: Types.InventoryState): Types.UnequipResult
+	return Operations.unequip(state)
+end
+
 -----------------------------
 --MAIN--
 -----------------------------

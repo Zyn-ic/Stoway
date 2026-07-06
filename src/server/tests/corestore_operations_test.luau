@@ -704,6 +704,82 @@ runTest("split to append hotbar slot works in Dynamic mode", true, function()
 	assertEqual(newItem.Amount, 3, "new stack should have 3")
 end)
 
+-- ==================== EQUIP / UNEQUIP ==================
+
+runTest("equip sets EquippedItemUUID", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	local addResult = CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1 })
+	local uuid = addResult.addedItems[1].uuid
+
+	local result = CoreStore.equip(state, uuid)
+	assertEqual(result.success, true, "should succeed")
+	assertEqual(result.uuid, uuid, "should return uuid")
+	assertEqual(state.EquippedItemUUID, uuid, "state should have equipped uuid")
+end)
+
+runTest("equip fails for nonexistent item", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	local result = CoreStore.equip(state, "fake-uuid")
+	assertEqual(result.success, false, "should fail")
+	assertEqual(result.reason, "ITEM_NOT_FOUND", "should be ITEM_NOT_FOUND")
+end)
+
+runTest("equip is idempotent", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	local addResult = CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1 })
+	local uuid = addResult.addedItems[1].uuid
+
+	CoreStore.equip(state, uuid)
+	local result = CoreStore.equip(state, uuid)
+	assertEqual(result.success, true, "should succeed (idempotent)")
+	assertEqual(state.EquippedItemUUID, uuid, "still equipped")
+end)
+
+runTest("equip replaces previous equipped item", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1 })
+	CoreStore.addToHotbar(state, { Id = "Shield", Amount = 1 })
+	local swordUUID = state.Hotbar[1]
+	local shieldUUID = state.Hotbar[2]
+
+	CoreStore.equip(state, swordUUID)
+	local result = CoreStore.equip(state, shieldUUID)
+	assertEqual(result.success, true, "should succeed")
+	assertEqual(result.previousUUID, swordUUID, "should return previous uuid")
+	assertEqual(state.EquippedItemUUID, shieldUUID, "shield should be equipped")
+end)
+
+runTest("unequip clears EquippedItemUUID", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	local addResult = CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1 })
+	local uuid = addResult.addedItems[1].uuid
+
+	CoreStore.equip(state, uuid)
+	local result = CoreStore.unequip(state)
+	assertEqual(result.success, true, "should succeed")
+	assertEqual(result.previousUUID, uuid, "should return previous uuid")
+	assertEqual(state.EquippedItemUUID, nil, "should be nil")
+end)
+
+runTest("unequip is idempotent", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	local result = CoreStore.unequip(state)
+	assertEqual(result.success, true, "should succeed (idempotent)")
+	assertEqual(result.previousUUID, nil, "no previous")
+end)
+
+runTest("auto-unequip on full remove", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	local addResult = CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1 })
+	local uuid = addResult.addedItems[1].uuid
+
+	CoreStore.equip(state, uuid)
+	assertEqual(state.EquippedItemUUID, uuid, "should be equipped")
+
+	CoreStore.remove(state, uuid, 1)
+	assertEqual(state.EquippedItemUUID, nil, "should be auto-unequipped")
+end)
+
 -- ==================== RESULTS ==================
 
 print()
