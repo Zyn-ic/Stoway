@@ -8,12 +8,12 @@
 -- VARIABLES --
 -----------------------------
 
-local Types = require("../CoreStore/Types")
-local Metadata = require("../CoreStore/Metadata")
-local Slots = require("../CoreStore/Slots")
-local Stack = require("../CoreStore/Stack")
-local State = require("../CoreStore/State")
-local Utils = require("../CoreStore/Utils")
+local Types = require("@CoreStore/Types")
+local Metadata = require("@CoreStore/Metadata")
+local Slots = require("@CoreStore/Slots")
+local Stack = require("@CoreStore/Stack")
+local State = require("@CoreStore/State")
+local Utils = require("@CoreStore/Utils")
 
 local Operations = {}
 

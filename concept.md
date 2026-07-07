@@ -2,16 +2,49 @@
 
 ### What It Is
 
-The glue between CoreStore (pure Luau engine) and the Roblox-specific layers (Network, World, Client). Handles player lifecycle, operation routing, anti-exploit, and result dispatching.
+The glue between CoreStore (pure Luau engine) and the Roblox-specific layers (Communications, World, Client). Handles player lifecycle, operation routing, anti-exploit, and result dispatching.
 
 ### Module Structure
 
 ```
 StowayServerV3_0_0/
-└── init.luau    Everything in one module (player store, locking, dispatching, routing)
+├── init.luau           Orchestration layer (player store, locking, dispatching, routing)
+├── Communications.luau Network adapter (sends/receives via NetworkService)
+└── CoreStore/          Pure Luau inventory engine (10 modules)
+    ├── init.luau       Public API facade
+    ├── Types.luau      Type exports
+    ├── Utils.luau      Utility functions
+    ├── State.luau      State creation, weight, capacity
+    ├── Metadata.luau   Input normalization, blacklisting
+    ├── Stack.luau      Stacking logic
+    ├── Slots.luau      Hotbar/storage slot operations
+    ├── Operations.luau Core mutation logic
+    ├── Query.luau      Item lookups
+    └── (no file — in-memory only)
 ```
 
-Luau CLI resolves `require` paths from the entry script directory, not the requiring module. This makes split modules with `../` paths impossible to test outside Roblox. The orchestration layer is kept as a single file for testability. In Roblox, this can be split into `PlayerRegistry`, `OperationGuard`, and `ResultDispatcher` submodules.
+Luau CLI resolves `require` paths from the entry script directory, not the requiring module. All cross-module requires use `.luaurc` aliases (`@CoreStore`, `@Stoway`) to bypass this quirk and work identically in both CLI and luau-lsp.
+
+### Require Aliases
+
+Defined in root `.luaurc`:
+
+```json
+{
+  "aliases": {
+    "CoreStore": "./src/server/StowayServerV3_0_0/CoreStore",
+    "Stoway": "./src/server/StowayServerV3_0_0"
+  }
+}
+```
+
+Usage:
+
+```luau
+local Types = require("@CoreStore/Types")      -- from any module
+local CoreStore = require("@CoreStore")         -- from test files
+local Stoway = require("@Stoway")               -- from test files
+```
 
 ### Public API
 
@@ -45,12 +78,14 @@ Stoway.Sort(player) → SortResult
 ### Data Flow
 
 ```
-Client fires RemoteEvent
+Client fires RemoteEvent (via NetworkService)
+    ↓
+Communications translates → Stoway operation route
     ↓
 Stoway.Route (lock → CoreStore → dispatch → unlock)
     ↓
-    ├──→ NetworkAdapter (sends to client)
-    ├──→ WorldAdapter (spawns/despawns Tools)
+    ├──→ Communications adapter (sends to client via NetworkService)
+    ├──→ WorldAdapter (spawns/despawns Tools) — future
     └──→ (future: DataStore adapter)
 ```
 
@@ -64,8 +99,9 @@ Stoway.Route (lock → CoreStore → dispatch → unlock)
 
 | Concern | Where it lives |
 |---|---|
-| RemoteEvent creation | Network layer |
-| Client payload formatting | Network layer |
+| RemoteEvent creation | NetworkService (QuickNet) |
+| Client payload formatting | Communications (uses NetworkService) |
+| Table replication | NetworkService (RemoteTable-Light) |
 | Tool spawning/despawning | World layer |
 | DataStore save/load | Future adapter |
 | Starter items | External caller |
@@ -73,37 +109,23 @@ Stoway.Route (lock → CoreStore → dispatch → unlock)
 
 ### How Other Layers Attach
 
+**Loader mode** (NetworkService loaded by module loader):
+
+```lua
+-- NetworkService.Init wires Communications internally
+-- Communications registers itself as Stoway adapter
+NetworkService.Init(Stoway)
+```
+
+**Standalone mode** (separate server scripts):
+
 ```lua
 local Stoway = require(ServerScriptService.Server.StowayServerV3_0_0)
 local CoreStore = require(ServerScriptService.Server.CoreStore)
-
 Stoway.Init(CoreStore)
 
--- Network layer:
-Stoway.registerAdapter(function(player, operation, result)
-    -- fire RemoteEvent to client
-end)
-
--- World layer:
-Stoway.registerAdapter(function(player, operation, result)
-    if operation == "EquipSlot" then
-        -- spawn Tool in character
-    end
-end)
-
--- External caller:
-Stoway.Init(CoreStore)
-
-Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function()
-        local state = Stoway.createPlayer(player)
-        CoreStore.add(state, { Id = "Sword", Amount = 1 })
-    end)
-end)
-
-Players.PlayerRemoving:Connect(function(player)
-    Stoway.removePlayer(player)
-end)
+-- NetworkService creates Communications and registers adapter
+-- Communications uses NetworkService for all send/receive
 ```
 
 ### CoreStore Additions
@@ -120,7 +142,7 @@ Both are pure state changes. Auto-unequip on `remove()` and `swap` with StackOnS
 ### What Comes After This Branch
 
 ```
-Network Layer    — RemoteEvents, client payloads, delta replication
+NetworkService   — QuickNet + RTL integration, Communications wiring
 World Layer      — Tool spawning, equipping, dropping, ItemSpawner
 Client Layer     — UI rendering, drag-and-drop, hotbar visuals
 PreBranch        — combines all layers for integration testing
@@ -131,7 +153,8 @@ PreBranch        — combines all layers for integration testing
 ```
 CoreStore = the engine (pure Luau, no Roblox)
 StowayServerV3_0_0 = the driver (connects engine to Roblox)
-Network Layer = the dashboard (client communication)
+Communications = the translator (inventory ops ↔ network messages)
+NetworkService = the wire (QuickNet + RTL, raw send/receive)
 World Layer = the hands (physical world interaction)
 Client Layer = the eyes (visual display)
 ```

@@ -6,9 +6,13 @@ This file helps AI agents understand the Stoway project. Read this before making
 
 ## Project Overview
 
-Stoway is a Roblox inventory framework. This branch rebuilds the inventory logic as a pure Luau core called `CoreStore` — no Roblox types, no UI, no networking.
+Stoway is a Roblox inventory framework. The core is a pure Luau inventory engine called `CoreStore` — no Roblox types, no UI, no networking. It lives inside an orchestration layer called `StowayServerV3_0_0` that connects it to Roblox-specific systems.
 
-**CoreStore lives at:** `src/server/CoreStore/`
+**CoreStore lives at:** `src/server/StowayServerV3_0_0/CoreStore/`
+
+**Orchestration layer:** `src/server/StowayServerV3_0_0/init.luau`
+
+**Communications adapter:** `src/server/StowayServerV3_0_0/Communications.luau`
 
 **Old server code:** `src/server/StowayServerV1_2/` (legacy reference, may be deleted)
 
@@ -22,7 +26,23 @@ Stoway is a Roblox inventory framework. This branch rebuilds the inventory logic
 C:\Users\drosales\Downloads\luau-windows\luau.exe "C:\Users\drosales\Documents\Stoway\src\server\tests\corestore_operations_test.luau"
 ```
 
-**Expected:** 39 passed, 0 failed
+**Expected:** 54 passed, 0 failed
+
+### Stoway Orchestration Tests
+
+```
+C:\Users\drosales\Downloads\luau-windows\luau.exe "C:\Users\drosales\Documents\Stoway\src\server\tests\stoway_server_test.luau"
+```
+
+**Expected:** 16 passed, 0 failed
+
+### Add Tests
+
+```
+C:\Users\drosales\Downloads\luau-windows\luau.exe "C:\Users\drosales\Documents\Stoway\src\server\tests\corestore_addtest.luau"
+```
+
+**Expected:** 25 passed, 0 failed (includes 5 deliberate failures)
 
 ### Lune (alternative, for REPL-style manual testing)
 
@@ -33,6 +53,42 @@ C:\Users\drosales\Downloads\lune-0.10.4-windows-x86_64\lune.exe "C:\Users\drosal
 ### Web Test Tool
 
 Open `src/server/tests/web/index.html` in a browser. No build step, no server needed. This is a full JS port of CoreStore.
+
+---
+
+## Require System
+
+All modules use `.luaurc` aliases instead of relative paths. This works in both Luau CLI and luau-lsp.
+
+**Root `.luaurc`:**
+
+```json
+{
+  "aliases": {
+    "CoreStore": "./src/server/StowayServerV3_0_0/CoreStore",
+    "Stoway": "./src/server/StowayServerV3_0_0"
+  }
+}
+```
+
+**Usage in modules:**
+
+```luau
+local Types = require("@CoreStore/Types")
+local Operations = require("@CoreStore/Operations")
+```
+
+**Usage in test files:**
+
+```luau
+local CoreStore = require("@CoreStore")
+local Stoway = require("@Stoway")
+```
+
+**Do NOT use:**
+- Relative paths like `require("../CoreStore/Types")` — break in luau-lsp Roblox mode
+- Bare names like `require("CoreStore")` — Luau CLI requires `@` prefix for aliases
+- Roblox-style paths like `require(game.ReplicatedStorage.CoreStore.Types)`
 
 ---
 
@@ -70,28 +126,20 @@ return ModuleName
 - **Section separators:** ALL CAPS with dashes: `-- VARIABLES --`, `-- CONSTANTS --`, `-- PRIVATE FUNCTIONS --`, `-- PUBLIC FUNCTIONS --`
 - **No emojis** in terminal output except test pass/fail visual output
 - **No OOP:** No `:Init()` / `:Start()` in CoreStore modules. Use functional style.
-- **No Roblox types:** CoreStore uses filesystem-style requires, not Roblox Instance paths
-
-### Require Paths
-
-CoreStore modules use relative filesystem paths:
-
-```luau
-local Types = require("../CoreStore/Types")
-local Operations = require("../CoreStore/Operations")
-```
-
-NOT Roblox-style:
-
-```luau
-local Types = require(game.ReplicatedStorage.CoreStore.Types)  -- WRONG
-```
+- **No Roblox types:** CoreStore uses `@` aliases, not Roblox Instance paths
 
 ---
 
-## CoreStore Architecture
+## Module Map
 
-### Module Map
+### StowayServerV3_0_0 (Orchestration Layer)
+
+| File | Purpose | Public API |
+|------|---------|-----------|
+| `init.luau` | Orchestration facade | Init, createPlayer, get, removePlayer, getAll, registerAdapter, 11 operation routes |
+| `Communications.luau` | Network adapter | Init(Stoway, NetworkService), registers Stoway adapter, sends/receives via NetworkService |
+
+### CoreStore (Pure Luau Engine)
 
 | File | Purpose | Public API |
 |------|---------|-----------|
@@ -101,9 +149,9 @@ local Types = require(game.ReplicatedStorage.CoreStore.Types)  -- WRONG
 | `Metadata.luau` | normalize input, matchesRequiredFields, isBlacklisted | normalize, matchesRequiredFields, isBlacklisted |
 | `Stack.luau` | canStack, tryStack logic | canStack, tryStack |
 | `Slots.luau` | Hotbar/storage slot operations, compaction, sorting | setHotbarSlot, clearHotbarSlot, findEmptyHotbarSlot, compactHotbar, swapSlots, moveWithinStorage, moveToStorage, sortStorage, sortHotbar, getUUIDFromSlot, getHotbarItemCount, getStorageItemCount, validation helpers |
-| `Operations.luau` | Core mutation logic | add, remove, removeBySlot, swap, move, split, updateMetadata, sort |
+| `Operations.luau` | Core mutation logic | add, remove, removeBySlot, swap, move, split, updateMetadata, sort, equip, unequip |
 | `Query.luau` | Item lookups | getItem, find, findById, filter, getAllItems |
-| `init.luau` | Public API facade | CoreStore.* (22 public functions) |
+| `init.luau` | Public API facade | CoreStore.* (24 public functions) |
 
 ### Data Flow
 
@@ -167,9 +215,13 @@ StackBlacklist = { Legendary = true, Mythic = true, Special = true }
 
 ## Test Structure
 
-### corestore_operations_test.luau (39 tests)
+### corestore_operations_test.luau (54 tests)
 
-Tests for: swap, move, split, metadata, sort, MetadataIndex. Visual pass/fail output.
+Tests for: swap, move, split, metadata, sort, MetadataIndex, equip/unequip, dynamic hotbar. Visual pass/fail output.
+
+### stoway_server_test.luau (16 tests)
+
+Tests for: Stoway orchestration layer — player lifecycle, operation routing, adapter dispatch, concurrent operation blocking.
 
 ### corestore_addtest.luau (25 tests)
 

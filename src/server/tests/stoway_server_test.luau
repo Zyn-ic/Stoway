@@ -8,8 +8,8 @@
 -- VARIABLES --
 -----------------------------
 
-local Stoway = require("../StowayServerV3_0_0")
-local CoreStore = require("../CoreStore")
+local Stoway = require("@Stoway")
+local CoreStore = require("@CoreStore")
 
 Stoway.Init(CoreStore)
 

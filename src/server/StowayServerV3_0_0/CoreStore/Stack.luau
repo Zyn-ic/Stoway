@@ -8,9 +8,9 @@
 -- VARIABLES --
 -----------------------------
 
-local Types = require("../CoreStore/Types")
-local Metadata = require("../CoreStore/Metadata")
-local State = require("../CoreStore/State")
+local Types = require("@CoreStore/Types")
+local Metadata = require("@CoreStore/Metadata")
+local State = require("@CoreStore/State")
 
 local Stack = {}
 

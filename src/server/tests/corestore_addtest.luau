@@ -10,7 +10,7 @@
 -----------------------------
 -- DEPENDENCIES --
 -----------------------------
-local CoreStore = require("../CoreStore")
+local CoreStore = require("@CoreStore")
 
 -----------------------------
 -- VARIABLES --

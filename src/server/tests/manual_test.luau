@@ -16,7 +16,7 @@ local stdio = require("@lune/stdio")
 -- DEPENDENCIES --
 -----------------------------
 
-local CoreStore = require("../CoreStore")
+local CoreStore = require("@CoreStore")
 
 -----------------------------
 -- VARIABLES --

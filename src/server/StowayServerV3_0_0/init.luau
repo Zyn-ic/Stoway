@@ -1,3 +1,5 @@
+--!strict
+
 --@author: yyumchi
 --@date: 2026-07-06
 --[[@description:
@@ -10,10 +12,31 @@
 -----------------------------
 
 local Stoway = {}
-local CoreStore = nil
-local _store = {}
-local _locks = {}
-local _adapters = {}
+
+local Types = require("@CoreStore/Types")
+
+-- Minimal contract for the injected CoreStore module.
+type CoreStoreApi = {
+	new: (Types.SettingsOverrides?) -> Types.InventoryState,
+	add: (Types.InventoryState, Types.ItemInput, Types.AddOptions?) -> Types.AddResult,
+	addToBackpack: (Types.InventoryState, Types.ItemInput, Types.AddOptions?) -> Types.AddResult,
+	addToHotbar: (Types.InventoryState, Types.ItemInput, number?) -> Types.AddResult,
+	remove: (Types.InventoryState, string, number?) -> Types.RemoveResult,
+	swap: (Types.InventoryState, Types.SlotRef, Types.SlotRef) -> Types.SwapResult,
+	move: (Types.InventoryState, Types.SlotRef, Types.SlotRef) -> Types.MoveResult,
+	split: (Types.InventoryState, string, number, Types.SlotRef?) -> Types.SplitResult,
+	equip: (Types.InventoryState, string) -> Types.EquipResult,
+	unequip: (Types.InventoryState) -> Types.UnequipResult,
+	updateMetadata: (Types.InventoryState, string, { [string]: any }) -> Types.MetadataUpdateResult,
+	sort: (Types.InventoryState) -> Types.SortResult,
+}
+
+type Adapter = (Player, string, any) -> ()
+
+local CoreStore: CoreStoreApi? = nil
+local _store: { [Player]: Types.InventoryState } = {}
+local _locks: { [Player]: number } = {}
+local _adapters: { Adapter } = {}
 
 -- CONSTANTS --
 -----------------------------
@@ -23,7 +46,7 @@ local LOCK_TIMEOUT = 3
 -- PRIVATE FUNCTIONS --
 -----------------------------
 
-local function lockPlayer(player: any): boolean
+local function lockPlayer(player: Player): boolean
 	local existing = _locks[player]
 	if existing then
 		local elapsed = os.clock() - existing
@@ -35,22 +58,24 @@ local function lockPlayer(player: any): boolean
 	return true
 end
 
-local function unlockPlayer(player: any)
+local function unlockPlayer(player: Player)
 	_locks[player] = nil
 end
 
-local function dispatch(player: any, operation: string, result: any)
+local function dispatch(player: Player, operation: string, result: any)
 	for _, adapter in _adapters do
 		adapter(player, operation, result)
 	end
 end
 
-local function route(player: any, operation: string, fn: () -> any): any
+-- fn receives the (non-nil) CoreStore so it never touches the nullable module field.
+local function route(player: Player, operation: string, fn: (cs: CoreStoreApi) -> any): any
 	if not lockPlayer(player) then
 		return { success = false, reason = "OPERATION_IN_PROGRESS" }
 	end
 
-	local ok, result = pcall(fn)
+	assert(CoreStore, "CoreStore not initialized")
+	local ok, result = pcall(fn, CoreStore)
 
 	if not ok then
 		unlockPlayer(player)
@@ -65,126 +90,127 @@ end
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
-function Stoway.Init(CS: any)
+function Stoway.Init(CS: CoreStoreApi)
 	CoreStore = CS
 end
 
 -- Player lifecycle
 
-function Stoway.createPlayer(player: any, settingsOverrides: any?): any
-	local state = CoreStore.new(settingsOverrides)
+function Stoway.createPlayer(player: Player, settingsOverrides: Types.SettingsOverrides?): Types.InventoryState
+	local cs = CoreStore :: CoreStoreApi
+	local state = cs.new(settingsOverrides)
 	_store[player] = state
 	return state
 end
 
-function Stoway.get(player: any): any?
+function Stoway.get(player: Player): Types.InventoryState?
 	return _store[player]
 end
 
-function Stoway.removePlayer(player: any): any?
+function Stoway.removePlayer(player: Player): Types.InventoryState?
 	unlockPlayer(player)
 	local state = _store[player]
 	_store[player] = nil
 	return state
 end
 
-function Stoway.getAll(): { [any]: any }
+function Stoway.getAll(): { [Player]: Types.InventoryState }
 	return _store
 end
 
 -- Adapter registration
 
-function Stoway.registerAdapter(adapter: (any, string, any) -> ())
+function Stoway.registerAdapter(adapter: Adapter)
 	table.insert(_adapters, adapter)
 end
 
 -- Operation routes
 
-function Stoway.AddItem(player: any, itemData: any, options: any?): any
-	return route(player, "AddItem", function()
+function Stoway.AddItem(player: Player, itemData: Types.ItemInput, options: Types.AddOptions?): Types.AddResult
+	return route(player, "AddItem", function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
-		return CoreStore.add(state, itemData, options)
+		return cs.add(state, itemData, options)
 	end)
 end
 
-function Stoway.AddToBackpack(player: any, itemData: any, options: any?): any
-	return route(player, "AddToBackpack", function()
+function Stoway.AddToBackpack(player: Player, itemData: Types.ItemInput, options: Types.AddOptions?): Types.AddResult
+	return route(player, "AddToBackpack", function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
-		return CoreStore.addToBackpack(state, itemData, options)
+		return cs.addToBackpack(state, itemData, options)
 	end)
 end
 
-function Stoway.AddToHotbar(player: any, itemData: any, slot: number?): any
-	return route(player, "AddToHotbar", function()
+function Stoway.AddToHotbar(player: Player, itemData: Types.ItemInput, slot: number?): Types.AddResult
+	return route(player, "AddToHotbar", function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
-		return CoreStore.addToHotbar(state, itemData, slot)
+		return cs.addToHotbar(state, itemData, slot)
 	end)
 end
 
-function Stoway.RemoveItem(player: any, uuid: string, amount: number?): any
-	return route(player, "RemoveItem", function()
+function Stoway.RemoveItem(player: Player, uuid: string, amount: number?): Types.RemoveResult
+	return route(player, "RemoveItem", function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
-		return CoreStore.remove(state, uuid, amount)
+		return cs.remove(state, uuid, amount)
 	end)
 end
 
-function Stoway.SwapSlots(player: any, fromRef: any, toRef: any): any
-	return route(player, "SwapSlots", function()
+function Stoway.SwapSlots(player: Player, fromRef: Types.SlotRef, toRef: Types.SlotRef): Types.SwapResult
+	return route(player, "SwapSlots", function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
-		return CoreStore.swap(state, fromRef, toRef)
+		return cs.swap(state, fromRef, toRef)
 	end)
 end
 
-function Stoway.Move(player: any, fromRef: any, toRef: any): any
-	return route(player, "Move", function()
+function Stoway.Move(player: Player, fromRef: Types.SlotRef, toRef: Types.SlotRef): Types.MoveResult
+	return route(player, "Move", function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
-		return CoreStore.move(state, fromRef, toRef)
+		return cs.move(state, fromRef, toRef)
 	end)
 end
 
-function Stoway.Split(player: any, uuid: string, amount: number, destination: any?): any
-	return route(player, "Split", function()
+function Stoway.Split(player: Player, uuid: string, amount: number, destination: Types.SlotRef?): Types.SplitResult
+	return route(player, "Split", function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
-		return CoreStore.split(state, uuid, amount, destination)
+		return cs.split(state, uuid, amount, destination)
 	end)
 end
 
-function Stoway.EquipSlot(player: any, uuid: string): any
-	return route(player, "EquipSlot", function()
+function Stoway.EquipSlot(player: Player, uuid: string): Types.EquipResult
+	return route(player, "EquipSlot", function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
-		return CoreStore.equip(state, uuid)
+		return cs.equip(state, uuid)
 	end)
 end
 
-function Stoway.UnequipSlot(player: any): any
-	return route(player, "UnequipSlot", function()
+function Stoway.UnequipSlot(player: Player): Types.UnequipResult
+	return route(player, "UnequipSlot", function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
-		return CoreStore.unequip(state)
+		return cs.unequip(state)
 	end)
 end
 
-function Stoway.UpdateMetadata(player: any, uuid: string, updates: { [string]: any }): any
-	return route(player, "UpdateMetadata", function()
+function Stoway.UpdateMetadata(player: Player, uuid: string, updates: { [string]: any }): Types.MetadataUpdateResult
+	return route(player, "UpdateMetadata", function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
-		return CoreStore.updateMetadata(state, uuid, updates)
+		return cs.updateMetadata(state, uuid, updates)
 	end)
 end
 
-function Stoway.Sort(player: any): any
-	return route(player, "Sort", function()
+function Stoway.Sort(player: Player): Types.SortResult
+	return route(player, "Sort", function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
-		return CoreStore.sort(state)
+		return cs.sort(state)
 	end)
 end
 

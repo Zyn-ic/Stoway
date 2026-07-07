@@ -7,7 +7,7 @@
 -- VARIABLES --
 -----------------------------
 
-local Types = require("../CoreStore/Types")
+local Types = require("@CoreStore/Types")
 
 local Query = {}
 

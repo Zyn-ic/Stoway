@@ -1,0 +1,7 @@
+{
+  "aliases": {
+    "CoreStore": "./src/server/StowayServerV3_0_0/CoreStore",
+    "Stoway": "./src/server/StowayServerV3_0_0"
+  },
+  "languageMode": "nonstrict"
+}
