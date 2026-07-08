@@ -137,7 +137,13 @@ return ModuleName
 | File | Purpose | Public API |
 |------|---------|-----------|
 | `init.luau` | Orchestration facade | Init, createPlayer, get, removePlayer, getAll, registerAdapter, 11 operation routes |
-| `Communications.luau` | Network adapter | Init(Stoway, NetworkService), registers Stoway adapter, sends/receives via NetworkService |
+| `Communications.luau` | Network adapter + gatekeeper | Init(Stoway, NetworkService, folder), QuickNet handlers, validation, replicate decisions, Stoway adapter |
+
+### StowayClient (Client Layer)
+
+| File | Purpose | Public API |
+|------|---------|-----------|
+| `init.luau` | Client entry point | Local cache, event listeners, optimistic updates, UI signals |
 
 ### CoreStore (Pure Luau Engine)
 
@@ -249,6 +255,8 @@ docs/
     SplitRules.md               -- Placement chain, MaxStackSize cap
     SortingRules.md             -- Auto-trigger model, sort criteria, descending rarity
     MetadataUpdateRules.md      -- All mutable, no auto re-stack
+    NetworkProtocol.md          -- QuickNet event names, payloads, validation rules
+    ReplicationRules.md         -- Origin tracking, replicate decision, rollback format
   site/                         -- Documentation website (vanilla HTML/CSS/JS)
 ```
 

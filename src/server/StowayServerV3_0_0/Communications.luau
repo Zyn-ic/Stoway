@@ -24,6 +24,7 @@ local RemoteFolder: Instance? = nil
 
 local Remotes: { [string]: RemoteEvent } = {}
 
+-----------------------------
 -- CONSTANTS --
 -----------------------------
 -- PRIVATE FUNCTIONS --
@@ -66,6 +67,16 @@ local function adapter(player: Player, operation: string, result: any)
 			end
 		end
 
+		local updatedItems = result.updatedItems
+		if updatedItems then
+			for uuid, newAmount in updatedItems do
+				fireToClient(player, "InventoryUpdated", {
+					uuid = uuid,
+					newAmount = newAmount,
+				})
+			end
+		end
+
 	elseif operation == "RemoveItem" then
 		local removedItem = result.removedItem
 		if removedItem then
@@ -88,6 +99,7 @@ local function adapter(player: Player, operation: string, result: any)
 	end
 end
 
+-----------------------------
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
@@ -96,6 +108,7 @@ function Communications.Init(stowayModule: StowayApi, folder: Instance)
 	RemoteFolder = folder
 
 	ensureRemote("InventoryAdded")
+	ensureRemote("InventoryUpdated")
 	ensureRemote("InventoryRemoved")
 	ensureRemote("InventoryEquipped")
 	ensureRemote("InventoryUnequipped")
