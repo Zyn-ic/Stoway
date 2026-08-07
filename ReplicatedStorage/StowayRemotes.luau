@@ -22,7 +22,7 @@ local SlotRef = { Type = data.String, Slot = data.NumberU8 }
 -- On the client, read these by trusting the naming convention; do NOT runtime
 -- type-check. Every value arrives as `any` and carries its own type-tag byte,
 -- so numbers stay numbers and strings stay strings through the round-trip.
-local MetadataSchema = { [data.String]: data.any }
+local MetadataSchema = { [data.String] = data.any }
 
 local ItemInput = {
 	Id = data.optional(data.StringLong),
