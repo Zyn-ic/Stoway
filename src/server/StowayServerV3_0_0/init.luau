@@ -14,6 +14,7 @@
 local Stoway = {}
 
 local Types = require("@CoreStore/Types")
+local Protocol = require("@Stoway/Protocol")
 
 -- Minimal contract for the injected CoreStore module.
 type CoreStoreApi = {
@@ -31,9 +32,14 @@ type CoreStoreApi = {
 	sort: (Types.InventoryState) -> Types.SortResult,
 }
 
-type Adapter = (Player, string, any) -> ()
+type Adapter = Protocol.Adapter
 
 local CoreStore: CoreStoreApi? = nil
+-- Replicate defaults to true when the caller leaves it nil.
+local function resolveReplicate(replicate: boolean?): boolean
+	return if replicate == nil then true else replicate
+end
+
 local _store: { [Player]: Types.InventoryState } = {}
 local _locks: { [Player]: number } = {}
 local _adapters: { Adapter } = {}
@@ -62,14 +68,14 @@ local function unlockPlayer(player: Player)
 	_locks[player] = nil
 end
 
-local function dispatch(player: Player, operation: string, result: any)
+local function dispatch(player: Player, signal: Protocol.Signal)
 	for _, adapter in _adapters do
-		adapter(player, operation, result)
+		adapter(player, signal)
 	end
 end
 
 -- fn receives the (non-nil) CoreStore so it never touches the nullable module field.
-local function route(player: Player, operation: string, fn: (cs: CoreStoreApi) -> any): any
+local function route(player: Player, operation: Protocol.Operation, replicate: boolean, fn: (cs: CoreStoreApi) -> any): any
 	if not lockPlayer(player) then
 		return { success = false, reason = "OPERATION_IN_PROGRESS" }
 	end
@@ -82,7 +88,11 @@ local function route(player: Player, operation: string, fn: (cs: CoreStoreApi) -
 		return { success = false, reason = "OPERATION_FAILED", error = result }
 	end
 
-	dispatch(player, operation, result)
+	-- Cast is intentional: 'result' is 'any' after pcall, and 'operation' is the
+	-- tagged-union discriminant literal this module constructs with the correct
+	-- per-operation result type.
+	local signal = ({ operation = operation, replicate = replicate, result = result }) :: Protocol.Signal
+	dispatch(player, signal)
 	unlockPlayer(player)
 	return result
 end
@@ -126,88 +136,88 @@ end
 
 -- Operation routes
 
-function Stoway.AddItem(player: Player, itemData: Types.ItemInput, options: Types.AddOptions?): Types.AddResult
-	return route(player, "AddItem", function(cs: CoreStoreApi)
+function Stoway.AddItem(player: Player, itemData: Types.ItemInput, options: Types.AddOptions?, replicate: boolean?): Types.AddResult
+	return route(player, "AddItem", resolveReplicate(replicate), function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
 		return cs.add(state, itemData, options)
 	end)
 end
 
-function Stoway.AddToBackpack(player: Player, itemData: Types.ItemInput, options: Types.AddOptions?): Types.AddResult
-	return route(player, "AddToBackpack", function(cs: CoreStoreApi)
+function Stoway.AddToBackpack(player: Player, itemData: Types.ItemInput, options: Types.AddOptions?, replicate: boolean?): Types.AddResult
+	return route(player, "AddToBackpack", resolveReplicate(replicate), function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
 		return cs.addToBackpack(state, itemData, options)
 	end)
 end
 
-function Stoway.AddToHotbar(player: Player, itemData: Types.ItemInput, slot: number?): Types.AddResult
-	return route(player, "AddToHotbar", function(cs: CoreStoreApi)
+function Stoway.AddToHotbar(player: Player, itemData: Types.ItemInput, slot: number?, replicate: boolean?): Types.AddResult
+	return route(player, "AddToHotbar", resolveReplicate(replicate), function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
 		return cs.addToHotbar(state, itemData, slot)
 	end)
 end
 
-function Stoway.RemoveItem(player: Player, uuid: string, amount: number?): Types.RemoveResult
-	return route(player, "RemoveItem", function(cs: CoreStoreApi)
+function Stoway.RemoveItem(player: Player, uuid: string, amount: number?, replicate: boolean?): Types.RemoveResult
+	return route(player, "RemoveItem", resolveReplicate(replicate), function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
 		return cs.remove(state, uuid, amount)
 	end)
 end
 
-function Stoway.SwapSlots(player: Player, fromRef: Types.SlotRef, toRef: Types.SlotRef): Types.SwapResult
-	return route(player, "SwapSlots", function(cs: CoreStoreApi)
+function Stoway.SwapSlots(player: Player, fromRef: Types.SlotRef, toRef: Types.SlotRef, replicate: boolean?): Types.SwapResult
+	return route(player, "SwapSlots", resolveReplicate(replicate), function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
 		return cs.swap(state, fromRef, toRef)
 	end)
 end
 
-function Stoway.Move(player: Player, fromRef: Types.SlotRef, toRef: Types.SlotRef): Types.MoveResult
-	return route(player, "Move", function(cs: CoreStoreApi)
+function Stoway.Move(player: Player, fromRef: Types.SlotRef, toRef: Types.SlotRef, replicate: boolean?): Types.MoveResult
+	return route(player, "Move", resolveReplicate(replicate), function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
 		return cs.move(state, fromRef, toRef)
 	end)
 end
 
-function Stoway.Split(player: Player, uuid: string, amount: number, destination: Types.SlotRef?): Types.SplitResult
-	return route(player, "Split", function(cs: CoreStoreApi)
+function Stoway.Split(player: Player, uuid: string, amount: number, destination: Types.SlotRef?, replicate: boolean?): Types.SplitResult
+	return route(player, "Split", resolveReplicate(replicate), function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
 		return cs.split(state, uuid, amount, destination)
 	end)
 end
 
-function Stoway.EquipSlot(player: Player, uuid: string): Types.EquipResult
-	return route(player, "EquipSlot", function(cs: CoreStoreApi)
+function Stoway.EquipSlot(player: Player, uuid: string, replicate: boolean?): Types.EquipResult
+	return route(player, "EquipSlot", resolveReplicate(replicate), function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
 		return cs.equip(state, uuid)
 	end)
 end
 
-function Stoway.UnequipSlot(player: Player): Types.UnequipResult
-	return route(player, "UnequipSlot", function(cs: CoreStoreApi)
+function Stoway.UnequipSlot(player: Player, replicate: boolean?): Types.UnequipResult
+	return route(player, "UnequipSlot", resolveReplicate(replicate), function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
 		return cs.unequip(state)
 	end)
 end
 
-function Stoway.UpdateMetadata(player: Player, uuid: string, updates: { [string]: any }): Types.MetadataUpdateResult
-	return route(player, "UpdateMetadata", function(cs: CoreStoreApi)
+function Stoway.UpdateMetadata(player: Player, uuid: string, updates: { [string]: any }, replicate: boolean?): Types.MetadataUpdateResult
+	return route(player, "UpdateMetadata", resolveReplicate(replicate), function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
 		return cs.updateMetadata(state, uuid, updates)
 	end)
 end
 
-function Stoway.Sort(player: Player): Types.SortResult
-	return route(player, "Sort", function(cs: CoreStoreApi)
+function Stoway.Sort(player: Player, replicate: boolean?): Types.SortResult
+	return route(player, "Sort", resolveReplicate(replicate), function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
 		return cs.sort(state)

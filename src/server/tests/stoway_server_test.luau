@@ -193,13 +193,74 @@ runTest("operation dispatches to adapters", true, function()
 	Stoway.createPlayer(MockPlayer1, { Limit = 100 })
 
 	local dispatched = {}
-	Stoway.registerAdapter(function(player, operation, result)
-		table.insert(dispatched, operation)
+	Stoway.registerAdapter(function(player, signal)
+		table.insert(dispatched, signal.operation)
 	end)
 
 	Stoway.AddItem(MockPlayer1, { Id = "Sword", Amount = 1 })
 	assertEqual(#dispatched >= 1, true, "should dispatch at least 1")
 	assertEqual(dispatched[1], "AddItem", "should dispatch AddItem")
+end)
+
+-- ==================== REPLICATE FLAG ==================
+
+runTest("admin add replicates to client by default", true, function()
+	Stoway.removePlayer(MockPlayer1)
+	Stoway.createPlayer(MockPlayer1, { Limit = 100 })
+
+	local signals = {}
+	Stoway.registerAdapter(function(player, signal)
+		table.insert(signals, { operation = signal.operation, replicate = signal.replicate })
+	end)
+
+	-- Server-side admin command: no override given, so replicate = true.
+	local result = Stoway.AddItem(MockPlayer1, { Id = "Sword", Amount = 1 })
+	assertEqual(result.success, true, "should succeed")
+	assertEqual(signals[1].operation, "AddItem", "should dispatch AddItem")
+	assertEqual(signals[1].replicate, true, "admin add should replicate to client")
+end)
+
+runTest("player swap does not replicate a full echo", true, function()
+	Stoway.removePlayer(MockPlayer1)
+	Stoway.createPlayer(MockPlayer1, { Limit = 100 })
+	Stoway.AddToHotbar(MockPlayer1, { Id = "Apple", Amount = 1 })
+	Stoway.AddToHotbar(MockPlayer1, { Id = "Sword", Amount = 1 })
+
+	local signals = {}
+	Stoway.registerAdapter(function(player, signal)
+		table.insert(signals, { operation = signal.operation, replicate = signal.replicate })
+	end)
+
+	-- Client already rendered the swap locally; no need to echo back a sync.
+	local result = Stoway.SwapSlots(MockPlayer1,
+		{ Type = "Hotbar", Slot = 1 },
+		{ Type = "Hotbar", Slot = 2 },
+		false
+	)
+	assertEqual(result.success, true, "swap should succeed")
+	assertEqual(signals[1].operation, "SwapSlots", "should dispatch SwapSlots")
+	assertEqual(signals[1].replicate, false, "client swap should not replicate a full sync")
+end)
+
+runTest("failed swap still dispatches a revert signal", true, function()
+	Stoway.removePlayer(MockPlayer1)
+	Stoway.createPlayer(MockPlayer1, { Limit = 100 })
+
+	local signals = {}
+	Stoway.registerAdapter(function(player, signal)
+		table.insert(signals, { operation = signal.operation, replicate = signal.replicate, success = signal.result.success })
+	end)
+
+	-- Attempt to swap out of bounds -> fails. The client applied it locally,
+	-- so we still dispatch a (failed) swap so Communications can send the inverse.
+	local result = Stoway.SwapSlots(MockPlayer1,
+		{ Type = "Hotbar", Slot = 1 },
+		{ Type = "Hotbar", Slot = 99 },
+		false
+	)
+	assertEqual(result.success, false, "swap should fail")
+	assertEqual(signals[1].operation, "SwapSlots", "should dispatch SwapSlots")
+	assertEqual(signals[1].success, false, "revert should carry the failure")
 end)
 
 -- ==================== CONCURRENT OPERATIONS ==================

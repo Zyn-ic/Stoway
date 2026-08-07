@@ -11,12 +11,13 @@
 -- VARIABLES --
 -----------------------------
 
+local Protocol = require("@Stoway/Protocol")
+local Types = require("@CoreStore/Types")
+
 local Communications = {}
 
-type Adapter = (Player, string, any) -> ()
-
 type StowayApi = {
-	registerAdapter: (Adapter) -> (),
+	registerAdapter: (Protocol.Adapter) -> (),
 }
 
 local _Stoway: StowayApi? = nil
@@ -50,12 +51,32 @@ local function fireToClient(player: Player, remoteName: string, ...: any)
 	end
 end
 
-local function adapter(player: Player, operation: string, result: any)
-	if not result.success then
+local function adapter(player: Player, signal: Protocol.Signal)
+	-- The tagged union's operation discriminant guards each branch, so the
+	-- result cast is safe. (Luau cannot correlate signal.result with
+	-- signal.operation across versions, hence the explicit cast.)
+
+	if not signal.result.success then
+		if signal.operation == "SwapSlots" then
+			local result = signal.result :: Types.SwapResult
+			-- The player already rendered the swap on their end; only talk back
+			-- on failure, and send the inverse of the attempted operation.
+			fireToClient(player, "InventoryRevert", {
+				fromResult = result,
+				fromSlot = result.reason,
+			})
+		end
 		return
 	end
 
-	if operation == "AddItem" or operation == "AddToBackpack" or operation == "AddToHotbar" then
+	-- Client-initiated operations don't need a full echo: the client applied
+	-- them locally and only needs a confirmation if something failed (above).
+	if not signal.replicate then
+		return
+	end
+
+	if signal.operation == "AddItem" or signal.operation == "AddToBackpack" or signal.operation == "AddToHotbar" then
+		local result = signal.result :: Types.AddResult
 		local addedItems = result.addedItems
 		if addedItems then
 			for _, added in addedItems do
@@ -77,7 +98,8 @@ local function adapter(player: Player, operation: string, result: any)
 			end
 		end
 
-	elseif operation == "RemoveItem" then
+	elseif signal.operation == "RemoveItem" then
+		local result = signal.result :: Types.RemoveResult
 		local removedItem = result.removedItem
 		if removedItem then
 			fireToClient(player, "InventoryRemoved", {
@@ -87,12 +109,14 @@ local function adapter(player: Player, operation: string, result: any)
 			})
 		end
 
-	elseif operation == "EquipSlot" then
+	elseif signal.operation == "EquipSlot" then
+		local result = signal.result :: Types.EquipResult
 		fireToClient(player, "InventoryEquipped", {
 			uuid = result.uuid,
 		})
 
-	elseif operation == "UnequipSlot" then
+	elseif signal.operation == "UnequipSlot" then
+		local result = signal.result :: Types.UnequipResult
 		fireToClient(player, "InventoryUnequipped", {
 			uuid = result.previousUUID,
 		})
@@ -112,6 +136,7 @@ function Communications.Init(stowayModule: StowayApi, folder: Instance)
 	ensureRemote("InventoryRemoved")
 	ensureRemote("InventoryEquipped")
 	ensureRemote("InventoryUnequipped")
+	ensureRemote("InventoryRevert")
 
 	stowayModule.registerAdapter(adapter)
 end
