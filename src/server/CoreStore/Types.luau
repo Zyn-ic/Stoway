@@ -30,7 +30,6 @@ export type Item = {
 
 export type ItemInput = {
     Id: string?,
-    ID: string?,
     Amount: number?,
     Metadata: ItemMetadata?,
 }
