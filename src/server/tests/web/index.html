@@ -347,7 +347,7 @@ const Utils = {
 // --- Metadata ---
 const Metadata = {
   normalize(itemData) {
-    const itemId = itemData.Id || itemData.ID;
+    const itemId = itemData.Id;
     if (typeof itemId !== 'string' || itemId === '') return [null, null, null, 'INVALID_ITEM_ID'];
     let metadata = itemData.Metadata ? Utils.shallowCopy(itemData.Metadata) : {};
     let rawAmount = itemData.Amount ?? metadata.Amount ?? metadata.StackAmount;

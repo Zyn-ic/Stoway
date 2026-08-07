@@ -4,12 +4,16 @@
 --@date: 2026-07-07
 --[[@description:
 	Communications adapter for Stoway.
-	Creates RemoteEvents and fires intent-based events to clients.
+	Uses QuickNet for server -> client event firing with typed data schemas.
 	Registers as an adapter with Stoway — Stoway does not import this module.
 ]]
 -----------------------------
 -- VARIABLES --
 -----------------------------
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Remotes = require(ReplicatedStorage.StowayRemotes)
 
 local Protocol = require("@Stoway/Protocol")
 local Types = require("@CoreStore/Types")
@@ -21,35 +25,9 @@ type StowayApi = {
 }
 
 local _Stoway: StowayApi? = nil
-local RemoteFolder: Instance? = nil
 
-local Remotes: { [string]: RemoteEvent } = {}
-
------------------------------
--- CONSTANTS --
------------------------------
 -- PRIVATE FUNCTIONS --
 -----------------------------
-
-local function ensureRemote(name: string): RemoteEvent
-	local existing = Remotes[name]
-	if existing then
-		return existing
-	end
-
-	local remote = Instance.new("RemoteEvent")
-	remote.Name = name
-	remote.Parent = RemoteFolder
-	Remotes[name] = remote
-	return remote
-end
-
-local function fireToClient(player: Player, remoteName: string, ...: any)
-	local remote = Remotes[remoteName]
-	if remote then
-		remote:FireClient(player, ...)
-	end
-end
 
 local function adapter(player: Player, signal: Protocol.Signal)
 	-- The tagged union's operation discriminant guards each branch, so the
@@ -61,9 +39,11 @@ local function adapter(player: Player, signal: Protocol.Signal)
 			local result = signal.result :: Types.SwapResult
 			-- The player already rendered the swap on their end; only talk back
 			-- on failure, and send the inverse of the attempted operation.
-			fireToClient(player, "InventoryRevert", {
-				fromResult = result,
-				fromSlot = result.reason,
+			--
+			Remotes.InventoryRevert:FireClient(player,
+			{
+                fromResult = { success = result.success },
+    			fromSlot = result.reason
 			})
 		end
 		return
@@ -80,7 +60,7 @@ local function adapter(player: Player, signal: Protocol.Signal)
 		local addedItems = result.addedItems
 		if addedItems then
 			for _, added in addedItems do
-				fireToClient(player, "InventoryAdded", {
+				Remotes.InventoryAdded:FireClient(player, {
 					uuid = added.uuid,
 					slotType = added.slotType,
 					slot = added.slot,
@@ -91,7 +71,7 @@ local function adapter(player: Player, signal: Protocol.Signal)
 		local updatedItems = result.updatedItems
 		if updatedItems then
 			for uuid, newAmount in updatedItems do
-				fireToClient(player, "InventoryUpdated", {
+				Remotes.InventoryUpdated:FireClient(player, {
 					uuid = uuid,
 					newAmount = newAmount,
 				})
@@ -102,7 +82,7 @@ local function adapter(player: Player, signal: Protocol.Signal)
 		local result = signal.result :: Types.RemoveResult
 		local removedItem = result.removedItem
 		if removedItem then
-			fireToClient(player, "InventoryRemoved", {
+			Remotes.InventoryRemoved:FireClient(player, {
 				uuid = removedItem.UUID,
 				slotType = result.slotType,
 				slot = result.slot,
@@ -111,13 +91,13 @@ local function adapter(player: Player, signal: Protocol.Signal)
 
 	elseif signal.operation == "EquipSlot" then
 		local result = signal.result :: Types.EquipResult
-		fireToClient(player, "InventoryEquipped", {
+		Remotes.InventoryEquipped:FireClient(player, {
 			uuid = result.uuid,
 		})
 
 	elseif signal.operation == "UnequipSlot" then
 		local result = signal.result :: Types.UnequipResult
-		fireToClient(player, "InventoryUnequipped", {
+		Remotes.InventoryUnequipped:FireClient(player, {
 			uuid = result.previousUUID,
 		})
 	end
@@ -127,16 +107,8 @@ end
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
-function Communications.Init(stowayModule: StowayApi, folder: Instance)
+function Communications.Init(stowayModule: StowayApi)
 	_Stoway = stowayModule
-	RemoteFolder = folder
-
-	ensureRemote("InventoryAdded")
-	ensureRemote("InventoryUpdated")
-	ensureRemote("InventoryRemoved")
-	ensureRemote("InventoryEquipped")
-	ensureRemote("InventoryUnequipped")
-	ensureRemote("InventoryRevert")
 
 	stowayModule.registerAdapter(adapter)
 end

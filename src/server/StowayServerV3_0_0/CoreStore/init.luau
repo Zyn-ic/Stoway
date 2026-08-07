@@ -42,6 +42,10 @@ function CoreStore.getDefaultSettings(): Types.Settings
 	return State.getDefaultSettings()
 end
 
+-- Sentinel value for deleting a metadata field via updateMetadata:
+-- CoreStore.updateMetadata(state, uuid, { HeatDmg = CoreStore.METADATA_DELETE })
+CoreStore.METADATA_DELETE = Operations.METADATA_DELETE
+
 function CoreStore.add(
 	state: Types.InventoryState,
 	itemData: Types.ItemInput,

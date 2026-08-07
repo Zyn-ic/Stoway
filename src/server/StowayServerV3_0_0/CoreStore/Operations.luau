@@ -25,6 +25,12 @@ local Operations = {}
 -- Example: MetadataIndex["Rarity"]["Legendary"] = { "uuid-1", "uuid-5" }
 local INDEXED_METADATA_FIELDS: { string } = { "Rarity", "Type" }
 
+-- Sentinel for deleting a metadata field. Lua tables can never hold a nil
+-- value, so updateMetadata accepts this unique string as a "remove this key"
+-- marker. It is namespaced aggressively to avoid colliding with a real value.
+local METADATA_DELETE = "__STOWAY_DELETE__"
+Operations.METADATA_DELETE = METADATA_DELETE
+
 -----------------------------
 -- PRIVATE FUNCTIONS --
 -----------------------------
@@ -386,7 +392,7 @@ function Operations.add(
 	local amountLeft = amountToAdd
 
 	-- Step 2: Try stacking into existing stacks (reduces amountLeft)
-	local updatedItems: { number } = {}
+	local updatedItems: { [string]: number } = {}
 
 	if state.Settings.CanStack then
 		local stackedAmount, updates = Stack.tryStack(state, itemId, amountLeft, metadata, opts.Placement)
@@ -891,7 +897,7 @@ function Operations.updateMetadata(
 	local updatedFields: { string } = {}
 
 	for key, value in updates do
-		if value == nil then
+		if value == METADATA_DELETE then
 			item.Metadata[key] = nil
 		else
 			item.Metadata[key] = value

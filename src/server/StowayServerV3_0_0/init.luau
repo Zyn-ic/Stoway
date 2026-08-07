@@ -35,9 +35,10 @@ type CoreStoreApi = {
 type Adapter = Protocol.Adapter
 
 local CoreStore: CoreStoreApi? = nil
--- Replicate defaults to true when the caller leaves it nil.
+-- Replication is opt-in: caller must explicitly pass `true` to echo a
+-- server-side change to a client. nil (omitted) means no replication.
 local function resolveReplicate(replicate: boolean?): boolean
-	return if replicate == nil then true else replicate
+	return if replicate == nil then false else replicate
 end
 
 local _store: { [Player]: Types.InventoryState } = {}

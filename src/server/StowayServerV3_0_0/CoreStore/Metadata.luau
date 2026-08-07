@@ -29,7 +29,7 @@ local Metadata = {}
 -- Cleans Amount/StackAmount from metadata after extraction.
 -- Defaults Droppable to true if not set.
 function Metadata.normalize(itemData: Types.ItemInput): (string?, number?, Types.ItemMetadata?, string?)
-	local itemId = itemData.Id or itemData.ID
+	local itemId = itemData.Id
 
 	if type(itemId) ~= "string" or itemId == "" then
 		return nil, nil, nil, "INVALID_ITEM_ID"
