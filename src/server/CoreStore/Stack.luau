@@ -87,9 +87,9 @@ function Stack.tryStack(
 	amount: number,
 	metadata: Types.ItemMetadata,
 	placement: Types.PlacementMode?
-): (number, { number })
+): (number, { [string]: number })
 	local stackedAmount = 0
-	local updates: { number } = {}
+	local updates: { [string]: number } = {}
 
 	local uuids = state.ItemsByID[itemId]
 

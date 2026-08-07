@@ -18,6 +18,16 @@ CoreStore.updateMetadata(state, uuid, updates) -> MetadataUpdateResult
 | uuid | string | UUID of the item to update |
 | updates | { [string]: any } | Key-value pairs to merge into metadata |
 
+### Deleting a Field
+
+Lua tables can never hold a nil value, so `{ Enchant = nil }` produces an **empty** table and deletes nothing. To remove a metadata field, set it to the `METADATA_DELETE` sentinel:
+
+```luau
+CoreStore.updateMetadata(state, uuid, { Enchant = CoreStore.METADATA_DELETE })
+```
+
+`CoreStore.METADATA_DELETE` is `"__STOWAY_DELETE__"`, a namespaced string exported from the CoreStore facade (and from `ReplicatedStorage/StowayRemotes.luau` in the stoway branch's wire layer). It survives the wire as a plain string, so clients delete fields with `StowayRemotes.METADATA_DELETE`. Deleting an indexed field (Rarity/Type) also evicts the UUID from its `MetadataIndex` bucket.
+
 ### Result Shape
 
 ```luau
@@ -42,7 +52,8 @@ CoreStore.updateMetadata(state, uuid, updates) -> MetadataUpdateResult
    - For each key in updates:
      - If key exists: overwrite value
      - If key does not exist: add key-value pair
-   - Keys set to nil: remove from metadata
+     - If value is the `METADATA_DELETE` sentinel: remove key from metadata
+       (note: `{ Key = nil }` is an empty table in Lua and deletes nothing)
 
 3. Evaluate stacking impact
    - Check if metadata changes affect stacking eligibility
@@ -152,7 +163,8 @@ If `Settings.Sorting = true`, auto-sort runs after metadata update. This may reo
 | Scenario | Behavior |
 |----------|----------|
 | updates is empty | No change, return success with empty updatedFields |
-| Key set to nil | Remove key from metadata |
+| Key set to `CoreStore.METADATA_DELETE` | Remove key from metadata (and from MetadataIndex if indexed) |
+| Key set to nil (inline) | No-op — `{ Key = nil }` produces an empty table, key untouched |
 | Key set to same value | No change, but listed in updatedFields |
 | Update equipped item | Allowed, no equip/unequip triggered |
 | Update blacklisted item to un-blacklisted | No immediate re-stack |

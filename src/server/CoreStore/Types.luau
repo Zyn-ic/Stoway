@@ -116,7 +116,7 @@ export type AddResult = {
     reason: string?,
 
     addedItems: { AddedSlot }?,
-    updatedItems: { number }?,
+    updatedItems: { [string]: number }?,
 
     addedAmount: number?,
     overflow: number?,
