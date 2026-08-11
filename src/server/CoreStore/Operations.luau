@@ -8,12 +8,12 @@
 -- VARIABLES --
 -----------------------------
 
-local Types = require("../CoreStore/Types")
-local Metadata = require("../CoreStore/Metadata")
-local Slots = require("../CoreStore/Slots")
-local Stack = require("../CoreStore/Stack")
-local State = require("../CoreStore/State")
-local Utils = require("../CoreStore/Utils")
+local Types = require("./Types")
+local Metadata = require("./Metadata")
+local Slots = require("./Slots")
+local Stack = require("./Stack")
+local State = require("./State")
+local Utils = require("./Utils")
 
 local Operations = {}
 
@@ -268,7 +268,7 @@ local function addNewStacks(
 		local placement = options.Placement or "Auto"
 
 		if placement == "Backpack" then
-			-- Storage only — skip hotbar stacking entirely
+			-- Storage only ΓÇö skip hotbar stacking entirely
 			slot, reason = placeItemInStorage(state, item)
 
 			if slot then
@@ -276,7 +276,7 @@ local function addNewStacks(
 				placed = true
 			end
 		elseif placement == "Hotbar" then
-			-- Hotbar only — preferred slot (Static) or append (Dynamic)
+			-- Hotbar only ΓÇö preferred slot (Static) or append (Dynamic)
 			slot, reason = placeItemInHotbar(state, item, options.Slot)
 
 			if slot then
@@ -284,7 +284,7 @@ local function addNewStacks(
 				placed = true
 			end
 		elseif placement == "Slot" and options.SlotRef then
-			-- Exact slot placement — must be empty
+			-- Exact slot placement ΓÇö must be empty
 			local slotRef = options.SlotRef
 
 			if slotRef.Type == "Hotbar" then
@@ -298,10 +298,14 @@ local function addNewStacks(
 				end
 			elseif slotRef.Type == "Storage" then
 				if state.Settings.BackpackEnabled then
-					Slots.moveToStorage(state, item.UUID, slotRef.Slot)
-					slotType = "Storage"
-					slot = slotRef.Slot
-					placed = true
+					if slotRef.Slot >= 1 and slotRef.Slot <= #state.Storage + 1 then
+						Slots.moveToStorage(state, item.UUID, slotRef.Slot)
+						slotType = "Storage"
+						slot = slotRef.Slot
+						placed = true
+					else
+						reason = "INVALID_SLOT"
+					end
 				else
 					reason = "BACKPACK_DISABLED"
 				end
@@ -327,7 +331,7 @@ local function addNewStacks(
 			reason = "INVALID_PLACEMENT"
 		end
 
-		-- Placement failed — rollback this item and return what we added so far
+		-- Placement failed ΓÇö rollback this item and return what we added so far
 		if not placed or not slotType or not slot then
 			destroyUnplacedItem(state, item)
 			return addedItems, remaining, reason
@@ -387,7 +391,7 @@ function Operations.add(
 		}
 	end
 
-	-- Cap at remaining capacity — excess becomes overflow
+	-- Cap at remaining capacity ΓÇö excess becomes overflow
 	local amountToAdd = math.min(amount, remainingCapacity)
 	local amountLeft = amountToAdd
 
@@ -416,7 +420,7 @@ function Operations.add(
 		addedItems = createdItems
 		amountLeft = leftover
 
-		-- Nothing placed and nothing stacked — total failure
+		-- Nothing placed and nothing stacked ΓÇö total failure
 		if #addedItems == 0 and next(updatedItems) == nil then
 			return {
 				success = false,
@@ -484,7 +488,7 @@ function Operations.remove(
 		Metadata = Utils.deepCopy(item.Metadata) :: Types.ItemMetadata,
 	}
 
-	-- Partial removal — item still has Amount > 0
+	-- Partial removal ΓÇö item still has Amount > 0
 	if item.Amount > amountToRemove then
 		item.Amount -= amountToRemove
 		State.removeWeight(state, amountToRemove)
@@ -498,7 +502,7 @@ function Operations.remove(
 		}
 	end
 
-	-- Full removal — destroy item from all tables
+	-- Full removal ΓÇö destroy item from all tables
 	State.removeWeight(state, item.Amount)
 
 	state.Items[uuid] = nil
@@ -570,6 +574,12 @@ function Operations.swap(
 		end
 	end
 
+	if toRef.Type == "Storage" then
+		if toRef.Slot < 1 or toRef.Slot > #state.Storage + 1 then
+			return { success = false, reason = "INVALID_STORAGE_SLOT" }
+		end
+	end
+
 	local fromUUID = Slots.getUUIDFromSlot(state, fromRef.Type, fromRef.Slot)
 	local toUUID = Slots.getUUIDFromSlot(state, toRef.Type, toRef.Slot)
 
@@ -593,12 +603,13 @@ function Operations.swap(
 			toItem.Amount += transfer
 			fromItem.Amount -= transfer
 
-			-- Source fully absorbed — destroy it
+			-- Source fully absorbed ΓÇö destroy it
 			if fromItem.Amount <= 0 then
 				local loc = Slots.getLocation(state, fromUUID)
 				state.Items[fromUUID] = nil
 				state.LocationByUUID[fromUUID] = nil
 				removeFromIndex(state, fromItem.Id, fromUUID)
+				removeFromMetadataIndex(state, fromUUID, fromItem.Metadata)
 
 				if loc and loc.Type == "Hotbar" then
 					Slots.clearHotbarSlot(state, loc.Slot)
@@ -623,7 +634,7 @@ function Operations.swap(
 		end
 	end
 
-	-- Positional swap — exchange UUIDs in both slots
+	-- Positional swap ΓÇö exchange UUIDs in both slots
 	local hotbarCompacted = Slots.swapSlots(state, fromRef, toRef)
 
 	-- Hotbar -> Storage (empty dest): clear old hotbar slot, compact if Dynamic
@@ -637,19 +648,19 @@ function Operations.swap(
 		end
 	end
 
-	-- Storage -> Hotbar (empty dest): remove from old storage index, append to end
+	-- Storage -> Hotbar (empty dest): swapSlots already moved the item into the
+	-- hotbar; just collapse the storage hole left (INV-9 contiguity).
 	if fromRef.Type == "Storage" and not toUUID then
 		local fromItem = state.Items[fromUUID]
 		if fromItem then
 			Slots.removeStorageAt(state, fromRef.Slot)
-			Slots.appendStorage(state, fromUUID)
 		end
 	end
 
 	return { success = true, hotbarCompacted = hotbarCompacted }
 end
 
--- Moves an item from one slot to another. Move is purely positional — never stacks.
+-- Moves an item from one slot to another. Move is purely positional ΓÇö never stacks.
 --
 -- 5 paths:
 --   HH (Static): clear source, set dest, update LocationByUUID
@@ -695,6 +706,9 @@ function Operations.move(
 
 	-- Storage -> Storage: reorder within the array
 	if fromRef.Type == "Storage" and toRef.Type == "Storage" then
+		if toRef.Slot < 1 or toRef.Slot > #state.Storage + 1 then
+			return { success = false, reason = "INVALID_STORAGE_SLOT" }
+		end
 		Slots.moveWithinStorage(state, fromRef.Slot, toRef.Slot)
 		return { success = true }
 	end
@@ -785,6 +799,7 @@ function Operations.split(
 
 	state.Items[newItem.UUID] = newItem
 	addToIndex(state, newItem.Id, newItem.UUID)
+	addToMetadataIndex(state, newItem.UUID, newItem.Metadata)
 	State.addWeight(state, splitAmount)
 
 	local newSlotType: Types.SlotType? = nil
@@ -792,10 +807,11 @@ function Operations.split(
 	local hotbarCompacted = false
 
 	if destination then
-		-- Explicit destination — validate and place, or rollback
+		-- Explicit destination ΓÇö validate and place, or rollback
 		if destination.Type == "Hotbar" then
 			if not Slots.isValidHotbarSlot(state, destination.Slot) then
 				state.Items[newItem.UUID] = nil
+				removeFromMetadataIndex(state, newItem.UUID, newItem.Metadata)
 				removeFromIndex(state, newItem.Id, newItem.UUID)
 				State.removeWeight(state, splitAmount)
 				item.Amount += splitAmount
@@ -804,6 +820,7 @@ function Operations.split(
 
 			if state.Hotbar[destination.Slot] then
 				state.Items[newItem.UUID] = nil
+				removeFromMetadataIndex(state, newItem.UUID, newItem.Metadata)
 				removeFromIndex(state, newItem.Id, newItem.UUID)
 				State.removeWeight(state, splitAmount)
 				item.Amount += splitAmount
@@ -815,6 +832,7 @@ function Operations.split(
 				local appendSlot = Slots.findEmptyHotbarSlot(state)
 				if destination.Slot ~= appendSlot then
 					state.Items[newItem.UUID] = nil
+					removeFromMetadataIndex(state, newItem.UUID, newItem.Metadata)
 					removeFromIndex(state, newItem.Id, newItem.UUID)
 					State.removeWeight(state, splitAmount)
 					item.Amount += splitAmount
@@ -828,6 +846,7 @@ function Operations.split(
 		elseif destination.Type == "Storage" then
 			if not state.Settings.BackpackEnabled then
 				state.Items[newItem.UUID] = nil
+				removeFromMetadataIndex(state, newItem.UUID, newItem.Metadata)
 				removeFromIndex(state, newItem.Id, newItem.UUID)
 				State.removeWeight(state, splitAmount)
 				item.Amount += splitAmount
@@ -836,6 +855,7 @@ function Operations.split(
 
 			if not Slots.isValidStorageSlot(state, destination.Slot) then
 				state.Items[newItem.UUID] = nil
+				removeFromMetadataIndex(state, newItem.UUID, newItem.Metadata)
 				removeFromIndex(state, newItem.Id, newItem.UUID)
 				State.removeWeight(state, splitAmount)
 				item.Amount += splitAmount
@@ -847,7 +867,7 @@ function Operations.split(
 			newSlot = destination.Slot
 		end
 	else
-		-- No destination — placement chain: Hotbar first, then Storage
+		-- No destination ΓÇö placement chain: Hotbar first, then Storage
 		local slot = Slots.findEmptyHotbarSlot(state)
 		if slot then
 			Slots.setHotbarSlot(state, slot, newItem.UUID)
@@ -858,8 +878,9 @@ function Operations.split(
 			newSlotType = "Storage"
 			newSlot = #state.Storage
 		else
-			-- No room anywhere — rollback
+			-- No room anywhere ΓÇö rollback
 			state.Items[newItem.UUID] = nil
+			removeFromMetadataIndex(state, newItem.UUID, newItem.Metadata)
 			removeFromIndex(state, newItem.Id, newItem.UUID)
 			State.removeWeight(state, splitAmount)
 			item.Amount += splitAmount
@@ -950,6 +971,54 @@ function Operations.removeBySlot(
 	end
 
 	return Operations.remove(state, uuid, amount)
+end
+
+-- Sets EquippedItemUUID. Pure state change, no Roblox dependency.
+-- Idempotent: equipping the same item again returns success.
+function Operations.equip(
+	state: Types.InventoryState,
+	uuid: string
+): Types.EquipResult
+	local item = state.Items[uuid]
+
+	if not item then
+		return {
+			success = false,
+			reason = "ITEM_NOT_FOUND",
+		}
+	end
+
+	local previousUUID = state.EquippedItemUUID
+
+	if previousUUID == uuid then
+		return {
+			success = true,
+			uuid = uuid,
+			previousUUID = previousUUID,
+		}
+	end
+
+	state.EquippedItemUUID = uuid
+
+	return {
+		success = true,
+		uuid = uuid,
+		previousUUID = previousUUID,
+	}
+end
+
+-- Clears EquippedItemUUID. Pure state change, no Roblox dependency.
+-- Idempotent: unequipping when nothing is equipped returns success.
+function Operations.unequip(
+	state: Types.InventoryState
+): Types.UnequipResult
+	local previousUUID = state.EquippedItemUUID
+	state.EquippedItemUUID = nil
+
+	return {
+		success = true,
+		previousUUID = previousUUID,
+	}
 end
 
 -----------------------------

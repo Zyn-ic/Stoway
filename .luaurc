@@ -1,0 +1,6 @@
+{
+  "aliases": {
+    "CoreStore": "./src/server/CoreStore"
+  },
+  "languageMode": "nonstrict"
+}

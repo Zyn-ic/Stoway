@@ -10,7 +10,7 @@
 -----------------------------
 -- DEPENDENCIES --
 -----------------------------
-local CoreStore = require("../CoreStore")
+local CoreStore = require("@CoreStore")
 
 -----------------------------
 -- VARIABLES --
@@ -702,6 +702,97 @@ runTest("split to append hotbar slot works in Dynamic mode", true, function()
 
 	local newItem = CoreStore.getItem(state, result.newUUID)
 	assertEqual(newItem.Amount, 3, "new stack should have 3")
+end)
+
+-- ==================== BOUNDS + INDEX REGRESSION TESTS ====================
+
+runTest("Swap to out-of-range storage slot fails", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1, Slot = 1 })
+
+	local result = CoreStore.swap(state, { Type = "Hotbar", Slot = 1 }, { Type = "Storage", Slot = 99 })
+	assertFalse(result.success, "swap to OOB storage slot should fail")
+	assertEqual(result.reason, "INVALID_STORAGE_SLOT", "should return INVALID_STORAGE_SLOT")
+	assertEqual(state.Hotbar[1] ~= nil, true, "source item must not be touched")
+end)
+
+runTest("Move to out-of-range storage slot fails", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	CoreStore.addToBackpack(state, { Id = "Potion", Amount = 1 })
+
+	local result = CoreStore.move(state, { Type = "Storage", Slot = 1 }, { Type = "Storage", Slot = 5 })
+	assertFalse(result.success, "move to OOB storage slot should fail")
+	assertEqual(result.reason, "INVALID_STORAGE_SLOT", "should return INVALID_STORAGE_SLOT")
+	assertEqual(#state.Storage, 1, "storage must be untouched")
+end)
+
+runTest("Move to append storage slot keeps storage packed", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	CoreStore.addToBackpack(state, { Id = "Potion", Amount = 1 })
+	CoreStore.addToBackpack(state, { Id = "Scroll", Amount = 1 })
+	local uuid1 = state.Storage[1]
+	local uuid2 = state.Storage[2]
+
+	local result = CoreStore.move(state, { Type = "Storage", Slot = 1 }, { Type = "Storage", Slot = 3 })
+	assertTrue(result.success, "append move should succeed, reason: " .. tostring(result.reason))
+
+	assertEqual(#state.Storage, 2, "storage must stay packed (no holes)")
+	assertEqual(state.Storage[1], uuid2, "slot 1 should hold the second item")
+	assertEqual(state.Storage[2], uuid1, "slot 2 should hold the moved item")
+	assertEqual(state.LocationByUUID[uuid1].Slot, 2, "INV-3: moved item loc should be slot 2")
+	assertEqual(state.LocationByUUID[uuid2].Slot, 1, "INV-3: other item loc should be slot 1")
+end)
+
+runTest("Add to out-of-range storage slot fails", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	CoreStore.addToBackpack(state, { Id = "Potion", Amount = 1 })
+
+	local result = CoreStore.add(state, { Id = "Scroll", Amount = 1 }, {
+		Placement = "Slot",
+		SlotRef = { Type = "Storage", Slot = 7 },
+	})
+	assertFalse(result.success, "add to OOB storage slot should fail")
+	assertEqual(result.reason, "INVALID_SLOT", "should return INVALID_SLOT")
+	assertEqual(#state.Storage, 1, "storage must be untouched")
+end)
+
+runTest("StackOnSwap absorption cleans MetadataIndex", true, function()
+	local state = CoreStore.new({ Limit = 100, StackOnSwap = true, CanStack = false, MaxStackSize = 10 })
+	CoreStore.addToHotbar(state, { Id = "Sword", Amount = 2, Slot = 1, Metadata = { Rarity = "Epic" } })
+	CoreStore.addToHotbar(state, { Id = "Sword", Amount = 2, Slot = 2, Metadata = { Rarity = "Epic" } })
+
+	assertEqual(#state.MetadataIndex.Rarity.Epic, 2, "expected 2 separate indexed stacks before swap")
+
+	state.Settings.CanStack = true
+	local result = CoreStore.swap(state, { Type = "Hotbar", Slot = 1 }, { Type = "Hotbar", Slot = 2 })
+	assertTrue(result.success, "stacking swap should succeed")
+
+	-- Direct bucket check: find() defensively filters dead UUIDs so it
+	-- cannot reveal a leaked index entry — must inspect the raw bucket.
+	assertEqual(#state.MetadataIndex.Rarity.Epic, 1, "absorbed item UUID must be evicted from MetadataIndex")
+end)
+
+runTest("Split indexes metadata and cleans up on rollback", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	local addRes = CoreStore.addToHotbar(state, { Id = "Apple", Amount = 5, Slot = 1, Metadata = { Rarity = "Rare" } })
+	local uuid = getFirstUUID(addRes)
+
+	local splitResult = CoreStore.split(state, uuid, 2)
+	assertTrue(splitResult.success, "split should succeed")
+
+	-- Direct bucket check: proves addToMetadataIndex runs on create.
+	-- find() filters dead UUIDs and would mask a missing index entry.
+	assertEqual(#state.MetadataIndex.Rarity.Rare, 2, "both stacks should be indexed after split")
+
+	local dynamic = CoreStore.new({ Limit = 100, HotbarType = "Dynamic" })
+	local addRes2 = CoreStore.addToHotbar(dynamic, { Id = "Apple", Amount = 5, Metadata = { Rarity = "Rare" } })
+	local uuid2 = getFirstUUID(addRes2)
+
+	local failed = CoreStore.split(dynamic, uuid2, 2, { Type = "Hotbar", Slot = 3 })
+	assertFalse(failed.success, "split to non-append dynamic slot should fail")
+
+	-- Direct bucket check: proves removeFromMetadataIndex runs on rollback.
+	assertEqual(#dynamic.MetadataIndex.Rarity.Rare, 1, "rolled-back split must not leave a stale index entry")
 end)
 
 -- ==================== RESULTS ==================

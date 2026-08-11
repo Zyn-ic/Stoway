@@ -7,7 +7,7 @@
 -- VARIABLES --
 -----------------------------
 
-local Types = require("../CoreStore/Types")
+local Types = require("./Types")
 
 local Slots = {}
 
@@ -281,11 +281,15 @@ function Slots.moveWithinStorage(state: Types.InventoryState, fromIndex: number,
 	local uuid = state.Storage[fromIndex]
 
 	table.remove(state.Storage, fromIndex)
-	table.insert(state.Storage, toIndex, uuid)
+	-- After removal the array is one shorter; clamp to the valid insert range
+	-- (1..#Storage+1). Luau's table.insert does NOT clamp the position, so an
+	-- unclamped append on a shortened array would leave a hole at index 1.
+	local insertAt = math.min(toIndex, #state.Storage + 1)
+	table.insert(state.Storage, insertAt, uuid)
 
 	-- Update LocationByUUID for all items that shifted during the move
-	local start = math.min(fromIndex, toIndex)
-	local finish = math.max(fromIndex, toIndex)
+	local start = math.min(fromIndex, insertAt)
+	local finish = math.min(math.max(fromIndex, insertAt), #state.Storage)
 
 	for i = start, finish do
 		local movedUUID = state.Storage[i]
