@@ -8,11 +8,11 @@ This file helps AI agents understand the Stoway project. Read this before making
 
 Stoway is a Roblox inventory framework. The core is a pure Luau inventory engine called `CoreStore` — no Roblox types, no UI, no networking. It lives inside an orchestration layer called `StowayServerV3_0_0` that connects it to Roblox-specific systems.
 
-**CoreStore lives at:** `src/server/StowayServerV3_0_0/CoreStore/`
+**CoreStore lives at:** `src/server/Services/StowayServerV3_0_0/CoreStore/`
 
-**Orchestration layer:** `src/server/StowayServerV3_0_0/init.luau`
+**Orchestration layer:** `src/server/Services/StowayServerV3_0_0/init.luau`
 
-**Communications adapter:** `src/server/StowayServerV3_0_0/Communications.luau`
+**Communications adapter:** `src/server/Services/StowayServerV3_0_0/Communications.luau`
 
 **Old server code:** `src/server/StowayServerV1_2/` (legacy reference, may be deleted)
 
@@ -20,35 +20,24 @@ Stoway is a Roblox inventory framework. The core is a pure Luau inventory engine
 
 ## Running Tests
 
-### Luau (primary — always use this)
+Run from the repo root with Lune (supports `.luaurc` aliases; no luau.exe installed on this machine):
 
 ```
-C:\Users\drosales\Downloads\luau-windows\luau.exe "C:\Users\drosales\Documents\Stoway\src\server\tests\corestore_operations_test.luau"
+C:\Users\yum\.bin\lune.exe run "C:\Users\yum\Documents\Stoway\src\server\tests\corestore_operations_test.luau"
 ```
 
-**Expected:** 54 passed, 0 failed
+### Suites and expected results
 
-### Stoway Orchestration Tests
+| Suite | Command suffix | Expected |
+|-------|---------------|----------|
+| CoreStore operations (swap/move/split/metadata/sort/index/equip/dynamic) | `corestore_operations_test.luau` | 62 passed, 0 failed |
+| Stoway orchestration | `stoway_server_test.luau` | 20 passed, 0 failed |
+| Add tests | `corestore_addtest.luau` | 25 passed, 0 failed |
+| Metadata REPL | `corestore_metadata_test.luau` | 12 passed, 0 failed |
 
-```
-C:\Users\drosales\Downloads\luau-windows\luau.exe "C:\Users\drosales\Documents\Stoway\src\server\tests\stoway_server_test.luau"
-```
+### Replication default
 
-**Expected:** 16 passed, 0 failed
-
-### Add Tests
-
-```
-C:\Users\drosales\Downloads\luau-windows\luau.exe "C:\Users\drosales\Documents\Stoway\src\server\tests\corestore_addtest.luau"
-```
-
-**Expected:** 25 passed, 0 failed (includes 5 deliberate failures)
-
-### Lune (alternative, for REPL-style manual testing)
-
-```
-C:\Users\drosales\Downloads\lune-0.10.4-windows-x86_64\lune.exe "C:\Users\drosales\Documents\Stoway\src\server\tests\manual_test.luau"
-```
+`replicate` is opt-in on every Stoway operation route: `nil` (omitted) means **no** replication; pass `true` to echo a server-side change to a client. Passing `false` is equivalent to omitting it.
 
 ### Web Test Tool
 
@@ -65,8 +54,8 @@ All modules use `.luaurc` aliases instead of relative paths. This works in both 
 ```json
 {
   "aliases": {
-    "CoreStore": "./src/server/StowayServerV3_0_0/CoreStore",
-    "Stoway": "./src/server/StowayServerV3_0_0"
+    "CoreStore": "./src/server/Services/StowayServerV3_0_0/CoreStore",
+    "Stoway": "./src/server/Services/StowayServerV3_0_0"
   }
 }
 ```

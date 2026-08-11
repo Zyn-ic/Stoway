@@ -8,16 +8,17 @@ The glue between CoreStore (pure Luau engine) and the Roblox-specific layers (Co
 
 ```
 src/server/
-├── StowayServerV3_0_0/
-│   ├── init.luau           Orchestration layer (player store, locking, dispatching, routing)
-│   ├── Communications.luau Network adapter (QuickNet handlers, Stoway adapter, validation)
-│   └── CoreStore/          Pure Luau inventory engine (10 modules)
-│       ├── init.luau       Public API facade
-│       ├── Types.luau      Type exports
-│       ├── Utils.luau      Utility functions
-│       ├── State.luau      State creation, weight, capacity
-│       ├── Metadata.luau   Input normalization, blacklisting
-│       ├── Stack.luau      Stacking logic
+├── Services/
+│   └── StowayServerV3_0_0/
+│       ├── init.luau           Orchestration layer (player store, locking, dispatching, routing)
+│       ├── Communications.luau Network adapter (QuickNet handlers, Stoway adapter, validation)
+│       └── CoreStore/          Pure Luau inventory engine (10 modules)
+│           ├── init.luau       Public API facade
+│           ├── Types.luau      Type exports
+│           ├── Utils.luau      Utility functions
+│           ├── State.luau      State creation, weight, capacity
+│           ├── Metadata.luau   Input normalization, blacklisting
+│           ├── Stack.luau      Stacking logic
 │       ├── Slots.luau      Hotbar/storage slot operations
 │       ├── Operations.luau Core mutation logic
 │       ├── Query.luau      Item lookups
@@ -38,8 +39,8 @@ Defined in root `.luaurc`:
 ```json
 {
   "aliases": {
-    "CoreStore": "./src/server/StowayServerV3_0_0/CoreStore",
-    "Stoway": "./src/server/StowayServerV3_0_0"
+    "CoreStore": "./src/server/Services/StowayServerV3_0_0/CoreStore",
+    "Stoway": "./src/server/Services/StowayServerV3_0_0"
   }
 }
 ```
@@ -155,13 +156,15 @@ Communications tracks **origin** — whether the operation was triggered by a cl
 |---|---|---|---|
 | Client request | Success | **No** | Nothing — client already applied locally |
 | Client request | Failure | **Yes** | Targeted rollback (affected slots/items only) |
-| Server/Admin | Success | **Yes** | Operation details (what changed) |
+| Server/Admin | Success | **Only if `replicate = true`** | Operation details (what changed) |
 | Server/Admin | Failure | **No** | Nothing — nothing changed |
 | Client RemoveItem failure | — | **Full sync** | Client state is unreliable, send complete InventoryState |
 
 **Why client-success sends nothing:** The client applies the operation locally (optimistic update) before sending to server. If the server accepts it, both sides are in sync. Sending the result back would cause a ping-pong loop.
 
 **Why client-failure sends targeted rollback:** The client's optimistic update was wrong. It needs to revert only the affected slots, not the entire inventory. Rollback payload contains only the slots/items that were involved in the failed operation.
+
+**Why server-admin success is opt-in:** Replication is not automatic for server-side operations. The caller must pass `replicate = true` to echo a server-side change to a client. Passing `false` or omitting it means no replication. This prevents unnecessary network traffic for bulk operations or internal state changes.
 
 **Why RemoveItem failure triggers full sync:** If the client tries to remove an item that doesn't exist (attack or desync), the client's local state is unreliable. A full sync ensures consistency.
 
@@ -264,7 +267,8 @@ When the user performs an action (drag, click), StowayClient:
 - `Container` must be `"Hotbar"` or `"Storage"`
 - If Hotbar + Static: `1 <= slot <= MaxHotbarSlots`
 - If Hotbar + Dynamic: `1 <= slot <= #hotbar`
-- If Storage: `1 <= slot <= #storage`
+- If Storage (move/swap): `1 <= slot <= #storage`
+- If Storage (add): `1 <= slot <= #storage + 1`
 
 **Unauthorized operations:**
 - Client fires `"InventoryAdd"` → reject immediately (server-only)
@@ -304,8 +308,8 @@ NetworkService.Init(Stoway)
 **Standalone mode** (separate server scripts):
 
 ```lua
-local Stoway = require(ServerScriptService.Server.StowayServerV3_0_0)
-local CoreStore = require(ServerScriptService.Server.CoreStore)
+local Stoway = require(ServerScriptService.Server.Services.StowayServerV3_0_0)
+local CoreStore = require(ServerScriptService.Server.Services.CoreStore)
 Stoway.Init(CoreStore)
 
 -- NetworkService creates Communications and registers adapter

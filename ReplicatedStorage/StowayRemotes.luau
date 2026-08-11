@@ -4,8 +4,13 @@ local data = QuickNet.Data
 
 local SlotChange = { uuid = data.String, slotType = data.optional(data.String), slot = data.optional(data.NumberU8) }
 local Updated = { uuid = data.String, newAmount = data.NumberU32 }
-local EquippedPayload = { uuid = data.optional(data.String) }
-local RevertPayload = { fromResult = { success = data.Boolean }, fromSlot = data.optional(data.String) }
+-- QuickNet limitation: a single-key named table parses as a uniform dict
+-- {[type]=type} and fails register(). Static dicts need >=2 named fields.
+local EquippedPayload = {
+	uuid = data.optional(data.String),
+	previousUUID = data.optional(data.String),
+}
+local RevertPayload = { success = data.Boolean, fromSlot = data.optional(data.String) }
 
 local SlotRef = { Type = data.String, Slot = data.NumberU8 }
 

@@ -204,7 +204,7 @@ end)
 
 -- ==================== REPLICATE FLAG ==================
 
-runTest("admin add replicates to client by default", true, function()
+runTest("add does not replicate when replicate omitted", true, function()
 	Stoway.removePlayer(MockPlayer1)
 	Stoway.createPlayer(MockPlayer1, { Limit = 100 })
 
@@ -213,11 +213,26 @@ runTest("admin add replicates to client by default", true, function()
 		table.insert(signals, { operation = signal.operation, replicate = signal.replicate })
 	end)
 
-	-- Server-side admin command: no override given, so replicate = true.
+	-- Replication is opt-in: no override given, so replicate = false.
 	local result = Stoway.AddItem(MockPlayer1, { Id = "Sword", Amount = 1 })
 	assertEqual(result.success, true, "should succeed")
 	assertEqual(signals[1].operation, "AddItem", "should dispatch AddItem")
-	assertEqual(signals[1].replicate, true, "admin add should replicate to client")
+	assertEqual(signals[1].replicate, false, "omitted replicate should not replicate")
+end)
+
+runTest("add replicates only when replicate = true", true, function()
+	Stoway.removePlayer(MockPlayer1)
+	Stoway.createPlayer(MockPlayer1, { Limit = 100 })
+
+	local signals = {}
+	Stoway.registerAdapter(function(player, signal)
+		table.insert(signals, { operation = signal.operation, replicate = signal.replicate })
+	end)
+
+	local result = Stoway.AddItem(MockPlayer1, { Id = "Sword", Amount = 1 }, nil, true)
+	assertEqual(result.success, true, "should succeed")
+	assertEqual(signals[1].operation, "AddItem", "should dispatch AddItem")
+	assertEqual(signals[1].replicate, true, "explicit replicate = true should replicate")
 end)
 
 runTest("player swap does not replicate a full echo", true, function()

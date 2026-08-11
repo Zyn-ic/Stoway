@@ -82,6 +82,7 @@ CoreStore.split(state, uuid, amount, destination?) -> SplitResult
 6. Update indexes
    - Add new UUID to Items
    - Add new UUID to ItemsByID[itemId]
+   - Add new UUID to MetadataIndex (indexed fields: Rarity, Type)
    - Set LocationByUUID for new UUID
    - Increment Weight by splitAmount
 
@@ -117,6 +118,7 @@ If destination.Type == "Hotbar":
 
 If destination.Type == "Storage":
     Validate BackpackEnabled
+    Validate destination.Slot bounds: 1 <= destination.Slot <= #Storage + 1
     Insert at destination.Slot in Storage
     Shift subsequent items if needed
 ```

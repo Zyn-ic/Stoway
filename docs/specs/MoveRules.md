@@ -135,6 +135,8 @@ Update LocationByUUID for all shifted storage items
 Move item within storage to a different index.
 
 ```
+Validate toRef.Slot bounds: 1 <= toRef.Slot <= #Storage + 1
+
 fromUUID = Storage[fromSlot]
 
 table.remove(Storage, fromSlot)
@@ -152,6 +154,9 @@ Update LocationByUUID for all affected storage items
 2. toRef must be empty
 3. BackpackEnabled check (if destination is Storage)
 4. Hotbar bounds check (if either slot is Hotbar)
+5. Storage destination bounds:
+   If toRef.Type == "Storage": toRef.Slot must be in [1, #Storage + 1]
+   (Append is allowed for empty destination)
 ```
 
 ---

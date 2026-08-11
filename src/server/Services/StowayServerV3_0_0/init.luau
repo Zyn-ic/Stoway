@@ -35,8 +35,8 @@ type CoreStoreApi = {
 type Adapter = Protocol.Adapter
 
 local CoreStore: CoreStoreApi? = nil
--- Replication is opt-in: caller must explicitly pass `true` to echo a
--- server-side change to a client. nil (omitted) means no replication.
+-- Replication is opt-in: nil (omitted) means no replication.
+-- Pass `true` explicitly to echo a server-side change to a client.
 local function resolveReplicate(replicate: boolean?): boolean
 	return if replicate == nil then false else replicate
 end
@@ -45,11 +45,13 @@ local _store: { [Player]: Types.InventoryState } = {}
 local _locks: { [Player]: number } = {}
 local _adapters: { Adapter } = {}
 
+-----------------------------
 -- CONSTANTS --
 -----------------------------
 
 local LOCK_TIMEOUT = 3
 
+-----------------------------
 -- PRIVATE FUNCTIONS --
 -----------------------------
 
@@ -98,11 +100,27 @@ local function route(player: Player, operation: Protocol.Operation, replicate: b
 	return result
 end
 
+-----------------------------
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
 function Stoway.Init(CS: CoreStoreApi)
 	CoreStore = CS
+end
+
+function Stoway.Start()
+	local ServerScriptService = game:GetService("ServerScriptService")
+	local PlayerServiceSignals = require(ServerScriptService.Libraries.PlayerServiceSignals)
+
+	PlayerServiceSignals.BindToPlrAdded:Connect(function(player: Player)
+        warn(player.Name .. " stoway has been created")
+        Stoway.createPlayer(player)
+    end)
+
+    PlayerServiceSignals.BindToPlrRemoving:Connect(function(player: Player)
+        warn(player.Name .. " stoway is being removed")
+        Stoway.removePlayer(player)
+    end)
 end
 
 -- Player lifecycle

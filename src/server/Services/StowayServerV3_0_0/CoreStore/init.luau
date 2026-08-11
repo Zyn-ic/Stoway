@@ -7,11 +7,11 @@
 -- VARIABLES --
 -----------------------------
 
-local Types = require("@CoreStore/Types")
-local State = require("@CoreStore/State")
-local Operations = require("@CoreStore/Operations")
-local Query = require("@CoreStore/Query")
-local Slots = require("@CoreStore/Slots")
+local Types = require("./CoreStore/Types")
+local State = require("./CoreStore/State")
+local Operations = require("./CoreStore/Operations")
+local Query = require("./CoreStore/Query")
+local Slots = require("./CoreStore/Slots")
 
 local CoreStore = {}
 

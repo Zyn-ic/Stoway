@@ -8,12 +8,12 @@
 -- VARIABLES --
 -----------------------------
 
-local Types = require("@CoreStore/Types")
-local Metadata = require("@CoreStore/Metadata")
-local Slots = require("@CoreStore/Slots")
-local Stack = require("@CoreStore/Stack")
-local State = require("@CoreStore/State")
-local Utils = require("@CoreStore/Utils")
+local Types = require("./Types")
+local Metadata = require("./Metadata")
+local Slots = require("./Slots")
+local Stack = require("./Stack")
+local State = require("./State")
+local Utils = require("./Utils")
 
 local Operations = {}
 
@@ -298,10 +298,14 @@ local function addNewStacks(
 				end
 			elseif slotRef.Type == "Storage" then
 				if state.Settings.BackpackEnabled then
-					Slots.moveToStorage(state, item.UUID, slotRef.Slot)
-					slotType = "Storage"
-					slot = slotRef.Slot
-					placed = true
+					if slotRef.Slot >= 1 and slotRef.Slot <= #state.Storage + 1 then
+						Slots.moveToStorage(state, item.UUID, slotRef.Slot)
+						slotType = "Storage"
+						slot = slotRef.Slot
+						placed = true
+					else
+						reason = "INVALID_SLOT"
+					end
 				else
 					reason = "BACKPACK_DISABLED"
 				end
@@ -570,6 +574,12 @@ function Operations.swap(
 		end
 	end
 
+	if toRef.Type == "Storage" then
+		if toRef.Slot < 1 or toRef.Slot > #state.Storage + 1 then
+			return { success = false, reason = "INVALID_STORAGE_SLOT" }
+		end
+	end
+
 	local fromUUID = Slots.getUUIDFromSlot(state, fromRef.Type, fromRef.Slot)
 	local toUUID = Slots.getUUIDFromSlot(state, toRef.Type, toRef.Slot)
 
@@ -599,6 +609,7 @@ function Operations.swap(
 				state.Items[fromUUID] = nil
 				state.LocationByUUID[fromUUID] = nil
 				removeFromIndex(state, fromItem.Id, fromUUID)
+				removeFromMetadataIndex(state, fromUUID, fromItem.Metadata)
 
 				if loc and loc.Type == "Hotbar" then
 					Slots.clearHotbarSlot(state, loc.Slot)
@@ -637,12 +648,12 @@ function Operations.swap(
 		end
 	end
 
-	-- Storage -> Hotbar (empty dest): remove from old storage index, append to end
+	-- Storage -> Hotbar (empty dest): swapSlots already moved the item into the
+	-- hotbar; just collapse the storage hole left (INV-9 contiguity).
 	if fromRef.Type == "Storage" and not toUUID then
 		local fromItem = state.Items[fromUUID]
 		if fromItem then
 			Slots.removeStorageAt(state, fromRef.Slot)
-			Slots.appendStorage(state, fromUUID)
 		end
 	end
 
@@ -695,6 +706,9 @@ function Operations.move(
 
 	-- Storage -> Storage: reorder within the array
 	if fromRef.Type == "Storage" and toRef.Type == "Storage" then
+		if toRef.Slot < 1 or toRef.Slot > #state.Storage + 1 then
+			return { success = false, reason = "INVALID_STORAGE_SLOT" }
+		end
 		Slots.moveWithinStorage(state, fromRef.Slot, toRef.Slot)
 		return { success = true }
 	end
@@ -785,6 +799,7 @@ function Operations.split(
 
 	state.Items[newItem.UUID] = newItem
 	addToIndex(state, newItem.Id, newItem.UUID)
+	addToMetadataIndex(state, newItem.UUID, newItem.Metadata)
 	State.addWeight(state, splitAmount)
 
 	local newSlotType: Types.SlotType? = nil
@@ -796,6 +811,7 @@ function Operations.split(
 		if destination.Type == "Hotbar" then
 			if not Slots.isValidHotbarSlot(state, destination.Slot) then
 				state.Items[newItem.UUID] = nil
+				removeFromMetadataIndex(state, newItem.UUID, newItem.Metadata)
 				removeFromIndex(state, newItem.Id, newItem.UUID)
 				State.removeWeight(state, splitAmount)
 				item.Amount += splitAmount
@@ -804,6 +820,7 @@ function Operations.split(
 
 			if state.Hotbar[destination.Slot] then
 				state.Items[newItem.UUID] = nil
+				removeFromMetadataIndex(state, newItem.UUID, newItem.Metadata)
 				removeFromIndex(state, newItem.Id, newItem.UUID)
 				State.removeWeight(state, splitAmount)
 				item.Amount += splitAmount
@@ -815,6 +832,7 @@ function Operations.split(
 				local appendSlot = Slots.findEmptyHotbarSlot(state)
 				if destination.Slot ~= appendSlot then
 					state.Items[newItem.UUID] = nil
+					removeFromMetadataIndex(state, newItem.UUID, newItem.Metadata)
 					removeFromIndex(state, newItem.Id, newItem.UUID)
 					State.removeWeight(state, splitAmount)
 					item.Amount += splitAmount
@@ -828,6 +846,7 @@ function Operations.split(
 		elseif destination.Type == "Storage" then
 			if not state.Settings.BackpackEnabled then
 				state.Items[newItem.UUID] = nil
+				removeFromMetadataIndex(state, newItem.UUID, newItem.Metadata)
 				removeFromIndex(state, newItem.Id, newItem.UUID)
 				State.removeWeight(state, splitAmount)
 				item.Amount += splitAmount
@@ -836,6 +855,7 @@ function Operations.split(
 
 			if not Slots.isValidStorageSlot(state, destination.Slot) then
 				state.Items[newItem.UUID] = nil
+				removeFromMetadataIndex(state, newItem.UUID, newItem.Metadata)
 				removeFromIndex(state, newItem.Id, newItem.UUID)
 				State.removeWeight(state, splitAmount)
 				item.Amount += splitAmount
@@ -860,6 +880,7 @@ function Operations.split(
 		else
 			-- No room anywhere — rollback
 			state.Items[newItem.UUID] = nil
+			removeFromMetadataIndex(state, newItem.UUID, newItem.Metadata)
 			removeFromIndex(state, newItem.Id, newItem.UUID)
 			State.removeWeight(state, splitAmount)
 			item.Amount += splitAmount

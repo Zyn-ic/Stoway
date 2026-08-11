@@ -53,8 +53,12 @@ type Adapter = (Player, string, any, "client" | "server") -> ()
 | Client | Success | **No** | Nothing |
 | Client | Failure | **Yes** | `InventoryRollback` (targeted) |
 | Client | RemoveItem failure | **Full sync** | `InventoryFullSync` |
-| Server | Success | **Yes** | Operation-specific event |
+| Server | Success | **Yes, only if `replicate = true`** | Operation-specific event |
 | Server | Failure | **No** | Nothing |
+
+### Replication is opt-in
+
+Every Stoway operation route takes a `replicate` flag. `nil` (omitted) means **no** replication; pass `true` explicitly to echo a server-side change to a client. Passing `false` is equivalent to omitting it. Server-side admin commands that want clients to see the change must opt in.
 
 ### Why client-success sends nothing
 

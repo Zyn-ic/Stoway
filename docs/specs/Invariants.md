@@ -170,21 +170,38 @@ forall uuid in Items:
 
 **Why this matters:** MaxStackSize is a structural constant that defines what a valid stack looks like. If stacks can exceed it, `canStack` returns false for them (Amount >= MaxStackSize), making them invisible to stacking logic. This creates zombie stacks that can never receive more items. The cap is always enforced in `createItem` and `split`.
 
+### INV-19: MetadataIndex Consistency
+
+Every Item in Items with indexed fields (Rarity, Type) must have a corresponding entry in MetadataIndex. Conversely, every entry in MetadataIndex must reference an existing Item in Items.
+
+```
+forall uuid in Items:
+    if Items[uuid].Metadata.Rarity ~= nil:
+        uuid in MetadataIndex["Rarity"][tostring(Items[uuid].Metadata.Rarity)]
+    if Items[uuid].Metadata.Type ~= nil:
+        uuid in MetadataIndex["Type"][tostring(Items[uuid].Metadata.Type)]
+
+forall field in MetadataIndex:
+    forall value in MetadataIndex[field]:
+        forall uuid in MetadataIndex[field][value]:
+            Items[uuid] ~= nil
+```
+
 ---
 
 ## Trigger Matrix
 
 Operations that modify state and which invariants they must preserve:
 
-| Operation | Modifies Items | Modifies Hotbar | Modifies Storage | Modifies Weight | Must Preserve |
-|-----------|---------------|-----------------|------------------|-----------------|---------------|
-| add | Yes (create) | Yes (set slot) | Yes (append) | Yes (+) | ALL |
-| remove | Yes (reduce/destroy) | Yes (clear) | Yes (remove) | Yes (-) | ALL |
-| swap | No | Yes (exchange) | Yes (exchange) | No | INV-1,2,3,4,5,8,9 |
-| move | No | Yes (set/clear) | Yes (append/remove) | No | INV-1,2,3,4,5,8,9 |
-| split | Yes (create) | Yes (set slot) | Yes (append) | Yes (+) | ALL |
-| sort | No | No | Yes (reorder) | No | INV-1,2,3,4,5,9 |
-| updateMetadata | Yes (modify) | No | No | No | ALL |
+| Operation | Modifies Items | Modifies Hotbar | Modifies Storage | Modifies Weight | Modifies MetadataIndex | Must Preserve |
+|-----------|---------------|-----------------|------------------|-----------------|------------------------|---------------|
+| add | Yes (create) | Yes (set slot) | Yes (append) | Yes (+) | Yes (add) | ALL |
+| remove | Yes (reduce/destroy) | Yes (clear) | Yes (remove) | Yes (-) | Yes (remove) | ALL |
+| swap | No (unless StackOnSwap absorbs) | Yes (exchange) | Yes (exchange) | No | Conditional (absorb destroys) | INV-1,2,3,4,5,8,9,19 |
+| move | No | Yes (set/clear) | Yes (append/remove) | No | No | INV-1,2,3,4,5,8,9,19 |
+| split | Yes (create) | Yes (set slot) | Yes (append) | Yes (+) | Yes (add) | ALL |
+| sort | No | No | Yes (reorder) | No | No | INV-1,2,3,4,5,9,19 |
+| updateMetadata | Yes (modify) | No | No | No | Yes (update) | ALL |
 
 ---
 
@@ -284,6 +301,49 @@ function CoreStore.verifyInvariants(state): { string }
     for uuid, item in state.Items do
         if item.Amount > state.Settings.MaxStackSize then
             table.insert(violations, `Items[{uuid}] has Amount {item.Amount} exceeding MaxStackSize {state.Settings.MaxStackSize}`)
+        end
+    end
+
+    -- Check INV-19: MetadataIndex Consistency
+    for uuid, item in state.Items do
+        if item.Metadata.Rarity ~= nil then
+            local strValue = tostring(item.Metadata.Rarity)
+            local bucket = state.MetadataIndex["Rarity"] and state.MetadataIndex["Rarity"][strValue]
+            if not bucket then
+                table.insert(violations, `Items[{uuid}] has Rarity {strValue} but MetadataIndex["Rarity"] has no bucket`)
+            else
+                local found = false
+                for _, id in bucket do
+                    if id == uuid then found = true; break end
+                end
+                if not found then
+                    table.insert(violations, `Items[{uuid}] has Rarity {strValue} but not in MetadataIndex bucket`)
+                end
+            end
+        end
+        if item.Metadata.Type ~= nil then
+            local strValue = tostring(item.Metadata.Type)
+            local bucket = state.MetadataIndex["Type"] and state.MetadataIndex["Type"][strValue]
+            if not bucket then
+                table.insert(violations, `Items[{uuid}] has Type {strValue} but MetadataIndex["Type"] has no bucket`)
+            else
+                local found = false
+                for _, id in bucket do
+                    if id == uuid then found = true; break end
+                end
+                if not found then
+                    table.insert(violations, `Items[{uuid}] has Type {strValue} but not in MetadataIndex bucket`)
+                end
+            end
+        end
+    end
+    for field, values in state.MetadataIndex do
+        for strValue, uuids in values do
+            for _, uuid in uuids do
+                if not state.Items[uuid] then
+                    table.insert(violations, `MetadataIndex[{field}][{strValue}] has stale UUID {uuid}`)
+                end
+            end
         end
     end
 

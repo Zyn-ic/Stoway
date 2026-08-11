@@ -15,8 +15,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Remotes = require(ReplicatedStorage.StowayRemotes)
 
-local Protocol = require("@Stoway/Protocol")
-local Types = require("@CoreStore/Types")
+local Protocol = require("./Protocol")
+local Types = require("./CoreStore/Types")
 
 local Communications = {}
 
@@ -40,10 +40,9 @@ local function adapter(player: Player, signal: Protocol.Signal)
 			-- The player already rendered the swap on their end; only talk back
 			-- on failure, and send the inverse of the attempted operation.
 			--
-			Remotes.InventoryRevert:FireClient(player,
-			{
-                fromResult = { success = result.success },
-    			fromSlot = result.reason
+			Remotes.InventoryRevert:FireClient(player, {
+				success = result.success,
+				fromSlot = result.reason,
 			})
 		end
 		return
@@ -93,6 +92,7 @@ local function adapter(player: Player, signal: Protocol.Signal)
 		local result = signal.result :: Types.EquipResult
 		Remotes.InventoryEquipped:FireClient(player, {
 			uuid = result.uuid,
+			previousUUID = result.previousUUID,
 		})
 
 	elseif signal.operation == "UnequipSlot" then
@@ -111,6 +111,10 @@ function Communications.Init(stowayModule: StowayApi)
 	_Stoway = stowayModule
 
 	stowayModule.registerAdapter(adapter)
+end
+
+function Communications.Start()
+
 end
 
 -----------------------------
