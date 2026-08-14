@@ -30,8 +30,8 @@ C:\Users\yum\.bin\lune.exe run "C:\Users\yum\Documents\Stoway\src\server\tests\c
 
 | Suite | Command suffix | Expected |
 |-------|---------------|----------|
-| CoreStore operations (swap/move/split/metadata/sort/index/equip/dynamic) | `corestore_operations_test.luau` | 62 passed, 0 failed |
-| Stoway orchestration | `stoway_server_test.luau` | 20 passed, 0 failed |
+| CoreStore operations (swap/swapStack/move/split/metadata/sort/index/equip/dynamic) | `corestore_operations_test.luau` | 66 passed, 0 failed |
+| Stoway orchestration | `stoway_server_test.luau` | 21 passed, 0 failed |
 | Add tests | `corestore_addtest.luau` | 25 passed, 0 failed |
 | Metadata REPL | `corestore_metadata_test.luau` | 12 passed, 0 failed |
 
@@ -125,7 +125,7 @@ return ModuleName
 
 | File | Purpose | Public API |
 |------|---------|-----------|
-| `init.luau` | Orchestration facade | Init, createPlayer, get, removePlayer, getAll, registerAdapter, 11 operation routes |
+| `init.luau` | Orchestration facade | Init, createPlayer, get, removePlayer, getAll, registerAdapter, 12 operation routes |
 | `Communications.luau` | Network adapter + gatekeeper | Init(Stoway, NetworkService, folder), QuickNet handlers, validation, replicate decisions, Stoway adapter |
 
 ### StowayClient (Client Layer)
@@ -144,9 +144,9 @@ return ModuleName
 | `Metadata.luau` | normalize input, matchesRequiredFields, isBlacklisted | normalize, matchesRequiredFields, isBlacklisted |
 | `Stack.luau` | canStack, tryStack logic | canStack, tryStack |
 | `Slots.luau` | Hotbar/storage slot operations, compaction, sorting | setHotbarSlot, clearHotbarSlot, findEmptyHotbarSlot, compactHotbar, swapSlots, moveWithinStorage, moveToStorage, sortStorage, sortHotbar, getUUIDFromSlot, getHotbarItemCount, getStorageItemCount, validation helpers |
-| `Operations.luau` | Core mutation logic | add, remove, removeBySlot, swap, move, split, updateMetadata, sort, equip, unequip |
+| `Operations.luau` | Core mutation logic | add, remove, removeBySlot, swap, swapStack, move, split, updateMetadata, sort, equip, unequip |
 | `Query.luau` | Item lookups | getItem, find, findById, filter, getAllItems |
-| `init.luau` | Public API facade | CoreStore.* (24 public functions) |
+| `init.luau` | Public API facade | CoreStore.* (27 public functions) |
 
 ### Data Flow
 
@@ -193,6 +193,7 @@ StackBlacklist = { Legendary = true, Mythic = true, Special = true }
 | add | Add item(s), stack into existing or create new | O(k) stack, O(1) new |
 | remove | Partial or full removal | O(1) partial, O(h)/O(n) full |
 | swap | Exchange two slot positions. StackOnSwap can absorb | O(1) same-container, O(n) cross-container |
+| swapStack | Explicit stack route; follows swap's StackOnSwap behavior | Same as swap |
 | move | Positional transfer, never stacks | O(1) HH, O(h) HS, O(n) SH/SS |
 | split | Divide stack, cap at MaxStackSize | O(1) + placement |
 | updateMetadata | Merge key-value pairs, all mutable | O(f) |
@@ -200,7 +201,7 @@ StackBlacklist = { Legendary = true, Mythic = true, Special = true }
 
 ### Key Behaviors
 
-- **Stacking:** Only via `add` (always) or `swap` with `StackOnSwap = true`. Move and split never stack.
+- **Stacking:** Only via `add` (always), `swap`, or `swapStack` when `StackOnSwap = true`. Move and split never stack.
 - **MaxStackSize:** Enforced unconditionally. No item Amount may exceed it after any operation.
 - **Dynamic hotbar:** Compacts after remove/swap/move. Static preserves holes. Use `CoreStore.setHotbarType(state, "Dynamic")` to switch types — it auto-compacts.
 - **Auto-sort:** Triggers after any mutating operation when `Sorting = true`. Sorts Storage only. Hotbar is never sorted (user-controlled).
@@ -210,11 +211,11 @@ StackBlacklist = { Legendary = true, Mythic = true, Special = true }
 
 ## Test Structure
 
-### corestore_operations_test.luau (54 tests)
+### corestore_operations_test.luau (66 tests)
 
-Tests for: swap, move, split, metadata, sort, MetadataIndex, equip/unequip, dynamic hotbar. Visual pass/fail output.
+Tests for: swap, swapStack, move, split, metadata, sort, MetadataIndex, equip/unequip, dynamic hotbar. Visual pass/fail output.
 
-### stoway_server_test.luau (16 tests)
+### stoway_server_test.luau (21 tests)
 
 Tests for: Stoway orchestration layer — player lifecycle, operation routing, adapter dispatch, concurrent operation blocking.
 
@@ -256,10 +257,10 @@ docs/
 1. **`setupDragHandlers()` must run once on init** — not inside `renderInventory()`. The web test tool's drag/drop uses document-level event delegation.
 2. **`table.clone` not `Utils.deepCopy`** for flat settings tables — `deepCopy` is for nested item metadata.
 3. **`split` always caps at MaxStackSize** regardless of CanStack — this is intentional.
-4. **Move never stacks** — use `swap` with `StackOnSwap = true` if you want to merge.
+4. **Move never stacks** — use `swap` or `swapStack` with `StackOnSwap = true` if you want to merge.
 5. **Static hotbar preserves holes** — `compactHotbar` is a no-op. Only Dynamic compacts.
 6. **Sort is descending for rarity** — Special > Mythic > Legendary > ... > Common.
-7. **`StackOnSwap` does NOT stack during move** — only during swap. This is a common misconception.
+7. **`StackOnSwap` does NOT stack during move** — it applies to swap and swapStack only. This is a common misconception.
 8. **Nil values in `updateMetadata`** — In Luau, `{ Key = nil }` creates empty table. Nil values are silently ignored.
 9. **MetadataIndex maintenance** — every `createItem`, `destroyUnplacedItem`, `remove`, and `updateMetadata` must update MetadataIndex.
 10. **Dynamic Hotbar slot availability** — The only available slot is the append position (`findEmptyHotbarSlot`). Operations targeting non-append slots are rejected with `DESTINATION_UNAVAILABLE`. Preferred slot is ignored in Dynamic mode. Use `CoreStore.setHotbarType(state, "Dynamic")` to switch types — it auto-compacts the hotbar.

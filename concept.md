@@ -74,6 +74,7 @@ Stoway.AddToBackpack(player, itemData, options?) → AddResult
 Stoway.AddToHotbar(player, itemData, slot?) → AddResult
 Stoway.RemoveItem(player, uuid, amount?) → RemoveResult
 Stoway.SwapSlots(player, fromRef, toRef) → SwapResult
+Stoway.SwapStack(player, fromRef, toRef) → SwapResult
 Stoway.Move(player, fromRef, toRef) → MoveResult
 Stoway.Split(player, uuid, amount, destination?) → SplitResult
 Stoway.EquipSlot(player, uuid) → EquipResult
@@ -141,6 +142,7 @@ Inventory state is **not** replicated via RemoteTable-Light. RTL creates a deep 
 | AddToHotbar | No | Yes | Same as AddItem |
 | RemoveItem | Yes (drop) | Yes (admin) | Client remove triggers desync recovery on failure |
 | SwapSlots | Yes | Yes | Drag-and-drop or admin |
+| SwapStack | No | Yes | Explicit routed API; no QuickNet client handler yet |
 | Move | Yes | Yes | Position transfer |
 | Split | Yes | Yes | Stack split |
 | Sort | Yes | Yes | Sort button or admin sort |

@@ -124,6 +124,16 @@ function CoreStore.swap(
 	return result
 end
 
+function CoreStore.swapStack(
+	state: Types.InventoryState,
+	fromRef: Types.SlotRef,
+	toRef: Types.SlotRef
+): Types.SwapResult
+	local result = Operations.swapStack(state, fromRef, toRef)
+	triggerAutoSort(state)
+	return result
+end
+
 function CoreStore.move(
 	state: Types.InventoryState,
 	fromRef: Types.SlotRef,

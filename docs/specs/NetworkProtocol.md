@@ -11,6 +11,12 @@ Describes the QuickNet event names, payloads, and validation rules for Stoway in
 
 All events are fired via QuickNet. No raw RemoteEvents.
 
+## Internal Routed Operations
+
+`SwapStack` is a Stoway/adapter protocol operation that invokes
+`CoreStore.swapStack`. It currently has no distinct client-to-server QuickNet
+event; client networking remains limited to the events documented below.
+
 ---
 
 ## Client → Server Events

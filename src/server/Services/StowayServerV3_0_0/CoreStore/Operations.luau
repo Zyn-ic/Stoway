@@ -660,6 +660,17 @@ function Operations.swap(
 	return { success = true, hotbarCompacted = hotbarCompacted }
 end
 
+-- Explicit drag-and-drop stack operation. It deliberately delegates to swap so
+-- StackOnSwap and CanStack remain the single source of truth for whether an
+-- absorption may happen, while retaining swap's positional fallback behavior.
+function Operations.swapStack(
+	state: Types.InventoryState,
+	fromRef: Types.SlotRef,
+	toRef: Types.SlotRef
+): Types.SwapResult
+	return Operations.swap(state, fromRef, toRef)
+end
+
 -- Moves an item from one slot to another. Move is purely positional — never stacks.
 --
 -- 5 paths:

@@ -187,6 +187,14 @@ When `StackOnSwap = false` (default) OR `CanStack = false`:
 
 Swap is purely positional. Items exchange slots regardless of whether they could stack.
 
+## SwapStack Behavior
+
+`CoreStore.swapStack(state, fromRef, toRef)` is the explicit drag-and-drop
+stack route. It uses the same directional source-to-target absorption as
+`swap`, and it respects both `Settings.StackOnSwap` and `Settings.CanStack`.
+When either setting is off, or the items cannot stack, it falls back to the
+ordinary positional swap behavior.
+
 ---
 
 ## Equipped Item Behavior

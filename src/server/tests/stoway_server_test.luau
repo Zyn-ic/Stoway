@@ -166,6 +166,25 @@ runTest("SwapSlots routes to CoreStore", true, function()
 	assertEqual(result.success, true, "should succeed")
 end)
 
+runTest("SwapStack routes and dispatches its distinct operation", true, function()
+	Stoway.removePlayer(MockPlayer1)
+	Stoway.createPlayer(MockPlayer1, { Limit = 100, StackOnSwap = true, CanStack = false })
+	Stoway.AddToHotbar(MockPlayer1, { Id = "Apple", Amount = 3 })
+	Stoway.AddToHotbar(MockPlayer1, { Id = "Apple", Amount = 2 })
+	local state = Stoway.get(MockPlayer1)
+	state.Settings.CanStack = true
+	local operations = {}
+	Stoway.registerAdapter(function(_, signal)
+		table.insert(operations, signal.operation)
+	end)
+
+	local result = Stoway.SwapStack(MockPlayer1, { Type = "Hotbar", Slot = 1 }, { Type = "Hotbar", Slot = 2 })
+	assertEqual(result.success, true, "should succeed")
+	assertEqual(state.Hotbar[1], nil, "source should be absorbed")
+	assertEqual(state.Items[state.Hotbar[2]].Amount, 5, "target should receive source amount")
+	assertEqual(operations[1], "SwapStack", "should dispatch SwapStack")
+end)
+
 runTest("UpdateMetadata routes to CoreStore", true, function()
 	Stoway.removePlayer(MockPlayer1)
 	Stoway.createPlayer(MockPlayer1, { Limit = 100 })

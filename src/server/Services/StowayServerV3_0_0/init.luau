@@ -13,8 +13,8 @@
 
 local Stoway = {}
 
-local Types = require("@CoreStore/Types")
-local Protocol = require("@Stoway/Protocol")
+local Types = require("./StowayServerV3_0_0/CoreStore/Types")
+local Protocol = require("./StowayServerV3_0_0/Protocol")
 
 -- Minimal contract for the injected CoreStore module.
 type CoreStoreApi = {
@@ -24,6 +24,7 @@ type CoreStoreApi = {
 	addToHotbar: (Types.InventoryState, Types.ItemInput, number?) -> Types.AddResult,
 	remove: (Types.InventoryState, string, number?) -> Types.RemoveResult,
 	swap: (Types.InventoryState, Types.SlotRef, Types.SlotRef) -> Types.SwapResult,
+	swapStack: (Types.InventoryState, Types.SlotRef, Types.SlotRef) -> Types.SwapResult,
 	move: (Types.InventoryState, Types.SlotRef, Types.SlotRef) -> Types.MoveResult,
 	split: (Types.InventoryState, string, number, Types.SlotRef?) -> Types.SplitResult,
 	equip: (Types.InventoryState, string) -> Types.EquipResult,
@@ -192,6 +193,14 @@ function Stoway.SwapSlots(player: Player, fromRef: Types.SlotRef, toRef: Types.S
 		local state = _store[player]
 		if not state then return { success = false, reason = "NO_STATE" } end
 		return cs.swap(state, fromRef, toRef)
+	end)
+end
+
+function Stoway.SwapStack(player: Player, fromRef: Types.SlotRef, toRef: Types.SlotRef, replicate: boolean?): Types.SwapResult
+	return route(player, "SwapStack", resolveReplicate(replicate), function(cs: CoreStoreApi)
+		local state = _store[player]
+		if not state then return { success = false, reason = "NO_STATE" } end
+		return cs.swapStack(state, fromRef, toRef)
 	end)
 end
 

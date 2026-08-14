@@ -176,6 +176,7 @@ Targeted rollback contains only the affected data:
 | Operation | hotbar | storage | items |
 |---|---|---|---|
 | SwapSlots | Both slot values | Both slot values | Both items |
+| SwapStack | Both slot values | Both slot values | Both items |
 | Move | Source + dest slot values | Source + dest slot values | Moved item |
 | Split | Source slot + dest slot | Source slot + dest slot | Source item + new item |
 | Sort | Full hotbar (if hotbar sorted) | — | — |

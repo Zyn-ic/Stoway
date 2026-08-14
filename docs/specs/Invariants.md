@@ -198,6 +198,7 @@ Operations that modify state and which invariants they must preserve:
 | add | Yes (create) | Yes (set slot) | Yes (append) | Yes (+) | Yes (add) | ALL |
 | remove | Yes (reduce/destroy) | Yes (clear) | Yes (remove) | Yes (-) | Yes (remove) | ALL |
 | swap | No (unless StackOnSwap absorbs) | Yes (exchange) | Yes (exchange) | No | Conditional (absorb destroys) | INV-1,2,3,4,5,8,9,19 |
+| swapStack | No (unless StackOnSwap absorbs) | Yes (exchange) | Yes (exchange) | No | Conditional (absorb destroys) | INV-1,2,3,4,5,8,9,19 |
 | move | No | Yes (set/clear) | Yes (append/remove) | No | No | INV-1,2,3,4,5,8,9,19 |
 | split | Yes (create) | Yes (set slot) | Yes (append) | Yes (+) | Yes (add) | ALL |
 | sort | No | No | Yes (reorder) | No | No | INV-1,2,3,4,5,9,19 |

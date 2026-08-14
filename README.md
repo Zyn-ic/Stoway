@@ -64,6 +64,7 @@ CoreStore.removeBySlot(state, "Hotbar", 1, amount)
 
 -- Move items
 CoreStore.swap(state, fromRef, toRef)
+CoreStore.swapStack(state, fromRef, toRef)
 CoreStore.move(state, fromRef, toRef)
 CoreStore.split(state, uuid, amount, destination)
 
@@ -108,7 +109,7 @@ Every operation returns a result object with `success`, `error` (if failed), and
 
 ## Key Behaviors
 
-- **Stacking** &rarr; via `add` (always) or `swap` with `StackOnSwap = true`. Move and split never stack.
+- **Stacking** &rarr; via `add` (always), `swap`, or `swapStack` with `StackOnSwap = true`. Move and split never stack.
 - **Capacity** &rarr; `Limit = 0` means infinite. `Weight` = sum of all item Amounts.
 - **Sorting** &rarr; auto-sorts Storage when `Settings.Sorting = true`. Hotbar is never sorted.
 - **Dynamic Hotbar** &rarr; packed array, no holes. Operations targeting non-append slots are rejected.

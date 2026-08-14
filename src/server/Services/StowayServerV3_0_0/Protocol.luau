@@ -19,7 +19,7 @@ local Protocol = {}
 -----------------------------
 
 export type Operation = "AddItem" | "AddToBackpack" | "AddToHotbar" |
-	"RemoveItem" | "SwapSlots" | "Move" | "Split" |
+	"RemoveItem" | "SwapSlots" | "SwapStack" | "Move" | "Split" |
 	"EquipSlot" | "UnequipSlot" | "UpdateMetadata" | "Sort"
 
 export type Signal =
@@ -28,6 +28,7 @@ export type Signal =
 	| { operation: "AddToHotbar", replicate: boolean, result: Types.AddResult }
 	| { operation: "RemoveItem", replicate: boolean, result: Types.RemoveResult }
 	| { operation: "SwapSlots", replicate: boolean, result: Types.SwapResult }
+	| { operation: "SwapStack", replicate: boolean, result: Types.SwapResult }
 	| { operation: "Move", replicate: boolean, result: Types.MoveResult }
 	| { operation: "Split", replicate: boolean, result: Types.SplitResult }
 	| { operation: "EquipSlot", replicate: boolean, result: Types.EquipResult }

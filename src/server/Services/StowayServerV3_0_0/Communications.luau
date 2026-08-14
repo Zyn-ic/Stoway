@@ -35,7 +35,7 @@ local function adapter(player: Player, signal: Protocol.Signal)
 	-- signal.operation across versions, hence the explicit cast.)
 
 	if not signal.result.success then
-		if signal.operation == "SwapSlots" then
+		if signal.operation == "SwapSlots" or signal.operation == "SwapStack" then
 			local result = signal.result :: Types.SwapResult
 			-- The player already rendered the swap on their end; only talk back
 			-- on failure, and send the inverse of the attempted operation.
