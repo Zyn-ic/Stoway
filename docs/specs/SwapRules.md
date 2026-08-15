@@ -47,6 +47,10 @@ Before any swap executes, these checks run:
 3. Storage source existence:
    If fromRef.Type == "Storage": Storage[fromRef.Slot] must exist
    (Swapping FROM an empty storage slot is invalid)
+
+4. Storage destination bounds:
+   If toRef.Type == "Storage": toRef.Slot must be in [1, #Storage + 1]
+   (Append is allowed for empty destination)
 ```
 
 ---
@@ -81,6 +85,8 @@ if HotbarType == "Dynamic" and toUUID == nil:
 Both slots are in storage. Reorder within the array.
 
 ```
+Validate toRef.Slot bounds: 1 <= toRef.Slot <= #Storage + 1
+
 fromUUID = Storage[fromSlot]
 toUUID = Storage[toSlot]
 
@@ -181,6 +187,14 @@ When `StackOnSwap = false` (default) OR `CanStack = false`:
 
 Swap is purely positional. Items exchange slots regardless of whether they could stack.
 
+## SwapStack Behavior
+
+`CoreStore.swapStack(state, fromRef, toRef)` is the explicit drag-and-drop
+stack route. It uses the same directional source-to-target absorption as
+`swap`, and it respects both `Settings.StackOnSwap` and `Settings.CanStack`.
+When either setting is off, or the items cannot stack, it falls back to the
+ordinary positional swap behavior.
+
 ---
 
 ## Equipped Item Behavior
@@ -208,6 +222,7 @@ If `Settings.Sorting = true`, auto-sort runs after the swap completes. This may 
 ## Complexity
 
 - Hotbar <-> Hotbar: O(1)
-- Storage <-> Storage: O(1)
-- Cross-container: O(n) for Storage shift (Dynamic) + O(1) for Hotbar
+- Storage <-> Storage: O(1) (direct UUID swap)
+- Cross-container (occupied dest): O(1) for direct swap
+- Cross-container (empty dest): O(h) compaction for Hotbar -> Storage; O(n) for Storage -> Hotbar (shift)
 - With StackOnSwap + canStack: O(k) where k = candidate stacks

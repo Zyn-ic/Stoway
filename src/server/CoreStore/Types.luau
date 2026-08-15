@@ -168,4 +168,16 @@ export type SortResult = {
     storageOrder: { string }?,
 }
 
+export type EquipResult = {
+    success: boolean,
+    reason: string?,
+    uuid: string?,
+    previousUUID: string?,
+}
+
+export type UnequipResult = {
+    success: boolean,
+    previousUUID: string?,
+}
+
 return Types

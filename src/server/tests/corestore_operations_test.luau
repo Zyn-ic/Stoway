@@ -60,6 +60,58 @@ local function getFirstUUID(result): string
 	return result.addedItems[1].uuid
 end
 
+-- Validates every reverse reference touched when swapStack fully absorbs an
+-- item. This detects stale UUIDs (the practical form of a retained-state leak)
+-- as well as slot or index orphans.
+local function assertStateIntegrity(state)
+	local seen: { [string]: number } = {}
+	local expectedWeight = 0
+
+	for slot, uuid in state.Hotbar do
+		assertTrue(state.Items[uuid] ~= nil, `Hotbar[{slot}] references a missing item`)
+		seen[uuid] = (seen[uuid] or 0) + 1
+		local location = state.LocationByUUID[uuid]
+		assertTrue(location ~= nil and location.Type == "Hotbar" and location.Slot == slot, "hotbar location index is stale")
+	end
+
+	for slot, uuid in state.Storage do
+		assertTrue(state.Items[uuid] ~= nil, `Storage[{slot}] references a missing item`)
+		seen[uuid] = (seen[uuid] or 0) + 1
+		local location = state.LocationByUUID[uuid]
+		assertTrue(location ~= nil and location.Type == "Storage" and location.Slot == slot, "storage location index is stale")
+	end
+
+	for uuid, item in state.Items do
+		assertEqual(seen[uuid], 1, "every item must have exactly one slot")
+		assertTrue(table.find(state.ItemsByID[item.Id], uuid) ~= nil, "ItemsByID is missing an item UUID")
+		expectedWeight += item.Amount
+		for _, field in { "Rarity", "Type" } do
+			local value = item.Metadata[field]
+			if value ~= nil then
+				local bucket = state.MetadataIndex[field] and state.MetadataIndex[field][tostring(value)]
+				assertTrue(bucket ~= nil and table.find(bucket, uuid) ~= nil, "MetadataIndex is missing an item UUID")
+			end
+		end
+	end
+
+	for uuid in state.LocationByUUID do
+		assertTrue(state.Items[uuid] ~= nil, "LocationByUUID contains an orphan UUID")
+	end
+	for _, uuids in state.ItemsByID do
+		for _, uuid in uuids do
+			assertTrue(state.Items[uuid] ~= nil, "ItemsByID contains an orphan UUID")
+		end
+	end
+	for _, values in state.MetadataIndex do
+		for _, bucket in values do
+			for _, uuid in bucket do
+				assertTrue(state.Items[uuid] ~= nil, "MetadataIndex contains an orphan UUID")
+			end
+		end
+	end
+	assertEqual(state.Weight, expectedWeight, "weight must equal the sum of item amounts")
+end
+
 -----------------------------
 -- MAIN --
 -----------------------------
@@ -179,6 +231,119 @@ runTest("StackOnSwap does not stack when disabled", true, function()
 
 	local fromItem = state.Items[uuid1]
 	assertEqual(fromItem.Amount, 3, "source amount should be unchanged (positional swap)")
+end)
+
+runTest("SwapStack fully absorbs source and cleans all references", true, function()
+	local state = CoreStore.new({ StackOnSwap = true, CanStack = false, MaxStackSize = 10, Limit = 100 })
+	local sourceResult = CoreStore.addToHotbar(state, { Id = "Apple", Amount = 3, Metadata = { Rarity = "Epic", Type = "Food" } })
+	local targetResult = CoreStore.addToBackpack(state, { Id = "Apple", Amount = 2, Metadata = { Rarity = "Epic", Type = "Food" } })
+	local sourceUUID = getFirstUUID(sourceResult)
+	local targetUUID = getFirstUUID(targetResult)
+	state.Settings.CanStack = true
+
+	local result = CoreStore.swapStack(state, state.LocationByUUID[sourceUUID], state.LocationByUUID[targetUUID])
+	assertTrue(result.success, "swapStack should succeed")
+	assertEqual(state.Items[sourceUUID], nil, "fully absorbed source must be removed")
+	assertEqual(state.Items[targetUUID].Amount, 5, "target must receive source amount")
+	assertEqual(state.EquippedItemUUID, nil, "no equipped orphan should remain")
+	assertStateIntegrity(state)
+end)
+
+runTest("SwapStack partially absorbs without moving either UUID", true, function()
+	local state = CoreStore.new({ StackOnSwap = true, CanStack = false, MaxStackSize = 5, Limit = 100 })
+	local sourceResult = CoreStore.addToHotbar(state, { Id = "Apple", Amount = 3 })
+	local targetResult = CoreStore.addToBackpack(state, { Id = "Apple", Amount = 4 })
+	local sourceUUID = getFirstUUID(sourceResult)
+	local targetUUID = getFirstUUID(targetResult)
+	state.Settings.CanStack = true
+
+	local result = CoreStore.swapStack(state, { Type = "Hotbar", Slot = 1 }, { Type = "Storage", Slot = 1 })
+	assertTrue(result.success, "swapStack should succeed")
+	assertEqual(state.Items[sourceUUID].Amount, 2, "source should retain the remainder")
+	assertEqual(state.Items[targetUUID].Amount, 5, "target should cap at MaxStackSize")
+	assertEqual(state.Hotbar[1], sourceUUID, "partial source must remain in place")
+	assertEqual(state.Storage[1], targetUUID, "target must remain in place")
+	assertStateIntegrity(state)
+end)
+
+runTest("SwapStack respects StackOnSwap and falls back to positional swap", true, function()
+	local state = CoreStore.new({ StackOnSwap = false, CanStack = false, MaxStackSize = 10, Limit = 100 })
+	local sourceResult = CoreStore.addToHotbar(state, { Id = "Apple", Amount = 3 })
+	local targetResult = CoreStore.addToHotbar(state, { Id = "Apple", Amount = 2 })
+	local sourceUUID = getFirstUUID(sourceResult)
+	local targetUUID = getFirstUUID(targetResult)
+	state.Settings.CanStack = true
+
+	local result = CoreStore.swapStack(state, { Type = "Hotbar", Slot = 1 }, { Type = "Hotbar", Slot = 2 })
+	assertTrue(result.success, "fallback swap should succeed")
+	assertEqual(state.Hotbar[1], targetUUID, "target should move to source slot")
+	assertEqual(state.Hotbar[2], sourceUUID, "source should move to target slot")
+	assertEqual(state.Items[sourceUUID].Amount, 3, "source must not be absorbed when StackOnSwap is off")
+	assertEqual(state.Items[targetUUID].Amount, 2, "target amount must not change when StackOnSwap is off")
+	assertStateIntegrity(state)
+end)
+
+runTest("SwapStack compacts Dynamic hotbar after absorbing source", true, function()
+	local state = CoreStore.new({ HotbarType = "Dynamic", StackOnSwap = true, CanStack = false, MaxStackSize = 10, Limit = 100 })
+	local sourceResult = CoreStore.addToHotbar(state, { Id = "Apple", Amount = 3 })
+	local survivorResult = CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1 })
+	local targetResult = CoreStore.addToBackpack(state, { Id = "Apple", Amount = 2 })
+	local sourceUUID = getFirstUUID(sourceResult)
+	local survivorUUID = getFirstUUID(survivorResult)
+	local targetUUID = getFirstUUID(targetResult)
+	state.Settings.CanStack = true
+
+	CoreStore.swapStack(state, state.LocationByUUID[sourceUUID], state.LocationByUUID[targetUUID])
+	assertEqual(state.Hotbar[1], survivorUUID, "dynamic hotbar should compact the survivor")
+	assertEqual(state.LocationByUUID[survivorUUID].Slot, 1, "survivor location must be updated")
+	assertStateIntegrity(state)
+end)
+
+runTest("Swap storage to hotbar (empty dest) moves item, no duplicate refs", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	local r1 = CoreStore.addToBackpack(state, { Id = "Wood", Amount = 1 })
+	local r2 = CoreStore.addToBackpack(state, { Id = "Chainsaw", Amount = 1 })
+	local uuidA = getFirstUUID(r1)
+	local uuidB = getFirstUUID(r2)
+
+	assertEqual(#state.Storage, 2, "both items should be in storage")
+
+	local result = CoreStore.swap(state, { Type = "Storage", Slot = 1 }, { Type = "Hotbar", Slot = 1 })
+	assertTrue(result.success, "swap should succeed")
+
+	assertEqual(state.Hotbar[1], uuidA, "hotbar dest should hold the moved item")
+
+	local storageCount = 0
+	for _, uuid in state.Storage do
+		if uuid == uuidA then
+			storageCount += 1
+		end
+	end
+	assertEqual(storageCount, 0, "moved item must not remain in storage (INV-2)")
+	assertEqual(#state.Storage, 1, "storage should keep only the other item")
+	assertEqual(state.Storage[1], uuidB, "remaining storage item should be the other one")
+	assertEqual(state.LocationByUUID[uuidA].Type, "Hotbar", "INV-3: LocationByUUID should be Hotbar")
+	assertEqual(state.LocationByUUID[uuidA].Slot, 1, "INV-3: LocationByUUID slot should be 1")
+	assertEqual(state.LocationByUUID[uuidB].Type, "Storage", "INV-3: other item should stay in Storage")
+	assertEqual(state.LocationByUUID[uuidB].Slot, 1, "INV-3: other item shifted to slot 1")
+end)
+
+runTest("Removing after storage->hotbar swap leaves no orphan", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	local r1 = CoreStore.addToBackpack(state, { Id = "Wood", Amount = 1 })
+	local r2 = CoreStore.addToBackpack(state, { Id = "Chainsaw", Amount = 1 })
+	local uuidA = getFirstUUID(r1)
+	local uuidB = getFirstUUID(r2)
+
+	local result = CoreStore.swap(state, { Type = "Storage", Slot = 1 }, { Type = "Hotbar", Slot = 1 })
+	assertTrue(result.success, "swap should succeed")
+
+	local rem = CoreStore.remove(state, uuidA)
+	assertTrue(rem.success, "remove should succeed")
+	assertEqual(state.Hotbar[1], nil, "hotbar slot should be cleared (no orphan UUID)")
+	assertEqual(#state.Storage, 1, "storage should keep the other item")
+	assertEqual(state.Storage[1], uuidB, "storage should hold the other item")
+	assertEqual(state.Items[uuidA], nil, "item should be fully removed")
 end)
 
 -- ==================== MOVE TESTS ====================
@@ -704,6 +869,82 @@ runTest("split to append hotbar slot works in Dynamic mode", true, function()
 	assertEqual(newItem.Amount, 3, "new stack should have 3")
 end)
 
+-- ==================== EQUIP / UNEQUIP ==================
+
+runTest("equip sets EquippedItemUUID", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	local addResult = CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1 })
+	local uuid = addResult.addedItems[1].uuid
+
+	local result = CoreStore.equip(state, uuid)
+	assertEqual(result.success, true, "should succeed")
+	assertEqual(result.uuid, uuid, "should return uuid")
+	assertEqual(state.EquippedItemUUID, uuid, "state should have equipped uuid")
+end)
+
+runTest("equip fails for nonexistent item", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	local result = CoreStore.equip(state, "fake-uuid")
+	assertEqual(result.success, false, "should fail")
+	assertEqual(result.reason, "ITEM_NOT_FOUND", "should be ITEM_NOT_FOUND")
+end)
+
+runTest("equip is idempotent", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	local addResult = CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1 })
+	local uuid = addResult.addedItems[1].uuid
+
+	CoreStore.equip(state, uuid)
+	local result = CoreStore.equip(state, uuid)
+	assertEqual(result.success, true, "should succeed (idempotent)")
+	assertEqual(state.EquippedItemUUID, uuid, "still equipped")
+end)
+
+runTest("equip replaces previous equipped item", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1 })
+	CoreStore.addToHotbar(state, { Id = "Shield", Amount = 1 })
+	local swordUUID = state.Hotbar[1]
+	local shieldUUID = state.Hotbar[2]
+
+	CoreStore.equip(state, swordUUID)
+	local result = CoreStore.equip(state, shieldUUID)
+	assertEqual(result.success, true, "should succeed")
+	assertEqual(result.previousUUID, swordUUID, "should return previous uuid")
+	assertEqual(state.EquippedItemUUID, shieldUUID, "shield should be equipped")
+end)
+
+runTest("unequip clears EquippedItemUUID", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	local addResult = CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1 })
+	local uuid = addResult.addedItems[1].uuid
+
+	CoreStore.equip(state, uuid)
+	local result = CoreStore.unequip(state)
+	assertEqual(result.success, true, "should succeed")
+	assertEqual(result.previousUUID, uuid, "should return previous uuid")
+	assertEqual(state.EquippedItemUUID, nil, "should be nil")
+end)
+
+runTest("unequip is idempotent", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	local result = CoreStore.unequip(state)
+	assertEqual(result.success, true, "should succeed (idempotent)")
+	assertEqual(result.previousUUID, nil, "no previous")
+end)
+
+runTest("auto-unequip on full remove", true, function()
+	local state = CoreStore.new({ Limit = 100 })
+	local addResult = CoreStore.addToHotbar(state, { Id = "Sword", Amount = 1 })
+	local uuid = addResult.addedItems[1].uuid
+
+	CoreStore.equip(state, uuid)
+	assertEqual(state.EquippedItemUUID, uuid, "should be equipped")
+
+	CoreStore.remove(state, uuid, 1)
+	assertEqual(state.EquippedItemUUID, nil, "should be auto-unequipped")
+end)
+
 -- ==================== BOUNDS + INDEX REGRESSION TESTS ====================
 
 runTest("Swap to out-of-range storage slot fails", true, function()
@@ -757,19 +998,27 @@ runTest("Add to out-of-range storage slot fails", true, function()
 end)
 
 runTest("StackOnSwap absorption cleans MetadataIndex", true, function()
+	-- CanStack starts false so the two adds create genuinely separate stacks
+	-- instead of silently merging at add-time (which would leave nothing for
+	-- StackOnSwap to absorb and make this test pass vacuously).
 	local state = CoreStore.new({ Limit = 100, StackOnSwap = true, CanStack = false, MaxStackSize = 10 })
 	CoreStore.addToHotbar(state, { Id = "Sword", Amount = 2, Slot = 1, Metadata = { Rarity = "Epic" } })
 	CoreStore.addToHotbar(state, { Id = "Sword", Amount = 2, Slot = 2, Metadata = { Rarity = "Epic" } })
 
 	assertEqual(#state.MetadataIndex.Rarity.Epic, 2, "expected 2 separate indexed stacks before swap")
 
+	-- Enable stacking only for the swap itself (same pattern as "StackOnSwap
+	-- stacks items when enabled" above).
 	state.Settings.CanStack = true
 	local result = CoreStore.swap(state, { Type = "Hotbar", Slot = 1 }, { Type = "Hotbar", Slot = 2 })
 	assertTrue(result.success, "stacking swap should succeed")
 
-	-- Direct bucket check: find() defensively filters dead UUIDs so it
-	-- cannot reveal a leaked index entry — must inspect the raw bucket.
+	-- Check the MetadataIndex bucket directly — find() defensively filters
+	-- dead UUIDs against state.Items, so it can mask a leaked index entry.
 	assertEqual(#state.MetadataIndex.Rarity.Epic, 1, "absorbed item UUID must be evicted from MetadataIndex")
+
+	local found = CoreStore.find(state, { Metadata = { Rarity = "Epic" } })
+	assertEqual(#found, 1, "find() should also report only 1 Epic item")
 end)
 
 runTest("Split indexes metadata and cleans up on rollback", true, function()
@@ -780,9 +1029,12 @@ runTest("Split indexes metadata and cleans up on rollback", true, function()
 	local splitResult = CoreStore.split(state, uuid, 2)
 	assertTrue(splitResult.success, "split should succeed")
 
-	-- Direct bucket check: proves addToMetadataIndex runs on create.
-	-- find() filters dead UUIDs and would mask a missing index entry.
-	assertEqual(#state.MetadataIndex.Rarity.Rare, 2, "both stacks should be indexed after split")
+	local found = CoreStore.find(state, { Rarity = "Rare" })
+	local count = 0
+	for _, _ in found do
+		count += 1
+	end
+	assertEqual(count, 2, "both stacks should be indexed after split")
 
 	local dynamic = CoreStore.new({ Limit = 100, HotbarType = "Dynamic" })
 	local addRes2 = CoreStore.addToHotbar(dynamic, { Id = "Apple", Amount = 5, Metadata = { Rarity = "Rare" } })
@@ -791,8 +1043,12 @@ runTest("Split indexes metadata and cleans up on rollback", true, function()
 	local failed = CoreStore.split(dynamic, uuid2, 2, { Type = "Hotbar", Slot = 3 })
 	assertFalse(failed.success, "split to non-append dynamic slot should fail")
 
-	-- Direct bucket check: proves removeFromMetadataIndex runs on rollback.
-	assertEqual(#dynamic.MetadataIndex.Rarity.Rare, 1, "rolled-back split must not leave a stale index entry")
+	local found2 = CoreStore.find(dynamic, { Rarity = "Rare" })
+	local count2 = 0
+	for _, _ in found2 do
+		count2 += 1
+	end
+	assertEqual(count2, 1, "rolled-back split must not leave a stale index entry")
 end)
 
 -- ==================== RESULTS ==================

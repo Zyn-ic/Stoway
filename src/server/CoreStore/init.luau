@@ -124,6 +124,16 @@ function CoreStore.swap(
 	return result
 end
 
+function CoreStore.swapStack(
+	state: Types.InventoryState,
+	fromRef: Types.SlotRef,
+	toRef: Types.SlotRef
+): Types.SwapResult
+	local result = Operations.swapStack(state, fromRef, toRef)
+	triggerAutoSort(state)
+	return result
+end
+
 function CoreStore.move(
 	state: Types.InventoryState,
 	fromRef: Types.SlotRef,
@@ -218,6 +228,14 @@ function CoreStore.setHotbarType(state: Types.InventoryState, newType: Types.Hot
 	if newType == "Dynamic" then
 		Slots.compactHotbar(state)
 	end
+end
+
+function CoreStore.equip(state: Types.InventoryState, uuid: string): Types.EquipResult
+	return Operations.equip(state, uuid)
+end
+
+function CoreStore.unequip(state: Types.InventoryState): Types.UnequipResult
+	return Operations.unequip(state)
 end
 
 -----------------------------

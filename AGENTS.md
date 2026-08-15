@@ -22,7 +22,7 @@ Stoway is a Roblox inventory framework. This branch rebuilds the inventory logic
 C:\Users\drosales\Downloads\luau-windows\luau.exe "C:\Users\drosales\Documents\Stoway\src\server\tests\corestore_operations_test.luau"
 ```
 
-**Expected:** 39 passed, 0 failed
+**Expected:** 66 passed, 0 failed
 
 ### Lune (alternative, for REPL-style manual testing)
 
@@ -101,9 +101,9 @@ local Types = require(game.ReplicatedStorage.CoreStore.Types)  -- WRONG
 | `Metadata.luau` | normalize input, matchesRequiredFields, isBlacklisted | normalize, matchesRequiredFields, isBlacklisted |
 | `Stack.luau` | canStack, tryStack logic | canStack, tryStack |
 | `Slots.luau` | Hotbar/storage slot operations, compaction, sorting | setHotbarSlot, clearHotbarSlot, findEmptyHotbarSlot, compactHotbar, swapSlots, moveWithinStorage, moveToStorage, sortStorage, sortHotbar, getUUIDFromSlot, getHotbarItemCount, getStorageItemCount, validation helpers |
-| `Operations.luau` | Core mutation logic | add, remove, removeBySlot, swap, move, split, updateMetadata, sort |
+| `Operations.luau` | Core mutation logic | add, remove, removeBySlot, swap, swapStack, move, split, updateMetadata, sort, equip, unequip |
 | `Query.luau` | Item lookups | getItem, find, findById, filter, getAllItems |
-| `init.luau` | Public API facade | CoreStore.* (22 public functions) |
+| `init.luau` | Public API facade | CoreStore.* (27 public functions) |
 
 ### Data Flow
 
@@ -150,6 +150,7 @@ StackBlacklist = { Legendary = true, Mythic = true, Special = true }
 | add | Add item(s), stack into existing or create new | O(k) stack, O(1) new |
 | remove | Partial or full removal | O(1) partial, O(h)/O(n) full |
 | swap | Exchange two slot positions. StackOnSwap can absorb | O(1) same-container, O(n) cross-container |
+| swapStack | Explicit stack route; follows swap's StackOnSwap behavior | Same as swap |
 | move | Positional transfer, never stacks | O(1) HH, O(h) HS, O(n) SH/SS |
 | split | Divide stack, cap at MaxStackSize | O(1) + placement |
 | updateMetadata | Merge key-value pairs, all mutable | O(f) |
@@ -157,7 +158,7 @@ StackBlacklist = { Legendary = true, Mythic = true, Special = true }
 
 ### Key Behaviors
 
-- **Stacking:** Only via `add` (always) or `swap` with `StackOnSwap = true`. Move and split never stack.
+- **Stacking:** Only via `add` (always), `swap`, or `swapStack` when `StackOnSwap = true`. Move and split never stack.
 - **MaxStackSize:** Enforced unconditionally. No item Amount may exceed it after any operation.
 - **Dynamic hotbar:** Compacts after remove/swap/move. Static preserves holes. Use `CoreStore.setHotbarType(state, "Dynamic")` to switch types — it auto-compacts.
 - **Auto-sort:** Triggers after any mutating operation when `Sorting = true`. Sorts Storage only. Hotbar is never sorted (user-controlled).
@@ -167,9 +168,9 @@ StackBlacklist = { Legendary = true, Mythic = true, Special = true }
 
 ## Test Structure
 
-### corestore_operations_test.luau (39 tests)
+### corestore_operations_test.luau (66 tests)
 
-Tests for: swap, move, split, metadata, sort, MetadataIndex. Visual pass/fail output.
+Tests for: swap, swapStack, move, split, metadata, sort, MetadataIndex, equip/unequip, dynamic hotbar. Visual pass/fail output.
 
 ### corestore_addtest.luau (25 tests)
 
@@ -191,7 +192,7 @@ Fill Hotbar, Stack Test, Overflow, Capacity, Blacklist, Swap, Move, Split, Sort 
 docs/
   specs/
     CoreStoreSpecification.md   -- Full audit, InventoryState shape, complexity targets
-    Invariants.md               -- 18 guarantees (INV-1 to INV-18) + verifyInvariants()
+    Invariants.md               -- 19 guarantees (INV-1 to INV-19) + verifyInvariants()
     SwapRules.md                -- 4 combos, StackOnSwap, equipped behavior
     MoveRules.md                -- Purely positional, never stacks
     SplitRules.md               -- Placement chain, MaxStackSize cap

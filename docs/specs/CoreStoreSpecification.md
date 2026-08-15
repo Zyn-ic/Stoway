@@ -62,7 +62,7 @@ export type InventoryState = {
 | CanStack | `boolean` | `true` | Enable/disable stacking globally. |
 | MaxStackSize | `number` | `5` | Maximum items per stack. |
 | BackpackEnabled | `boolean` | `true` | Enable/disable storage container. |
-| StackOnSwap | `boolean` | `false` | Allow stacking during swap operations. Requires CanStack = true. |
+| StackOnSwap | `boolean` | `false` | Allow stacking during swap and swapStack operations. Requires CanStack = true. |
 | Sorting | `boolean` | `false` | Enable auto-sort after mutations. |
 | SortOrder | `"None" \| "Name" \| "Rarity" \| "ItemType"` | `"None"` | Sort criteria when Sorting is enabled. |
 | StackRequiredFields | `{ string }` | `{ "Rarity", "Type" }` | Metadata fields that must match for stacking. |
@@ -458,6 +458,7 @@ LocationByUUID updated:
 | swap (SH, dest occupied) | O(1) | Direct slot exchange |
 | swap (SH, dest empty) | O(n) | Storage shift left via table.remove |
 | swap (with StackOnSwap) | O(k) | k = candidate stacks for stacking |
+| swapStack | Same as swap | Explicit route with the same StackOnSwap-gated behavior and positional fallback |
 | move (HH) | O(1) | Direct slot assignment |
 | move (HS) | O(h) | Hotbar compaction in Dynamic mode |
 | move (SH) | O(n) | Storage shift left + set hotbar |
