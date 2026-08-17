@@ -1,4 +1,5 @@
 --!native
+
 --@author: yyumchi
 --@date: 2026-06-24
 --[[@description:
@@ -8,6 +9,8 @@
 -- VARIABLES --
 -----------------------------
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Result = require(ReplicatedStorage.Shared.Types.Result)
 local Types = require("./Types")
 local Metadata = require("./Metadata")
 local Slots = require("./Slots")
@@ -16,6 +19,8 @@ local State = require("./State")
 local Utils = require("./Utils")
 
 local Operations = {}
+
+local EK = Result.ErrorKind
 
 -----------------------------
 -- CONSTANTS --
@@ -30,6 +35,37 @@ local INDEXED_METADATA_FIELDS: { string } = { "Rarity", "Type" }
 -- marker. It is namespaced aggressively to avoid colliding with a real value.
 local METADATA_DELETE = "__STOWAY_DELETE__"
 Operations.METADATA_DELETE = METADATA_DELETE
+
+-- Maps reason strings to Error objects for the Result type.
+local REASON_TO_KIND: { [string]: Result.ErrorKind } = {
+	BACKPACK_DISABLED = EK.PermissionDenied,
+	NOT_DROPPABLE = EK.PermissionDenied,
+	INVALID_HOTBAR_SLOT = EK.InvalidArgument,
+	INVALID_STORAGE_SLOT = EK.InvalidArgument,
+	INVALID_AMOUNT = EK.InvalidArgument,
+	INVALID_ITEM_DATA = EK.InvalidArgument,
+	INVALID_SLOT = EK.InvalidArgument,
+	INVALID_PLACEMENT = EK.InvalidArgument,
+	ITEM_NOT_IN_TOOLS_FOLDER = EK.InvalidArgument,
+	INVALID_ITEM_ID = EK.InvalidArgument,
+	CANNOT_SPLIT_FULL = EK.InvalidArgument,
+	ITEM_NOT_FOUND = EK.NotFound,
+	NO_STATE = EK.NotFound,
+	SOURCE_EMPTY = EK.NotFound,
+	SLOT_EMPTY = EK.NotFound,
+	FULL = EK.NotAvailable,
+	HOTBAR_FULL = EK.NotAvailable,
+	HOTBAR_SLOT_OCCUPIED = EK.NotAvailable,
+	DESTINATION_OCCUPIED = EK.NotAvailable,
+	DESTINATION_UNAVAILABLE = EK.NotAvailable,
+	OPERATION_IN_PROGRESS = EK.NotAvailable,
+	NO_SPACE = EK.NotAvailable,
+	ADD_FAILED = EK.NotAvailable,
+}
+
+local function Err(reason: string): { ok: false, error: Result.Error }
+	return Result.Err({ kind = REASON_TO_KIND[reason] or EK.InvalidArgument, message = reason })
+end
 
 -----------------------------
 -- PRIVATE FUNCTIONS --
@@ -368,27 +404,21 @@ function Operations.add(
 	local opts: Types.AddOptions = options or {}
 
 	-- Step 1: Normalize input
-	local itemId, amount, metadata, normalizeError = Metadata.normalize(itemData)
+	local normResult = Metadata.normalize(itemData)
 
-	if normalizeError or not itemId or not amount or not metadata then
-		return {
-			success = false,
-			reason = normalizeError or "INVALID_ITEM_DATA",
-			addedAmount = 0,
-			overflow = 0,
-		}
+	if not normResult.ok then
+		return Err(normResult.error.message)
 	end
+
+	local itemId = normResult.value.itemId
+	local amount = normResult.value.amount
+	local metadata = normResult.value.metadata
 
 	local originalAmount = amount
 	local remainingCapacity = State.getRemainingCapacity(state)
 
 	if remainingCapacity <= 0 then
-		return {
-			success = false,
-			reason = "FULL",
-			addedAmount = 0,
-			overflow = amount,
-		}
+		return Result.Err({ kind = EK.NotAvailable, message = "FULL" })
 	end
 
 	-- Cap at remaining capacity — excess becomes overflow
@@ -422,28 +452,19 @@ function Operations.add(
 
 		-- Nothing placed and nothing stacked — total failure
 		if #addedItems == 0 and next(updatedItems) == nil then
-			return {
-				success = false,
-				reason = placeReason or "ADD_FAILED",
-				addedItems = addedItems,
-				updatedItems = updatedItems,
-				addedAmount = 0,
-				overflow = originalAmount,
-			}
+			return Err(placeReason or "ADD_FAILED")
 		end
 	end
 
 	local addedAmount = amountToAdd - amountLeft
 	local overflow = originalAmount - addedAmount
 
-	return {
-		success = addedAmount > 0,
-		reason = overflow > 0 and "PARTIAL" or nil,
+	return Result.Ok({
 		addedItems = addedItems,
 		updatedItems = updatedItems,
 		addedAmount = addedAmount,
 		overflow = overflow,
-	}
+	})
 end
 
 -- Removes an item (partial or full).
@@ -459,19 +480,13 @@ function Operations.remove(
 	local item = state.Items[uuid]
 
 	if not item then
-		return {
-			success = false,
-			reason = "ITEM_NOT_FOUND",
-		}
+		return Err("ITEM_NOT_FOUND")
 	end
 
 	local amountToRemove = amount or item.Amount
 
 	if not Utils.isPositiveNumber(amountToRemove) then
-		return {
-			success = false,
-			reason = "INVALID_AMOUNT",
-		}
+		return Err("INVALID_AMOUNT")
 	end
 
 	amountToRemove = math.min(amountToRemove, item.Amount)
@@ -493,13 +508,12 @@ function Operations.remove(
 		item.Amount -= amountToRemove
 		State.removeWeight(state, amountToRemove)
 
-		return {
-			success = true,
+		return Result.Ok({
 			removedItem = removedItem,
 			remaining = item.Amount,
 			slotType = slotType,
 			slot = slot,
-		}
+		})
 	end
 
 	-- Full removal — destroy item from all tables
@@ -522,13 +536,12 @@ function Operations.remove(
 		Slots.removeStorageAt(state, slot)
 	end
 
-	return {
-		success = true,
+	return Result.Ok({
 		removedItem = removedItem,
 		remaining = 0,
 		slotType = slotType,
 		slot = slot,
-	}
+	})
 end
 
 -- Swaps two slot positions. Handles 4 container combos:
@@ -549,34 +562,31 @@ function Operations.swap(
 ): Types.SwapResult
 	if not state.Settings.BackpackEnabled then
 		if fromRef.Type == "Storage" or toRef.Type == "Storage" then
-			return {
-				success = false,
-				reason = "BACKPACK_DISABLED",
-			}
+			return Err("BACKPACK_DISABLED")
 		end
 	end
 
 	if fromRef.Type == "Hotbar" then
 		if not Slots.isValidHotbarSlot(state, fromRef.Slot) then
-			return { success = false, reason = "INVALID_HOTBAR_SLOT" }
+			return Err("INVALID_HOTBAR_SLOT")
 		end
 	end
 
 	if toRef.Type == "Hotbar" then
 		if not Slots.isValidHotbarSlot(state, toRef.Slot) then
-			return { success = false, reason = "INVALID_HOTBAR_SLOT" }
+			return Err("INVALID_HOTBAR_SLOT")
 		end
 	end
 
 	if fromRef.Type == "Storage" then
 		if not Slots.isValidStorageSlot(state, fromRef.Slot) then
-			return { success = false, reason = "INVALID_STORAGE_SLOT" }
+			return Err("INVALID_STORAGE_SLOT")
 		end
 	end
 
 	if toRef.Type == "Storage" then
 		if toRef.Slot < 1 or toRef.Slot > #state.Storage + 1 then
-			return { success = false, reason = "INVALID_STORAGE_SLOT" }
+			return Err("INVALID_STORAGE_SLOT")
 		end
 	end
 
@@ -584,11 +594,11 @@ function Operations.swap(
 	local toUUID = Slots.getUUIDFromSlot(state, toRef.Type, toRef.Slot)
 
 	if not fromUUID then
-		return { success = false, reason = "SOURCE_EMPTY" }
+		return Err("SOURCE_EMPTY")
 	end
 
 	if fromUUID == toUUID then
-		return { success = true }
+		return Result.Ok({})
 	end
 
 	-- StackOnSwap: if both items can stack, absorb source into destination
@@ -623,14 +633,14 @@ function Operations.swap(
 				end
 			end
 
-			return { success = true }
+			return Result.Ok({})
 		end
 	end
 
 	-- Dynamic Hotbar: reject swap to empty slot (no holes allowed)
 	if fromRef.Type == "Hotbar" and toRef.Type == "Hotbar" then
 		if state.Settings.HotbarType == "Dynamic" and not toUUID then
-			return { success = false, reason = "DESTINATION_UNAVAILABLE" }
+			return Err("DESTINATION_UNAVAILABLE")
 		end
 	end
 
@@ -657,7 +667,7 @@ function Operations.swap(
 		end
 	end
 
-	return { success = true, hotbarCompacted = hotbarCompacted }
+	return Result.Ok({ hotbarCompacted = hotbarCompacted })
 end
 
 -- Explicit drag-and-drop stack operation. It deliberately delegates to swap so
@@ -686,31 +696,31 @@ function Operations.move(
 ): Types.MoveResult
 	if not state.Settings.BackpackEnabled then
 		if fromRef.Type == "Storage" or toRef.Type == "Storage" then
-			return { success = false, reason = "BACKPACK_DISABLED" }
+			return Err("BACKPACK_DISABLED")
 		end
 	end
 
 	if fromRef.Type == "Hotbar" then
 		if not Slots.isValidHotbarSlot(state, fromRef.Slot) then
-			return { success = false, reason = "INVALID_HOTBAR_SLOT" }
+			return Err("INVALID_HOTBAR_SLOT")
 		end
 	end
 
 	if toRef.Type == "Hotbar" then
 		if not Slots.isValidHotbarSlot(state, toRef.Slot) then
-			return { success = false, reason = "INVALID_HOTBAR_SLOT" }
+			return Err("INVALID_HOTBAR_SLOT")
 		end
 	end
 
 	if fromRef.Type == "Storage" then
 		if not Slots.isValidStorageSlot(state, fromRef.Slot) then
-			return { success = false, reason = "INVALID_STORAGE_SLOT" }
+			return Err("INVALID_STORAGE_SLOT")
 		end
 	end
 
 	local fromUUID = Slots.getUUIDFromSlot(state, fromRef.Type, fromRef.Slot)
 	if not fromUUID then
-		return { success = false, reason = "SOURCE_EMPTY" }
+		return Err("SOURCE_EMPTY")
 	end
 
 	local toUUID = Slots.getUUIDFromSlot(state, toRef.Type, toRef.Slot)
@@ -718,25 +728,25 @@ function Operations.move(
 	-- Storage -> Storage: reorder within the array
 	if fromRef.Type == "Storage" and toRef.Type == "Storage" then
 		if toRef.Slot < 1 or toRef.Slot > #state.Storage + 1 then
-			return { success = false, reason = "INVALID_STORAGE_SLOT" }
+			return Err("INVALID_STORAGE_SLOT")
 		end
 		Slots.moveWithinStorage(state, fromRef.Slot, toRef.Slot)
-		return { success = true }
+		return Result.Ok({})
 	end
 
 	if toUUID then
-		return { success = false, reason = "DESTINATION_OCCUPIED" }
+		return Err("DESTINATION_OCCUPIED")
 	end
 
 	-- Hotbar -> Hotbar: Static allows, Dynamic rejects
 	if fromRef.Type == "Hotbar" and toRef.Type == "Hotbar" then
 		if state.Settings.HotbarType == "Dynamic" then
-			return { success = false, reason = "DESTINATION_UNAVAILABLE" }
+			return Err("DESTINATION_UNAVAILABLE")
 		end
 		state.Hotbar[fromRef.Slot] = nil
 		state.Hotbar[toRef.Slot] = fromUUID
 		state.LocationByUUID[fromUUID] = { Type = "Hotbar", Slot = toRef.Slot }
-		return { success = true }
+		return Result.Ok({})
 	end
 
 	-- Hotbar -> Storage: clear hotbar, append to storage, compact
@@ -744,7 +754,7 @@ function Operations.move(
 		state.Hotbar[fromRef.Slot] = nil
 		--[[local insertedSlot =]] Slots.appendStorage(state, fromUUID)
 		local hotbarCompacted =    Slots.compactHotbar(state)
-		return { success = true, hotbarCompacted = hotbarCompacted }
+		return Result.Ok({ hotbarCompacted = hotbarCompacted })
 	end
 
 	-- Storage -> Hotbar: Dynamic only allows append position
@@ -752,15 +762,15 @@ function Operations.move(
 		if state.Settings.HotbarType == "Dynamic" then
 			local appendSlot = Slots.findEmptyHotbarSlot(state)
 			if toRef.Slot ~= appendSlot then
-				return { success = false, reason = "DESTINATION_UNAVAILABLE" }
+				return Err("DESTINATION_UNAVAILABLE")
 			end
 		end
 		Slots.removeStorageAt(state, fromRef.Slot)
 		Slots.setHotbarSlot(state, toRef.Slot, fromUUID)
-		return { success = true }
+		return Result.Ok({})
 	end
 
-	return { success = false, reason = "INVALID_OPERATION" }
+	return Err("INVALID_OPERATION")
 end
 
 -- Splits a stack into two. Source keeps its UUID (important if equipped).
@@ -784,15 +794,15 @@ function Operations.split(
 	local item = state.Items[uuid]
 
 	if not item then
-		return { success = false, reason = "ITEM_NOT_FOUND" }
+		return Err("ITEM_NOT_FOUND")
 	end
 
 	if not Utils.isPositiveNumber(amount) then
-		return { success = false, reason = "INVALID_AMOUNT" }
+		return Err("INVALID_AMOUNT")
 	end
 
 	if amount >= item.Amount then
-		return { success = false, reason = "CANNOT_SPLIT_FULL" }
+		return Err("CANNOT_SPLIT_FULL")
 	end
 
 	-- Cap split amount at MaxStackSize. Excess stays in source.
@@ -826,7 +836,7 @@ function Operations.split(
 				removeFromIndex(state, newItem.Id, newItem.UUID)
 				State.removeWeight(state, splitAmount)
 				item.Amount += splitAmount
-				return { success = false, reason = "INVALID_HOTBAR_SLOT" }
+				return Err("INVALID_HOTBAR_SLOT")
 			end
 
 			if state.Hotbar[destination.Slot] then
@@ -835,7 +845,7 @@ function Operations.split(
 				removeFromIndex(state, newItem.Id, newItem.UUID)
 				State.removeWeight(state, splitAmount)
 				item.Amount += splitAmount
-				return { success = false, reason = "HOTBAR_SLOT_OCCUPIED" }
+				return Err("HOTBAR_SLOT_OCCUPIED")
 			end
 
 			-- Dynamic: only allow append position
@@ -847,7 +857,7 @@ function Operations.split(
 					removeFromIndex(state, newItem.Id, newItem.UUID)
 					State.removeWeight(state, splitAmount)
 					item.Amount += splitAmount
-					return { success = false, reason = "DESTINATION_UNAVAILABLE" }
+					return Err("DESTINATION_UNAVAILABLE")
 				end
 			end
 
@@ -861,7 +871,7 @@ function Operations.split(
 				removeFromIndex(state, newItem.Id, newItem.UUID)
 				State.removeWeight(state, splitAmount)
 				item.Amount += splitAmount
-				return { success = false, reason = "BACKPACK_DISABLED" }
+				return Err("BACKPACK_DISABLED")
 			end
 
 			if not Slots.isValidStorageSlot(state, destination.Slot) then
@@ -870,7 +880,7 @@ function Operations.split(
 				removeFromIndex(state, newItem.Id, newItem.UUID)
 				State.removeWeight(state, splitAmount)
 				item.Amount += splitAmount
-				return { success = false, reason = "INVALID_STORAGE_SLOT" }
+				return Err("INVALID_STORAGE_SLOT")
 			end
 
 			Slots.moveToStorage(state, newItem.UUID, destination.Slot)
@@ -895,12 +905,11 @@ function Operations.split(
 			removeFromIndex(state, newItem.Id, newItem.UUID)
 			State.removeWeight(state, splitAmount)
 			item.Amount += splitAmount
-			return { success = false, reason = "NO_SPACE" }
+			return Err("NO_SPACE")
 		end
 	end
 
-	return {
-		success = true,
+	return Result.Ok({
 		sourceUUID = uuid,
 		newUUID = newItem.UUID,
 		sourceAmount = item.Amount,
@@ -908,7 +917,7 @@ function Operations.split(
 		newSlotType = newSlotType,
 		newSlot = newSlot,
 		hotbarCompacted = hotbarCompacted,
-	}
+	})
 end
 
 -- Updates metadata fields on an item. All fields are mutable.
@@ -922,7 +931,7 @@ function Operations.updateMetadata(
 	local item = state.Items[uuid]
 
 	if not item then
-		return { success = false, reason = "ITEM_NOT_FOUND" }
+		return Err("ITEM_NOT_FOUND")
 	end
 
 	local oldMetadata = table.clone(item.Metadata) :: Types.ItemMetadata
@@ -939,10 +948,9 @@ function Operations.updateMetadata(
 
 	updateMetadataIndex(state, uuid, oldMetadata, item.Metadata)
 
-	return {
-		success = true,
+	return Result.Ok({
 		updatedFields = updatedFields,
-	}
+	})
 end
 
 -- Sorts Storage only. Hotbar is never sorted (user-controlled).
@@ -954,15 +962,14 @@ function Operations.sort(
 	local sortOrder = state.Settings.SortOrder
 
 	if sortOrder == "None" then
-		return { success = true }
+		return Result.Ok({})
 	end
 
 	local storageChanged = Slots.sortStorage(state, sortOrder)
 
-	return {
-		success = true,
+	return Result.Ok({
 		storageOrder = if storageChanged then state.Storage else nil,
-	}
+	})
 end
 
 -- Removes an item by slot reference. Delegates to Operations.remove after UUID lookup.
@@ -975,10 +982,7 @@ function Operations.removeBySlot(
 	local uuid = Slots.getUUIDFromSlot(state, slotType, slot)
 
 	if not uuid then
-		return {
-			success = false,
-			reason = "SLOT_EMPTY",
-		}
+		return Err("SLOT_EMPTY")
 	end
 
 	return Operations.remove(state, uuid, amount)
@@ -993,29 +997,24 @@ function Operations.equip(
 	local item = state.Items[uuid]
 
 	if not item then
-		return {
-			success = false,
-			reason = "ITEM_NOT_FOUND",
-		}
+		return Err("ITEM_NOT_FOUND")
 	end
 
 	local previousUUID = state.EquippedItemUUID
 
 	if previousUUID == uuid then
-		return {
-			success = true,
+		return Result.Ok({
 			uuid = uuid,
 			previousUUID = previousUUID,
-		}
+		})
 	end
 
 	state.EquippedItemUUID = uuid
 
-	return {
-		success = true,
+	return Result.Ok({
 		uuid = uuid,
 		previousUUID = previousUUID,
-	}
+	})
 end
 
 -- Clears EquippedItemUUID. Pure state change, no Roblox dependency.
@@ -1026,10 +1025,9 @@ function Operations.unequip(
 	local previousUUID = state.EquippedItemUUID
 	state.EquippedItemUUID = nil
 
-	return {
-		success = true,
+	return Result.Ok({
 		previousUUID = previousUUID,
-	}
+	})
 end
 
 -----------------------------

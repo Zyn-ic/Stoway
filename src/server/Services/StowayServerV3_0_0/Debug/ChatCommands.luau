@@ -10,8 +10,8 @@
 -- DEPENDENCIES --
 -----------------------------
 
-local CoreStore = require(script.Parent.Parent.CoreStore)
-local Types = require(script.Parent.Parent.CoreStore.Types)
+local CoreStore = require("../CoreStore")
+local Types = require("../CoreStore/Types")
 
 -----------------------------
 -- VARIABLES --
@@ -32,6 +32,7 @@ type StowayApi = {
 	UnequipSlot: (Player, boolean?) -> Types.UnequipResult,
 	UpdateMetadata: (Player, string, { [string]: any }, boolean?) -> Types.MetadataUpdateResult,
 	Sort: (Player, boolean?) -> Types.SortResult,
+	Drop: (Player, string, number?, boolean?) -> Types.DropResult,
 }
 
 local ChatCommands = {}
@@ -127,10 +128,14 @@ local function cmdAdd(player: Player, stoway: StowayApi, args: { string })
 	local amount = tonumber(args[3]) or 1
 	local result = stoway.AddItem(player, { Id = itemId, Amount = amount }, nil, true)
 	print(("[Add] %s x%d"):format(itemId, amount))
-	print("  Success:", result.success)
-	print("  Added:", result.addedAmount or 0)
-	print("  Overflow:", result.overflow or 0)
-	print("  Reason:", result.reason or "OK")
+	if result.ok then
+		print("  Success: true")
+		print("  Added:", result.value.addedAmount or 0)
+		print("  Overflow:", result.value.overflow or 0)
+	else
+		print("  Success: false")
+		print("  Reason:", result.error.message)
+	end
 end
 
 local function cmdAddBack(player: Player, stoway: StowayApi, args: { string })
@@ -143,10 +148,14 @@ local function cmdAddBack(player: Player, stoway: StowayApi, args: { string })
 	local amount = tonumber(args[3]) or 1
 	local result = stoway.AddToBackpack(player, { Id = itemId, Amount = amount }, nil, true)
 	print(("[AddToBackpack] %s x%d"):format(itemId, amount))
-	print("  Success:", result.success)
-	print("  Added:", result.addedAmount or 0)
-	print("  Overflow:", result.overflow or 0)
-	print("  Reason:", result.reason or "OK")
+	if result.ok then
+		print("  Success: true")
+		print("  Added:", result.value.addedAmount or 0)
+		print("  Overflow:", result.value.overflow or 0)
+	else
+		print("  Success: false")
+		print("  Reason:", result.error.message)
+	end
 end
 
 local function cmdAddHot(player: Player, stoway: StowayApi, args: { string })
@@ -160,10 +169,14 @@ local function cmdAddHot(player: Player, stoway: StowayApi, args: { string })
 	local slot = tonumber(args[4])
 	local result = stoway.AddToHotbar(player, { Id = itemId, Amount = amount }, slot, true)
 	print(("[AddToHotbar] %s x%d%s"):format(itemId, amount, if slot then (" @slot " .. slot) else ""))
-	print("  Success:", result.success)
-	print("  Added:", result.addedAmount or 0)
-	print("  Overflow:", result.overflow or 0)
-	print("  Reason:", result.reason or "OK")
+	if result.ok then
+		print("  Success: true")
+		print("  Added:", result.value.addedAmount or 0)
+		print("  Overflow:", result.value.overflow or 0)
+	else
+		print("  Success: false")
+		print("  Reason:", result.error.message)
+	end
 end
 
 -- REMOVE ITEM
@@ -178,9 +191,35 @@ local function cmdRemove(player: Player, stoway: StowayApi, args: { string })
 	local amount = tonumber(args[3])
 	local result = stoway.RemoveItem(player, uuid, amount, true)
 	print(("[Remove] %s"):format(uuid))
-	print("  Success:", result.success)
-	print("  Remaining:", result.remaining or 0)
-	print("  Reason:", result.reason or "OK")
+	if result.ok then
+		print("  Success: true")
+		print("  Remaining:", result.value.remaining or 0)
+	else
+		print("  Success: false")
+		print("  Reason:", result.error.message)
+	end
+end
+
+-- DROP ITEM
+
+local function cmdDrop(player: Player, stoway: StowayApi, args: { string })
+	local uuid = args[2]
+	if not uuid then
+		print("Usage: /drop [uuid] [amount?]")
+		return
+	end
+
+	local amount = tonumber(args[3])
+	local result = stoway.Drop(player, uuid, amount, true)
+	print(("[Drop] %s"):format(uuid))
+	if result.ok then
+		print("  Success: true")
+		print("  Dropped:", result.value.removedItem.Amount or 0)
+		print("  Remaining:", result.value.remaining or 0)
+	else
+		print("  Success: false")
+		print("  Reason:", result.error.message)
+	end
 end
 
 -- SWAP / MOVE
@@ -196,9 +235,13 @@ local function cmdSwap(player: Player, stoway: StowayApi, args: { string })
 
 	local result = stoway.SwapSlots(player, from, to, true)
 	print(("[Swap] %s %d -> %s %d"):format(from.Type, from.Slot, to.Type, to.Slot))
-	print("  Success:", result.success)
-	print("  HotbarCompacted:", result.hotbarCompacted or false)
-	print("  Reason:", result.reason or "OK")
+	if result.ok then
+		print("  Success: true")
+		print("  HotbarCompacted:", result.value.hotbarCompacted or false)
+	else
+		print("  Success: false")
+		print("  Reason:", result.error.message)
+	end
 end
 
 local function cmdMove(player: Player, stoway: StowayApi, args: { string })
@@ -212,9 +255,13 @@ local function cmdMove(player: Player, stoway: StowayApi, args: { string })
 
 	local result = stoway.Move(player, from, to, true)
 	print(("[Move] %s %d -> %s %d"):format(from.Type, from.Slot, to.Type, to.Slot))
-	print("  Success:", result.success)
-	print("  HotbarCompacted:", result.hotbarCompacted or false)
-	print("  Reason:", result.reason or "OK")
+	if result.ok then
+		print("  Success: true")
+		print("  HotbarCompacted:", result.value.hotbarCompacted or false)
+	else
+		print("  Success: false")
+		print("  Reason:", result.error.message)
+	end
 end
 
 -- SPLIT
@@ -234,13 +281,17 @@ local function cmdSplit(player: Player, stoway: StowayApi, args: { string })
 
 	local result = stoway.Split(player, uuid, amount, destination, true)
 	print(("[Split] %s x%d"):format(uuid, amount))
-	print("  Success:", result.success)
-	print("  New UUID:", result.newUUID or "?")
-	print("  New Amount:", result.newAmount or 0)
-	if result.newSlotType and result.newSlot then
-		print("  Destination:", result.newSlotType, result.newSlot)
+	if result.ok then
+		print("  Success: true")
+		print("  New UUID:", result.value.newUUID or "?")
+		print("  New Amount:", result.value.newAmount or 0)
+		if result.value.newSlotType and result.value.newSlot then
+			print("  Destination:", result.value.newSlotType, result.value.newSlot)
+		end
+	else
+		print("  Success: false")
+		print("  Reason:", result.error.message)
 	end
-	print("  Reason:", result.reason or "OK")
 end
 
 -- EQUIP / UNEQUIP
@@ -254,15 +305,24 @@ local function cmdEquip(player: Player, stoway: StowayApi, args: { string })
 
 	local result = stoway.EquipSlot(player, uuid, true)
 	print(("[Equip] %s"):format(uuid))
-	print("  Success:", result.success)
-	print("  Equipped UUID:", result.uuid or "None")
-	print("  Previous:", result.previousUUID or "None")
+	if result.ok then
+		print("  Success: true")
+		print("  Equipped UUID:", result.value.uuid or "None")
+		print("  Previous:", result.value.previousUUID or "None")
+	else
+		print("  Success: false")
+		print("  Reason:", result.error.message)
+	end
 end
 
 local function cmdUnequip(player: Player, stoway: StowayApi, args: { string })
 	local result = stoway.UnequipSlot(player, true)
 	print("[Unequip]")
-	print("  Previous UUID:", result.previousUUID or "None")
+	if result.ok then
+		print("  Previous UUID:", result.value.previousUUID or "None")
+	else
+		print("  Reason:", result.error.message)
+	end
 end
 
 -- SORT
@@ -270,8 +330,13 @@ end
 local function cmdSort(player: Player, stoway: StowayApi, args: { string })
 	local result = stoway.Sort(player, true)
 	print("[Sort]")
-	print("  Success:", result.success)
-	print("  Storage Order:", result.storageOrder and ("#" .. #result.storageOrder) or "?")
+	if result.ok then
+		print("  Success: true")
+		print("  Storage Order:", result.value.storageOrder and ("#" .. #result.value.storageOrder) or "?")
+	else
+		print("  Success: false")
+		print("  Reason:", result.error.message)
+	end
 end
 
 -- CLEAR
@@ -364,6 +429,7 @@ local function cmdHelp(player: Player, stoway: StowayApi, args: { string })
 	print("/addback [id] [amount?]         - Add directly to backpack")
 	print("/addhot [id] [amount?] [slot?]  - Add directly to hotbar")
 	print("/remove [uuid] [amount?]        - Remove item by UUID")
+	print("/drop [uuid] [amount?]         - Drop item into the world")
 	print("/swap [t1] [s1] [t2] [s2]       - Swap two slots")
 	print("/move [t1] [s1] [t2] [s2]       - Move item to slot (never stacks)")
 	print("/split [uuid] [amt] [t] [s]?    - Split a stack")
@@ -390,6 +456,7 @@ local commands: { [string]: (Player, StowayApi, { string }) -> () } = {
 	addback = cmdAddBack,
 	addhot = cmdAddHot,
 	remove = cmdRemove,
+	drop = cmdDrop,
 	swap = cmdSwap,
 	move = cmdMove,
 	split = cmdSplit,

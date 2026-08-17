@@ -1,3 +1,6 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Result = require(ReplicatedStorage.Shared.Types.Result)
+
 local Types = {}
 
 export type HotbarType = "Static" | "Dynamic"
@@ -111,43 +114,29 @@ export type AddedSlot = {
     slot: number,
 }
 
-export type AddResult = {
-    success: boolean,
-    reason: string?,
-
+export type AddResult = Result.Result<{
     addedItems: { AddedSlot }?,
     updatedItems: { [string]: number }?,
-
     addedAmount: number?,
     overflow: number?,
-}
+}>
 
-export type RemoveResult = {
-    success: boolean,
-    reason: string?,
-
+export type RemoveResult = Result.Result<{
     removedItem: Item?,
     remaining: number?,
-
     slotType: SlotType?,
     slot: number?,
-}
+}>
 
-export type SwapResult = {
-    success: boolean,
-    reason: string?,
+export type SwapResult = Result.Result<{
     hotbarCompacted: boolean?,
-}
+}>
 
-export type MoveResult = {
-    success: boolean,
-    reason: string?,
+export type MoveResult = Result.Result<{
     hotbarCompacted: boolean?,
-}
+}>
 
-export type SplitResult = {
-    success: boolean,
-    reason: string?,
+export type SplitResult = Result.Result<{
     sourceUUID: string?,
     newUUID: string?,
     sourceAmount: number?,
@@ -155,29 +144,29 @@ export type SplitResult = {
     newSlotType: SlotType?,
     newSlot: number?,
     hotbarCompacted: boolean?,
-}
+}>
 
-export type MetadataUpdateResult = {
-    success: boolean,
-    reason: string?,
+export type MetadataUpdateResult = Result.Result<{
     updatedFields: { string }?,
-}
+}>
 
-export type SortResult = {
-    success: boolean,
+export type SortResult = Result.Result<{
     storageOrder: { string }?,
-}
+}>
 
-export type EquipResult = {
-    success: boolean,
-    reason: string?,
+export type EquipResult = Result.Result<{
     uuid: string?,
     previousUUID: string?,
-}
+}>
 
-export type UnequipResult = {
-    success: boolean,
+export type UnequipResult = Result.Result<{
     previousUUID: string?,
-}
+}>
+
+export type DropResult = Result.Result<{
+	removedItem: Item,
+	remaining: number?,
+	tool: Tool,
+}>
 
 return Types

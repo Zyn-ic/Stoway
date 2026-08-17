@@ -16,7 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Remotes = require(ReplicatedStorage.StowayRemotes)
 
 local Protocol = require("./Protocol")
-local Types = require("./CoreStore/Types")
+local _Types = require("./CoreStore/Types")
 
 local Communications = {}
 
@@ -34,15 +34,15 @@ local function adapter(player: Player, signal: Protocol.Signal)
 	-- result cast is safe. (Luau cannot correlate signal.result with
 	-- signal.operation across versions, hence the explicit cast.)
 
-	if not signal.result.success then
+	local res = signal.result
+	if not res.ok then
 		if signal.operation == "SwapSlots" or signal.operation == "SwapStack" then
-			local result = signal.result :: Types.SwapResult
 			-- The player already rendered the swap on their end; only talk back
 			-- on failure, and send the inverse of the attempted operation.
 			--
 			Remotes.InventoryRevert:FireClient(player, {
-				success = result.success,
-				fromSlot = result.reason,
+				success = false,
+				fromSlot = res.error.message,
 			})
 		end
 		return
@@ -55,7 +55,7 @@ local function adapter(player: Player, signal: Protocol.Signal)
 	end
 
 	if signal.operation == "AddItem" or signal.operation == "AddToBackpack" or signal.operation == "AddToHotbar" then
-		local result = signal.result :: Types.AddResult
+		local result = (signal.result :: any).value
 		local addedItems = result.addedItems
 		if addedItems then
 			for _, added in addedItems do
@@ -78,7 +78,7 @@ local function adapter(player: Player, signal: Protocol.Signal)
 		end
 
 	elseif signal.operation == "RemoveItem" then
-		local result = signal.result :: Types.RemoveResult
+		local result = (signal.result :: any).value
 		local removedItem = result.removedItem
 		if removedItem then
 			Remotes.InventoryRemoved:FireClient(player, {
@@ -89,17 +89,27 @@ local function adapter(player: Player, signal: Protocol.Signal)
 		end
 
 	elseif signal.operation == "EquipSlot" then
-		local result = signal.result :: Types.EquipResult
+		local result = (signal.result :: any).value
 		Remotes.InventoryEquipped:FireClient(player, {
 			uuid = result.uuid,
 			previousUUID = result.previousUUID,
 		})
 
 	elseif signal.operation == "UnequipSlot" then
-		local result = signal.result :: Types.UnequipResult
+		local result = (signal.result :: any).value
 		Remotes.InventoryUnequipped:FireClient(player, {
 			uuid = result.previousUUID,
 		})
+
+	elseif signal.operation == "Drop" then
+		local result = (signal.result :: any).value
+		if result.removedItem then
+			Remotes.InventoryRemoved:FireClient(player, {
+				uuid = result.removedItem.UUID,
+				slotType = nil,
+				slot = nil,
+			})
+		end
 	end
 end
 

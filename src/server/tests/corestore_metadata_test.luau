@@ -70,7 +70,7 @@ end
 -- stack, `addedItems` is empty, so fall back to finding a stack by Id.
 local function addAndGetUUID(state, itemData): string
 	local result = CoreStore.add(state, itemData)
-	assertTrue(result.success)
+	assertTrue(result.ok)
 
 	if result.addedItems and result.addedItems[1] then
 		return result.addedItems[1].uuid
@@ -175,7 +175,7 @@ runTest("updateMetadata adds new custom fields", true, function()
 	local uuid = addAndGetUUID(state, { Id = "Staff", Metadata = { Enchant = "Fire" } })
 
 	local r = CoreStore.updateMetadata(state, uuid, { Durability = 120 })
-	assertTrue(r.success)
+	assertTrue(r.ok)
 	local item = CoreStore.getItem(state, uuid)
 	assertEqual(item.Metadata.Enchant, "Fire", "old custom key preserved")
 	assertEqual(item.Metadata.Durability, 120, "new custom key added")

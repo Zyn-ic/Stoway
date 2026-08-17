@@ -7,10 +7,14 @@
 -- VARIABLES --
 -----------------------------
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Result = require(ReplicatedStorage.Shared.Types.Result)
 local Types = require("./Types")
 local Utils = require("./Utils")
 
 local Metadata = {}
+
+local EK = Result.ErrorKind
 
 -----------------------------
 -- CONSTANTS --
@@ -23,16 +27,16 @@ local Metadata = {}
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
--- Normalizes raw item input into (itemId, amount, metadata, error).
+-- Normalizes raw item input into a Result of { itemId, amount, metadata }.
 --
 -- Amount fallback chain: itemData.Amount -> metadata.Amount -> metadata.StackAmount -> 1
 -- Cleans Amount/StackAmount from metadata after extraction.
 -- Defaults Droppable to true if not set.
-function Metadata.normalize(itemData: Types.ItemInput): (string?, number?, Types.ItemMetadata?, string?)
+function Metadata.normalize(itemData: Types.ItemInput): Result.Result<{ itemId: string, amount: number, metadata: Types.ItemMetadata }>
 	local itemId = itemData.Id
 
 	if type(itemId) ~= "string" or itemId == "" then
-		return nil, nil, nil, "INVALID_ITEM_ID"
+		return Result.Err({ kind = EK.InvalidArgument, message = "INVALID_ITEM_ID" })
 	end
 
 	local metadata: Types.ItemMetadata = {}
@@ -61,14 +65,14 @@ function Metadata.normalize(itemData: Types.ItemInput): (string?, number?, Types
 	local amount = rawAmount or 1
 
 	if not Utils.isPositiveNumber(amount) then
-		return nil, nil, nil, "INVALID_AMOUNT"
+		return Result.Err({ kind = EK.InvalidArgument, message = "INVALID_AMOUNT" })
 	end
 
 	if metadata.Droppable == nil then
 		metadata.Droppable = true
 	end
 
-	return itemId, amount, metadata, nil
+	return Result.Ok({ itemId = itemId, amount = amount, metadata = metadata })
 end
 
 function Metadata.matchesRequiredFields(
