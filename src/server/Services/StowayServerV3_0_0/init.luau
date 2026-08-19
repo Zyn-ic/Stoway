@@ -19,7 +19,7 @@ local Workspace = game:GetService("Workspace")
 
 local Types = require(script.CoreStore.Types)
 local Protocol = require(script.Protocol)
-local Result = require(ReplicatedStorage.Shared.Types.Result)
+local Result = require(ReplicatedStorage.Shared.Stoway.Result)
 
 -- Minimal contract for the injected CoreStore module.
 type CoreStoreApi = {

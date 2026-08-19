@@ -26,7 +26,7 @@ Lua tables can never hold a nil value, so `{ Enchant = nil }` produces an **empt
 CoreStore.updateMetadata(state, uuid, { Enchant = CoreStore.METADATA_DELETE })
 ```
 
-`CoreStore.METADATA_DELETE` is `"__STOWAY_DELETE__"`, a namespaced string exported from the CoreStore facade and from `ReplicatedStorage/StowayRemotes.luau`. It survives the wire as a plain string, so clients delete fields with `StowayRemotes.METADATA_DELETE`. Deleting an indexed field (Rarity/Type) also evicts the UUID from its `MetadataIndex` bucket.
+`CoreStore.METADATA_DELETE` is `"__STOWAY_DELETE__"`, a namespaced string exported from the CoreStore facade and from `ReplicatedStorage/Shared/Stoway/StowayRemotes.luau`. It survives the wire as a plain string, so clients delete fields with `StowayRemotes.METADATA_DELETE`. Deleting an indexed field (Rarity/Type) also evicts the UUID from its `MetadataIndex` bucket.
 
 ### Result Shape
 

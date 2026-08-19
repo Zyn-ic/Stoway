@@ -1,0 +1,77 @@
+--!strict
+
+--@author: yyumchi
+--@date: 2026-08-19
+--[[@description:
+	Shared Stoway data types (pure type exports, no runtime logic).
+	Client-side mirror of the CoreStore InventoryState — server-only indexes
+	(ItemsByID, LocationByUUID, MetadataIndex) are omitted here.
+]]
+-----------------------------
+-- VARIABLES --
+-----------------------------
+
+export type HotbarType = "Static" | "Dynamic"
+export type SortOrder = "None" | "Name" | "Rarity" | "ItemType"
+export type SlotType = "Hotbar" | "Storage"
+export type PlacementMode = "Auto" | "Hotbar" | "Backpack" | "Slot"
+
+export type SlotRef = {
+	Type: SlotType,
+	Slot: number,
+}
+
+export type ItemMetadata = {
+	Description: string?,
+	Image: string?,
+	IsGamepass: boolean?,
+	Rarity: string?,
+	Droppable: boolean?,
+	Type: string?,
+	[string]: any,
+}
+
+export type Item = {
+	UUID: string,
+	Id: string,
+	Amount: number,
+	Metadata: ItemMetadata,
+}
+
+export type CategoryDef = {
+	DisplayName: string,
+	Color: Color3,
+	Order: number,
+}
+
+export type Settings = {
+	HotbarType: HotbarType,
+	MaxHotbarSlots: number,
+	Limit: number,
+	CanStack: boolean,
+	MaxStackSize: number,
+	BackpackEnabled: boolean,
+	Sorting: boolean,
+	SortOrder: SortOrder,
+	StackOnSwap: boolean,
+	StackRequiredFields: { string },
+	StackBlacklist: { [string]: boolean },
+	DefaultDroppable: boolean,
+	UiSkin: string,
+	Categories: { [string]: CategoryDef },
+}
+
+export type InventoryState = {
+	Items: { [string]: Item },
+	Hotbar: { [number]: string? },
+	Storage: { string },
+	EquippedItemUUID: string?,
+	Weight: number,
+	Settings: Settings,
+}
+
+export type AddOptions = {
+	Placement: PlacementMode?,
+	Slot: number?,
+	SlotRef: SlotRef?,
+}

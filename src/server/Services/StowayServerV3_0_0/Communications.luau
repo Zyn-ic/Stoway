@@ -13,7 +13,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Remotes = require(ReplicatedStorage.StowayRemotes)
+local Remotes = require(ReplicatedStorage.Shared.Stoway.StowayRemotes)
 
 local Protocol = require("./Protocol")
 local _Types = require("./CoreStore/Types")

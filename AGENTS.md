@@ -16,6 +16,14 @@ Stoway is a Roblox inventory framework. The core is a pure Luau inventory engine
 
 **Old server code:** `src/server/StowayServerV1_2/` (legacy reference, may be deleted)
 
+**Client (StowayClientV3):** `src/client/StowayClientV3/` — Fusion 0.3.1 client. Mapped to `StarterPlayer.StarterPlayerScripts` via `default.project.json`. Core phase: settings-driven hotbar + sectioned storage from mock data. Drag, multi-platform, hooks come later.
+
+**Shared (Stoway):** `ReplicatedStorage/Shared/Stoway/` — shared types, settings defaults, colors, Result type, StowayRemotes wire.
+
+**Vendored Fusion:** `ReplicatedStorage/Packages/fusion/` (Fusion 0.3.1, copied from wally install; do NOT wally install again or the root `Packages/` folder will reappear).
+
+**Skin prefabs (Studio-only, NOT in the repo):** `ReplicatedStorage/Stoway/GUI/<SkinName>/StowayGui/` — `Stoway` ScreenGui (Hotbar/Backpack frames, BackpackStuff), `Slot/template` slot prefab (slotbutton, stackcount, slotnumber, selecticon, rarityframe). The GUI lives in the .rbxl only; a `rojo build` output has no GUI and the client warns + skips views.
+
 ---
 
 ## Running Tests
@@ -132,7 +140,24 @@ return ModuleName
 
 | File | Purpose | Public API |
 |------|---------|-----------|
-| `init.luau` | Client entry point | Local cache, event listeners, optimistic updates, UI signals |
+| `init.client.luau` | LocalScript entry | StowayClient.Init() |
+| `init.luau` | Client entry point | Init (seed mock data, resolve skin, create views) |
+| `Core/ClientStore.luau` | Fusion root scope + reactive atoms (Items/Hotbar/Storage/Weight/Settings) | Scope, Value atoms, Init, GetState, GetSettings, GetItem, GetUuidAt, GetSlotOf |
+| `Core/MockData.luau` | Seeded inventory for the pure client test | build() |
+| `Skin/DefaultSkin.luau` | Skin prefab resolver (Stoway.GUI folder) | load(playerGui, skinName) |
+| `Slot/SlotView.luau` | Slot hydration: image, stack count, rarity frame, keybind, equipped, packing | Create(scope, props) |
+| `Views/HotbarView.luau` | Hotbar 1..MaxHotbarSlots, Static holes / Dynamic packing | Create(scope, skin, store) |
+| `Views/StorageView.luau` | Sectioned storage: type groups + collapse headers + weight label | Create(scope, skin, store) |
+
+### Shared (Stoway layer)
+
+| File | Purpose | Public API |
+|------|---------|-----------|
+| `Types.luau` | Pure type exports (no runtime) | Types only |
+| `Settings.luau` | Settings defaults mirroring CoreStore State.luau + Categories | getDefault, getKnownTypes |
+| `Colors.luau` | Rarity accent colors | getRarityColor, getTypeColor |
+| `Result.luau` | Result type shared with server | Result |
+| `StowayRemotes.luau` | Remote event definitions (wire) | Wire |
 
 ### CoreStore (Pure Luau Engine)
 

@@ -14,7 +14,7 @@ how it changed from a strict (closed) schema to an open dynamic dict.
   transmits automatically — **no schema edits needed ever**.
 - On the client, read metadata values **by convention**, not by runtime
   type-checking.
-- Only `ReplicatedStorage/StowayRemotes.luau` (the wire) is open. CoreStore
+- Only `ReplicatedStorage/Shared/Stoway/StowayRemotes.luau` (the wire) is open. CoreStore
   storage logic is untouched.
 
 ---
