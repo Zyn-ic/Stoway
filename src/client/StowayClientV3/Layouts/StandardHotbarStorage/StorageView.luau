@@ -41,7 +41,10 @@ local StorageView = {}
 -- CONSTANTS --
 -----------------------------
 
-local CELL_SIZE = UDim2.fromOffset(96, 120)
+local CELL_PADDING = 8
+local CELL_HEIGHT = 96
+local TARGET_COLUMNS = 5
+local MIN_CELL_WIDTH = 48
 local HEADER_HEIGHT = 26
 local FALLBACK_HEADER_COLOR = Color3.fromRGB(80, 80, 90)
 
@@ -95,6 +98,23 @@ function StorageView.Create(scope: Fusion.Scope<any>, skin: CoreTypes.SkinHandle
 	end
 	local scrollingFrame = skin.ScrollingFrame
 	local slotTemplate = skin.SlotTemplate
+
+	-- Responsive cell width: always TARGET_COLUMNS per row, regardless of
+	-- screen size. The backpack frame is a fixed % of screen width, so the
+	-- ScrollingFrame's width changes with it — recompute the cell on resize.
+	local cellWidth = scope:Value(MIN_CELL_WIDTH)
+	local function updateCellWidth()
+		local width = scrollingFrame.AbsoluteSize.X
+		if width > 0 then
+			cellWidth:set(math.max(MIN_CELL_WIDTH, (width - (TARGET_COLUMNS - 1) * CELL_PADDING) / TARGET_COLUMNS))
+		end
+	end
+	table.insert(scope, scrollingFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateCellWidth))
+	task.defer(updateCellWidth)
+
+	local cellSize = scope:Computed(function(use)
+		return UDim2.fromOffset(use(cellWidth), CELL_HEIGHT)
+	end)
 
 	local groupedSlots = scope:Computed(function(use)
 		local settings = use(store.Settings)
@@ -210,8 +230,8 @@ function StorageView.Create(scope: Fusion.Scope<any>, skin: CoreTypes.SkinHandle
 
 		groupScope:New("UIGridLayout") {
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			CellSize = CELL_SIZE,
-			CellPadding = UDim2.fromOffset(8, 8),
+			CellSize = cellSize,
+			CellPadding = UDim2.fromOffset(CELL_PADDING, CELL_PADDING),
 			HorizontalAlignment = Enum.HorizontalAlignment.Left,
 			VerticalAlignment = Enum.VerticalAlignment.Top,
 			Parent = slotGrid,
@@ -226,7 +246,9 @@ function StorageView.Create(scope: Fusion.Scope<any>, skin: CoreTypes.SkinHandle
 				Store = store,
 			})
 			slotFrame.LayoutOrder = listIndex
-			slotFrame.Size = CELL_SIZE
+			groupScope:Hydrate(slotFrame) {
+				Size = cellSize,
+			}
 			return listIndex, record
 		end)
 

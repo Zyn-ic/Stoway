@@ -171,6 +171,40 @@ function Query.formatWeight(weight: number, limit: number): string
 	return `{weight}/{limit}`
 end
 
+-- Compact stack count. Below 1000 keeps the "x" ("5x", "999x"); from 1k up
+-- the "x" is dropped and the number is abbreviated ("1.3k", "2.3m",
+-- "200m", "200.3k") so the badge never shows a long digit list. One
+-- decimal is shown only when the fractional part is non-zero; rounding
+-- across a unit boundary (999.95k -> 1m) escalates to the next suffix.
+function Query.formatAmount(amount: number): string
+	if amount < 1000 then
+		return tostring(amount) .. "x"
+	end
+	local units = {
+		{ threshold = 1e9, suffix = "b" },
+		{ threshold = 1e6, suffix = "m" },
+		{ threshold = 1e3, suffix = "k" },
+	}
+	for _, unit in units do
+		if amount >= unit.threshold then
+			local scaled = math.floor(amount / unit.threshold * 10 + 0.5) / 10
+			if scaled >= 1000 then
+				if unit.suffix == "k" then
+					return "1m"
+				elseif unit.suffix == "m" then
+					return "1b"
+				end
+				return string.format("%.0f", scaled) .. unit.suffix
+			end
+			if scaled == math.floor(scaled) then
+				return string.format("%.0f", scaled) .. unit.suffix
+			end
+			return string.format("%.1f", scaled) .. unit.suffix
+		end
+	end
+	return tostring(amount)
+end
+
 -- Case-insensitive substring match against Id and Metadata.Description. An
 -- empty search always matches (so "no search" shows everything).
 function Query.matchesSearch(item: Types.Item?, searchText: string): boolean

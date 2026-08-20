@@ -99,16 +99,26 @@ function SlotView.Create(scope: Fusion.Scope<any>, props: SlotProps): Frame
 	end
 
 	if stackcount then
+		-- Storage slots are small square cells inside a UIGridLayout; the
+		-- template's badge hangs below the slot (Position Y = 1.05), which
+		-- overlaps the next row / next group header and gets clipped for the
+		-- last row. Pin it to the bottom-right INSIDE the cell instead.
+		if props.SlotType == "Storage" then
+			stackcount.AnchorPoint = Vector2.new(1, 1)
+			stackcount.Position = UDim2.new(1, -3, 1, -3)
+			stackcount.Size = UDim2.fromOffset(30, 22)
+			stackcount.ZIndex = 3
+		end
 		scope:Hydrate(stackcount) {
 			Visible = scope:Computed(function(use)
 				local item = use(currentItem)
 				local settings = use(store.Settings)
-				return settings ~= nil and settings.CanStack and item ~= nil and item.Amount > 1
+				return settings ~= nil and settings.CanStack and item ~= nil
 			end),
 			Text = scope:Computed(function(use)
 				local item = use(currentItem)
-				if item and item.Amount > 1 then
-					return tostring(item.Amount) .. "x"
+				if item then
+					return Query.formatAmount(item.Amount)
 				end
 				return ""
 			end),

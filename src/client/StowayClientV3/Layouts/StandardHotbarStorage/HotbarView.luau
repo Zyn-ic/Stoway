@@ -39,6 +39,15 @@ function HotbarView.Create(scope: Fusion.Scope<any>, skin: CoreTypes.SkinHandle,
 	local hotbarFrame = skin.HotbarFrame
 	local slotTemplate = skin.SlotTemplate
 
+	-- The prefab's UIListLayout defaults to SortOrder.Name, which puts
+	-- "Hotbar-10" between "Hotbar-1" and "Hotbar-2" lexicographically. The
+	-- engine owns slot ordering (LayoutOrder == packed/raw slot index), so
+	-- force the container to honor it.
+	local hotbarListLayout = hotbarFrame:FindFirstChildOfClass("UIListLayout")
+	if hotbarListLayout then
+		hotbarListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	end
+
 	local isDynamic = scope:Computed(function(use)
 		return Query.isDynamicHotbar(use(store.Settings))
 	end)
@@ -53,7 +62,9 @@ function HotbarView.Create(scope: Fusion.Scope<any>, skin: CoreTypes.SkinHandle,
 		end)
 
 		local keybind = slotScope:Computed(function(use)
-			return tostring(use(packOrder))
+			-- Keyboard row is 1..9, 0: the 10th slot binds to the "0" key.
+			local display = use(packOrder)
+			return if display == 10 then "0" else tostring(display)
 		end)
 
 		local visibility = slotScope:Computed(function(use)
