@@ -3,9 +3,11 @@
 --@author: yyumchi
 --@date: 2026-08-19
 --[[@description:
-	Hydrates one slot frame cloned from the skin's Slot/template: item image,
-	stack count (CanStack-aware), rarity frame color, equipped indicator,
-	hotbar keybinds, and Dynamic hotbar packing.
+	Hydrates one slot Frame cloned from the skin's Slot template: item image,
+	stack count (CanStack-aware), rarity frame color, equipped indicator, and
+	an optional keybind label. Shared by every HotbarType layout engine —
+	Carousel and Utility Belt (Phase 5/6) call this exact same module instead
+	of duplicating slot-hydration logic per layout.
 ]]
 -----------------------------
 -- VARIABLES --
@@ -13,9 +15,11 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Fusion = require(ReplicatedStorage.Packages.fusion)
-local SharedTypes = require(ReplicatedStorage.Shared.Stoway.Types)
 local Colors = require(ReplicatedStorage.Shared.Stoway.Colors)
-local ClientStore = require(script.Parent.Parent.Core.ClientStore)
+
+local CoreTypes = require(script.Parent.Parent.CoreStore.Types)
+local Query = require(script.Parent.Parent.CoreStore.Query)
+local ClientStore = require(script.Parent.Parent.Controller.ClientStore)
 
 local SlotView = {}
 
@@ -24,11 +28,11 @@ local SlotView = {}
 -----------------------------
 
 export type SlotProps = {
-	SlotType: SharedTypes.SlotType,
+	SlotType: CoreTypes.SlotType,
 	SlotIndex: number,
 	Parent: Instance,
 	Template: Frame,
-	KeybindText: string?,
+	Store: typeof(ClientStore),
 	ShowKeybind: boolean?,
 	PackOrder: Fusion.Computed<number>?,
 	Keybind: Fusion.Computed<string>?,
@@ -39,10 +43,15 @@ export type SlotProps = {
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
-function SlotView.Create(scope: Fusion.Scope, props: SlotProps): Frame
+function SlotView.Create(scope: Fusion.Scope<any>, props: SlotProps): Frame
 	local slotFrame = props.Template:Clone()
 	slotFrame.Name = props.SlotType .. "-" .. tostring(props.SlotIndex)
 	slotFrame.Parent = props.Parent
+	-- Not built via scope:New, so it isn't auto-tracked — register it
+	-- manually so this scope's doCleanup() destroys it too.
+	table.insert(scope, slotFrame)
+
+	local store = props.Store
 
 	local slotbutton = slotFrame:FindFirstChild("slotbutton")
 	local stackcount = slotFrame:FindFirstChild("stackcount")
@@ -52,17 +61,13 @@ function SlotView.Create(scope: Fusion.Scope, props: SlotProps): Frame
 
 	local slotUUID = scope:Computed(function(use)
 		if props.SlotType == "Hotbar" then
-			return use(ClientStore.Hotbar)[props.SlotIndex]
+			return Query.getHotbarUUID(use(store.Hotbar), props.SlotIndex)
 		end
-		return use(ClientStore.Storage)[props.SlotIndex]
+		return Query.getStorageUUID(use(store.Storage), props.SlotIndex)
 	end)
 
 	local currentItem = scope:Computed(function(use)
-		local uuid = use(slotUUID)
-		if not uuid then
-			return nil
-		end
-		return use(ClientStore.Items)[uuid]
+		return Query.getItem(use(store.Items), use(slotUUID))
 	end)
 
 	local hasItem = scope:Computed(function(use)
@@ -70,17 +75,14 @@ function SlotView.Create(scope: Fusion.Scope, props: SlotProps): Frame
 	end)
 
 	local isEquipped = scope:Computed(function(use)
-		local equipped = use(ClientStore.EquippedItemUUID)
-		local uuid = use(slotUUID)
-		return equipped ~= nil and uuid ~= nil and equipped == uuid
+		return Query.isEquipped(use(store.EquippedItemUUID), use(slotUUID))
 	end)
 
 	if slotbutton then
 		scope:Hydrate(slotbutton) {
 			Image = scope:Computed(function(use)
 				local item = use(currentItem)
-				local metadata = item and item.Metadata
-				return if metadata then metadata.Image or "" else ""
+				return if item and item.Metadata then item.Metadata.Image or "" else ""
 			end),
 			Visible = hasItem,
 		}
@@ -90,7 +92,7 @@ function SlotView.Create(scope: Fusion.Scope, props: SlotProps): Frame
 		scope:Hydrate(rarityframe) {
 			ImageColor3 = scope:Computed(function(use)
 				local item = use(currentItem)
-				return Colors.getRarityColor(item and item.Metadata.Rarity)
+				return Colors.getRarityColor(item and item.Metadata and item.Metadata.Rarity)
 			end),
 			Visible = hasItem,
 		}
@@ -100,7 +102,7 @@ function SlotView.Create(scope: Fusion.Scope, props: SlotProps): Frame
 		scope:Hydrate(stackcount) {
 			Visible = scope:Computed(function(use)
 				local item = use(currentItem)
-				local settings = use(ClientStore.Settings)
+				local settings = use(store.Settings)
 				return settings ~= nil and settings.CanStack and item ~= nil and item.Amount > 1
 			end),
 			Text = scope:Computed(function(use)
@@ -115,7 +117,7 @@ function SlotView.Create(scope: Fusion.Scope, props: SlotProps): Frame
 
 	if slotnumber then
 		scope:Hydrate(slotnumber) {
-			Text = props.Keybind or props.KeybindText or "",
+			Text = props.Keybind or "",
 			Visible = props.ShowKeybind == true,
 		}
 	end

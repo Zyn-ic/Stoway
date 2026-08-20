@@ -3,9 +3,12 @@
 --@author: yyumchi
 --@date: 2026-08-19
 --[[@description:
-	StowayClientV3 — Fusion client entry point. Builds the active UiSkin GUI
-	from settings + mock data (core phase: settings-driven hotbar and
-	sectioned storage; drag/multi-platform/hooks come later).
+	StowayClientV3 — Fusion client entry point. Core phase only: seeds
+	ClientStore from mock data and mounts the StandardHotbarStorage layout
+	under the DefaultModern skin via LayoutManager. No networking, no
+	dragging, no gamepad/hooks yet — see Controller/LayoutManager.luau and
+	the Layouts/ folder for how a Carousel or Utility Belt HotbarType slots
+	in later without touching this file, CoreStore, or Controller.
 ]]
 -----------------------------
 -- VARIABLES --
@@ -13,13 +16,10 @@
 
 local Players = game:GetService("Players")
 local StarterGui = game:GetService("StarterGui")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local ClientStore = require(script.Core.ClientStore)
-local MockData = require(script.Core.MockData)
-local DefaultSkin = require(script.Skin.DefaultSkin)
-local HotbarView = require(script.Views.HotbarView)
-local StorageView = require(script.Views.StorageView)
+local ClientStore = require(script.Controller.ClientStore)
+local LayoutManager = require(script.Controller.LayoutManager)
+local MockData = require(script.Mock.MockData)
 
 local StowayClient = {}
 
@@ -32,21 +32,14 @@ function StowayClient.Init()
 	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
 
 	local player = Players.LocalPlayer
-	local playerGui = player:WaitForChild("PlayerGui")
+	local playerGui = player:WaitForChild("PlayerGui") :: PlayerGui
 
 	-- Seed local state from mock data (pure client test: no server round trip).
 	ClientStore.Init(MockData.build())
 
-	local settings = ClientStore.GetSettings()
-	local skin = DefaultSkin.load(playerGui, settings and settings.UiSkin or "Default")
+	LayoutManager.SetLayout(ClientStore.RootScope, playerGui, ClientStore, "StandardHotbarStorage", "DefaultModern")
 
-	-- Layout scope: torn down on skin/layout swaps.
-	local scope = ClientStore.Scope:deriveScope()
-
-	HotbarView.Create(scope, skin, ClientStore)
-	StorageView.Create(scope, skin, ClientStore)
-
-	print("[StowayClientV3] core initialized")
+	print("[StowayClientV3] core initialized (mock data, StandardHotbarStorage / DefaultModern)")
 end
 
 -----------------------------

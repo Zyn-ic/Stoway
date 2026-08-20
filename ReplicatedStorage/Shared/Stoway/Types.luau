@@ -59,6 +59,13 @@ export type Settings = {
 	DefaultDroppable: boolean,
 	UiSkin: string,
 	Categories: { [string]: CategoryDef },
+	-- Client/UI-only demo toggle: when true, Storage renders as collapsible
+	-- groups by Metadata.Type (StorageView); when false, Storage renders as
+	-- a single flat, ungrouped list straight into the backpack
+	-- ScrollingFrame. For now this is a runtime-toggleable setting so the
+	-- grouped view is just one example of settings-driven sort/filter —
+	-- later a given Layout/Skin may bake this in rather than exposing it.
+	GroupByCategory: boolean,
 }
 
 export type InventoryState = {
@@ -75,3 +82,5 @@ export type AddOptions = {
 	Slot: number?,
 	SlotRef: SlotRef?,
 }
+
+return {}

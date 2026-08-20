@@ -40,6 +40,10 @@ local DEFAULT_SETTINGS: Types.Settings = {
 	DefaultDroppable = true,
 	UiSkin = "Default",
 	Categories = DEFAULT_CATEGORIES,
+	-- Demo toggle (see Types.luau) — on by default so the grouped/collapsible
+	-- storage view is what you see out of the box; flip to false to render
+	-- the plain ungrouped backpack ScrollingFrame instead.
+	GroupByCategory = true,
 }
 
 -----------------------------

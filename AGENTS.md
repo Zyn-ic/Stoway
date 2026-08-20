@@ -16,7 +16,7 @@ Stoway is a Roblox inventory framework. The core is a pure Luau inventory engine
 
 **Old server code:** `src/server/StowayServerV1_2/` (legacy reference, may be deleted)
 
-**Client (StowayClientV3):** `src/client/StowayClientV3/` — Fusion 0.3.1 client. Mapped to `StarterPlayer.StarterPlayerScripts` via `default.project.json`. Core phase: settings-driven hotbar + sectioned storage from mock data. Drag, multi-platform, hooks come later.
+**Client (StowayClientV3, branch `client-v3-sonnet`):** `src/client/StowayClientV3/` — Fusion 0.3.1 client. Mapped to `StarterPlayer.StarterPlayerScripts` via `default.project.json`. Core phase: settings-driven hotbar + sectioned storage from mock data. Drag, multi-platform, hooks come later. Structured around the master plan's `HotbarType` vs `UiSkin` split: `CoreStore/` (pure state+query), `Controller/` (Fusion RootScope + `LayoutManager`), `Layouts/<HotbarType>/` (render engines), `Skins/<SkinName>/` (GUI prefab loaders), `Slot/SlotView.luau` (shared across layouts). See `src/client/StowayClientV3/README.md`.
 
 **Shared (Stoway):** `ReplicatedStorage/Shared/Stoway/` — shared types, settings defaults, colors, Result type, StowayRemotes wire.
 
@@ -136,18 +136,23 @@ return ModuleName
 | `init.luau` | Orchestration facade | Init, createPlayer, get, removePlayer, getAll, registerAdapter, 12 operation routes |
 | `Communications.luau` | Network adapter + gatekeeper | Init(Stoway, NetworkService, folder), QuickNet handlers, validation, replicate decisions, Stoway adapter |
 
-### StowayClient (Client Layer)
+### StowayClient (Client Layer, branch `client-v3-sonnet`)
 
 | File | Purpose | Public API |
 |------|---------|-----------|
 | `init.client.luau` | LocalScript entry | StowayClient.Init() |
-| `init.luau` | Client entry point | Init (seed mock data, resolve skin, create views) |
-| `Core/ClientStore.luau` | Fusion root scope + reactive atoms (Items/Hotbar/Storage/Weight/Settings) | Scope, Value atoms, Init, GetState, GetSettings, GetItem, GetUuidAt, GetSlotOf |
-| `Core/MockData.luau` | Seeded inventory for the pure client test | build() |
-| `Skin/DefaultSkin.luau` | Skin prefab resolver (Stoway.GUI folder) | load(playerGui, skinName) |
-| `Slot/SlotView.luau` | Slot hydration: image, stack count, rarity frame, keybind, equipped, packing | Create(scope, props) |
-| `Views/HotbarView.luau` | Hotbar 1..MaxHotbarSlots, Static holes / Dynamic packing | Create(scope, skin, store) |
-| `Views/StorageView.luau` | Sectioned storage: type groups + collapse headers + weight label | Create(scope, skin, store) |
+| `init.luau` | Client entry point | Init (seed mock data, LayoutManager.SetLayout) |
+| `CoreStore/Types.luau` | Client-local type re-exports + SkinHandle/GroupedStorage shapes | Types only |
+| `CoreStore/State.luau` | Settings-derived defaults (pure) | getMaxHotbarSlots, slotIndices, isBackpackEnabled |
+| `CoreStore/Query.luau` | Pure lookups/derivations (no Fusion/Instances) | getItem, findSlotByUUID, packedHotbarOrder, isHotbarSlotVisible, groupStorageByType, orderedGroupKeys, formatWeight |
+| `Controller/ClientStore.luau` | Fusion RootScope + reactive atoms (Items/Hotbar/Storage/Weight/Settings) | RootScope, Value atoms, Init, GetSnapshot, GetSettings, GetItem, GetSlotOf |
+| `Controller/LayoutManager.luau` | Mounts a `Layouts[]` engine against a `Skins[]` loader; owns LayoutScope lifecycle | SetLayout, Teardown, GetCurrentLayout |
+| `Layouts/StandardHotbarStorage/init.luau` | HotbarType engine: Static/Dynamic hotbar + sectioned storage | Mount(scope, skin, store) |
+| `Layouts/StandardHotbarStorage/HotbarView.luau` | Hotbar 1..MaxHotbarSlots, Static holes / Dynamic packing | Create(scope, skin, store) |
+| `Layouts/StandardHotbarStorage/StorageView.luau` | Sectioned storage: type groups + collapse headers + weight label | Create(scope, skin, store) |
+| `Skins/DefaultModern/init.luau` | UiSkin prefab loader (`ReplicatedStorage.Stoway.GUI.<name>`) | Load(scope, playerGui, skinAssetName) |
+| `Slot/SlotView.luau` | Slot hydration: image, stack count, rarity frame, keybind, equipped, packing. Shared across all layouts. | Create(scope, props) |
+| `Mock/MockData.luau` | Seeded inventory for the pure client test | build() |
 
 ### Shared (Stoway layer)
 

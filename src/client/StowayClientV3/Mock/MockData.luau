@@ -3,8 +3,13 @@
 --@author: yyumchi
 --@date: 2026-08-19
 --[[@description:
-	Seeded mock inventory for the pure client test. Mirrors the server state
-	shape (Items/Hotbar/Storage/Weight/Settings) with readable UUIDs.
+	Seeded mock inventory snapshot for running the client with no server
+	round trip. Mirrors InventoryState exactly, so swapping this for a real
+	NetworkReceiver payload later is a one-line change in init.luau.
+
+	Includes one "Trinket" item deliberately outside Settings.Categories, to
+	exercise StorageView's uncategorized-group fallback path (falls back to
+	the raw type name, sorts after every known category).
 ]]
 -----------------------------
 -- VARIABLES --
@@ -52,6 +57,7 @@ function MockData.build(): SharedTypes.InventoryState
 		["leather-1"] = item("leather-1", "Leather", 2, "Common", "Material"),
 		["greatshield-1"] = item("greatshield-1", "Greatshield", 1, "Epic", "Armor"),
 		["platehelm-1"] = item("platehelm-1", "PlateHelm", 1, "Rare", "Armor"),
+		["mystery-charm-1"] = item("mystery-charm-1", "MysteryCharm", 1, "Special", "Trinket"),
 	}
 
 	return {
@@ -64,9 +70,10 @@ function MockData.build(): SharedTypes.InventoryState
 		Storage = {
 			"steel-dagger-1", "health-potion-2", "mana-potion-1",
 			"iron-ingot-1", "leather-1", "greatshield-1", "platehelm-1",
+			"mystery-charm-1",
 		},
 		EquippedItemUUID = "iron-sword-1",
-		Weight = 21,
+		Weight = 22,
 		Settings = Settings.getDefault(),
 	}
 end
