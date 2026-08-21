@@ -26,12 +26,31 @@ Colors.RarityColors = {
 	Special = Color3.fromRGB(240, 240, 240),
 }
 
+-- Ascending rank for Settings.SortOrder == "Rarity". Unknown/nil rarities
+-- rank 0, sorting after every known tier.
+Colors.RarityOrder = {
+	Common = 1,
+	Uncommon = 2,
+	Rare = 3,
+	Epic = 4,
+	Legendary = 5,
+	Mythic = 6,
+	Special = 7,
+}
+
 -----------------------------
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
 function Colors.getRarityColor(rarity: string?): Color3
 	return Colors.RarityColors[rarity] or Color3.fromRGB(80, 80, 80)
+end
+
+function Colors.getRarityRank(rarity: string?): number
+	if not rarity then
+		return 0
+	end
+	return Colors.RarityOrder[rarity] or 0
 end
 
 function Colors.getTypeColor(itemType: string?): Color3

@@ -3,18 +3,8 @@
 --@author: yyumchi
 --@date: 2026-08-19
 --[[@description:
-	Orchestration layer (Layer 2): mounts the active HotbarType layout engine
-	against the active UiSkin, and owns the LayoutScope lifecycle so swapping
-	either one tears down every visual instance, spring, and listener from
-	the previous layout before the next one mounts.
-
-	hotbarTypeKey selects a Layouts[] engine (today: StandardHotbarStorage;
-	later: CarouselHotbar, UtilityBelt). skinKey selects a Skins[] loader,
-	which resolves Settings.UiSkin to a ReplicatedStorage.Stoway.GUI.<name>
-	prefab folder. The two are independent — this is the HotbarType vs UiSkin
-	split from section 1 of the master plan. Adding a new layout or skin
-	later only means adding an entry to the tables below; nothing in
-	CoreStore, ClientStore, or init.luau needs to change.
+	Mounts a HotbarType layout with a UiSkin and manages the LayoutScope
+	lifecycle. HotbarType and UiSkin are independent.
 ]]
 -----------------------------
 -- VARIABLES --
@@ -81,8 +71,7 @@ function LayoutManager.SetLayout(
 	engine.Mount(layoutScope, skin, store)
 end
 
--- Tears down the current LayoutScope: every Instance, Computed, and event
--- listener created under it (skin GUI clone included) gets cleaned up.
+-- Cleans up the current layout scope and its instances.
 function LayoutManager.Teardown()
 	if currentLayoutScope then
 		(currentLayoutScope :: any):doCleanup()

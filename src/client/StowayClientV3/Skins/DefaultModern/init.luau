@@ -3,33 +3,8 @@
 --@author: yyumchi
 --@date: 2026-08-19
 --[[@description:
-	UiSkin loader for the StandardHotbarStorage layout. Resolves an asset
-	folder at ReplicatedStorage.Stoway.GUI.<skinAssetName>, clones its Stoway
-	ScreenGui into the player's PlayerGui, and returns a SkinHandle pointing
-	at the named pieces StandardHotbarStorage's views expect.
-
-	Prefab contract (matches the GUI already placed under
-	ReplicatedStorage.Stoway.GUI.Default in this project):
-
-		ReplicatedStorage.Stoway.GUI.<skinAssetName>/
-			StowayGui (Folder)
-				Stoway (ScreenGui)      -> cloned into PlayerGui
-					Hotbar (Frame)         -> slot container (UIListLayout, horizontal)
-					Backpack (Frame)       -> storage container
-						ScrollingFrame (ScrollingFrame) -> group containers' parent
-						Weight (TextLabel)
-						SearchFilter (TextBox)
-					BackpackStuff (ImageButton)
-				Slot (Folder)            -> slot prefab
-					template (Frame)         -> slotbutton, stackcount, slotnumber,
-					                            selecticon, rarityframe
-
-	Any UiSkin swapped in for this same layout (DarkModern, FantasyWood, ...)
-	must satisfy this same contract under its own GUI.<name> folder — only
-	the visuals inside change, never the names the views look up.
-
-	Returns nil (with a warning) if the asset or a required piece is
-	missing — e.g. a build without the GUI folder exported/synced yet.
+	Loads the DefaultModern skin. Clones the Stoway ScreenGui and returns
+	handles to its frames for the layout.
 ]]
 -----------------------------
 -- VARIABLES --
@@ -46,9 +21,7 @@ local DefaultModern = {}
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
--- scope: the LayoutScope owning this mount. The cloned ScreenGui is
--- registered on it, so LayoutManager tearing down the layout also destroys
--- the GUI instance — no separate cleanup path needed.
+-- Loads the skin GUI onto the given scope.
 function DefaultModern.Load(scope: Fusion.Scope<any>, playerGui: PlayerGui, skinAssetName: string): CoreTypes.SkinHandle?
 	local guiRoot = ReplicatedStorage:FindFirstChild("Stoway")
 	local guiFolder = guiRoot and guiRoot:FindFirstChild("GUI")

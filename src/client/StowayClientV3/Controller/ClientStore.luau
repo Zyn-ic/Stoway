@@ -3,15 +3,8 @@
 --@author: yyumchi
 --@date: 2026-08-19
 --[[@description:
-	Fusion root state (Layer 1 of the client: reactive mirror of the server
-	InventoryState). Holds the RootScope and every top-level atom. Lookup
-	logic itself lives in CoreStore/Query.luau (pure); this module wires
-	Fusion around those pure functions and exposes peek-based getters for
-	one-shot reads (network handlers, debug prints, etc).
-
-	RootScope is never cleaned up for the lifetime of the client session —
-	only LayoutScope (see Controller/LayoutManager.luau) gets torn down and
-	recreated when the active HotbarType/UiSkin changes.
+	Reactive state mirror of the server InventoryState. Holds RootScope and
+	top-level atoms. Pure lookups are in CoreStore/Query.luau.
 ]]
 -----------------------------
 -- VARIABLES --
@@ -46,9 +39,7 @@ ClientStore.Settings = Scope:Value(nil :: Types.Settings?)
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
--- Seeds every atom from a full snapshot (mock data today; the real
--- NetworkReceiver's initial replication payload once Phase 1 networking
--- lands — this is a one-line swap in init.luau, not a rewrite here).
+-- Populates atoms from a full snapshot.
 function ClientStore.Init(snapshot: Types.InventoryState)
 	ClientStore.Items:set(snapshot.Items)
 	ClientStore.Hotbar:set(snapshot.Hotbar)

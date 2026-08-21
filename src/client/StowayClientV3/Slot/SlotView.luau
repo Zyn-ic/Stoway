@@ -3,11 +3,8 @@
 --@author: yyumchi
 --@date: 2026-08-19
 --[[@description:
-	Hydrates one slot Frame cloned from the skin's Slot template: item image,
-	stack count (CanStack-aware), rarity frame color, equipped indicator, and
-	an optional keybind label. Shared by every HotbarType layout engine —
-	Carousel and Utility Belt (Phase 5/6) call this exact same module instead
-	of duplicating slot-hydration logic per layout.
+	Hydrates a slot frame from the skin template. Handles icon, stack
+	count, rarity color, equipped state and keybind. Used by all layouts.
 ]]
 -----------------------------
 -- VARIABLES --
@@ -47,8 +44,6 @@ function SlotView.Create(scope: Fusion.Scope<any>, props: SlotProps): Frame
 	local slotFrame = props.Template:Clone()
 	slotFrame.Name = props.SlotType .. "-" .. tostring(props.SlotIndex)
 	slotFrame.Parent = props.Parent
-	-- Not built via scope:New, so it isn't auto-tracked — register it
-	-- manually so this scope's doCleanup() destroys it too.
 	table.insert(scope, slotFrame)
 
 	local store = props.Store
@@ -99,15 +94,21 @@ function SlotView.Create(scope: Fusion.Scope<any>, props: SlotProps): Frame
 	end
 
 	if stackcount then
-		-- Storage slots are small square cells inside a UIGridLayout; the
-		-- template's badge hangs below the slot (Position Y = 1.05), which
-		-- overlaps the next row / next group header and gets clipped for the
-		-- last row. Pin it to the bottom-right INSIDE the cell instead.
+		-- Keep badge inside the cell and tilted for readability.
 		if props.SlotType == "Storage" then
 			stackcount.AnchorPoint = Vector2.new(1, 1)
 			stackcount.Position = UDim2.new(1, -3, 1, -3)
 			stackcount.Size = UDim2.fromOffset(30, 22)
 			stackcount.ZIndex = 3
+			stackcount.Rotation = -15
+		elseif props.SlotType == "Hotbar" then
+			stackcount.AnchorPoint = Vector2.new(1, 1)
+			stackcount.Position = UDim2.new(1, -2, 1, -2)
+			stackcount.Size = UDim2.fromOffset(32, 18)
+			stackcount.ZIndex = 3
+			stackcount.Rotation = -15
+		else
+			stackcount.Rotation = -15
 		end
 		scope:Hydrate(stackcount) {
 			Visible = scope:Computed(function(use)

@@ -3,17 +3,14 @@
 --@author: yyumchi
 --@date: 2026-08-19
 --[[@description:
-	Pure query/derivation logic for the client inventory mirror. Every
-	function takes plain data in and returns plain data out — no Fusion
-	StateObjects, no Instances, no game/Roblox services. Same philosophy as
-	the server's CoreStore/Query.luau: testable in isolation, reused by the
-	reactive Controller layer through Fusion:Computed wrappers.
+	Pure queries over the client inventory mirror. No Fusion or Instances.
 ]]
 -----------------------------
 -- VARIABLES --
 -----------------------------
 
 local Types = require(script.Parent.Types)
+local Colors = require(game:GetService("ReplicatedStorage").Shared.Stoway.Colors)
 
 local Query = {}
 
@@ -40,9 +37,7 @@ function Query.isEquipped(equippedUUID: string?, uuid: string?): boolean
 	return equippedUUID ~= nil and uuid ~= nil and equippedUUID == uuid
 end
 
--- O(hotbarSize + storageSize) linear scan — fine at client-side UUID counts.
--- The server keeps the real O(1) LocationByUUID index; the client doesn't
--- need one until interactions (drag/move) land in a later phase.
+-- Linear scan over hotbar and storage.
 function Query.findSlotByUUID(
 	hotbar: { [number]: string? },
 	storage: { string },
@@ -65,10 +60,7 @@ function Query.isDynamicHotbar(settings: Types.Settings?): boolean
 	return settings ~= nil and settings.HotbarType == "Dynamic"
 end
 
--- Visible left-packed position of a Dynamic hotbar slot (1-indexed, among
--- occupied slots only). Static hotbars are identity-mapped (holes allowed).
--- Empty Dynamic slots resolve past the end (1000 + slot) so they stay
--- LayoutOrder-sortable without ever colliding with a real packed position.
+-- Packed position for Dynamic hotbars; holes map past the end.
 function Query.packedHotbarOrder(
 	hotbar: { [number]: string? },
 	items: { [string]: Types.Item },
@@ -104,13 +96,7 @@ function Query.isHotbarSlotVisible(
 	return uuid ~= nil and items[uuid] ~= nil
 end
 
--- Buckets Storage by Metadata.Type. Storage's own array order is preserved
--- within each bucket — this is a presentation-only grouping, never a resort
--- of the underlying data. Collapsing a group hides its slot frames; it never
--- moves anything out of Storage or changes what the server thinks is there.
---
--- groupByCategory = false collapses everything into one bucket keyed by
--- Query.UNGROUPED_KEY, in Storage order — the "pure" flat backpack list.
+-- Groups Storage by item type for display; original order preserved.
 Query.UNGROUPED_KEY = ""
 
 function Query.groupStorageByType(
@@ -140,9 +126,7 @@ function Query.groupStorageByType(
 	return groups
 end
 
--- Deterministic group display order: known categories sorted by
--- Settings.Categories[type].Order ascending, then any unknown/uncategorized
--- types alphabetically after all known ones.
+-- Group order by category Order, then alphabetically.
 function Query.orderedGroupKeys(
 	groups: Types.GroupedStorage,
 	categories: { [string]: Types.CategoryDef }?
@@ -171,11 +155,7 @@ function Query.formatWeight(weight: number, limit: number): string
 	return `{weight}/{limit}`
 end
 
--- Compact stack count. Below 1000 keeps the "x" ("5x", "999x"); from 1k up
--- the "x" is dropped and the number is abbreviated ("1.3k", "2.3m",
--- "200m", "200.3k") so the badge never shows a long digit list. One
--- decimal is shown only when the fractional part is non-zero; rounding
--- across a unit boundary (999.95k -> 1m) escalates to the next suffix.
+-- Abbreviated stack count (e.g. 1.3k, 2m).
 function Query.formatAmount(amount: number): string
 	if amount < 1000 then
 		return tostring(amount) .. "x"
@@ -205,8 +185,7 @@ function Query.formatAmount(amount: number): string
 	return tostring(amount)
 end
 
--- Case-insensitive substring match against Id and Metadata.Description. An
--- empty search always matches (so "no search" shows everything).
+-- Case-insensitive match on Id and Description.
 function Query.matchesSearch(item: Types.Item?, searchText: string): boolean
 	if searchText == "" then
 		return true
@@ -240,6 +219,43 @@ function Query.filterRecordsBySearch(
 		end
 	end
 	return filtered
+end
+
+-- Sorts records by SortOrder; stable by original index.
+function Query.sortRecords(
+	records: { Types.ItemRecord },
+	items: { [string]: Types.Item },
+	sortOrder: Types.SortOrder
+): { Types.ItemRecord }
+	if sortOrder == "None" then
+		return records
+	end
+	local sorted = table.clone(records)
+	table.sort(sorted, function(a, b)
+		local itemA = items[a.uuid]
+		local itemB = items[b.uuid]
+		if sortOrder == "Name" then
+			local nameA = if itemA then itemA.Id else ""
+			local nameB = if itemB then itemB.Id else ""
+			if nameA ~= nameB then
+				return nameA < nameB
+			end
+		elseif sortOrder == "Rarity" then
+			local rankA = Colors.getRarityRank(itemA and itemA.Metadata and itemA.Metadata.Rarity)
+			local rankB = Colors.getRarityRank(itemB and itemB.Metadata and itemB.Metadata.Rarity)
+			if rankA ~= rankB then
+				return rankA > rankB -- highest rarity first
+			end
+		elseif sortOrder == "ItemType" then
+			local typeA = if itemA and itemA.Metadata and itemA.Metadata.Type then itemA.Metadata.Type else "Other"
+			local typeB = if itemB and itemB.Metadata and itemB.Metadata.Type then itemB.Metadata.Type else "Other"
+			if typeA ~= typeB then
+				return typeA < typeB
+			end
+		end
+		return a.index < b.index
+	end)
+	return sorted
 end
 
 -----------------------------

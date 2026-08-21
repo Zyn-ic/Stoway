@@ -3,12 +3,8 @@
 --@author: yyumchi
 --@date: 2026-08-19
 --[[@description:
-	StowayClientV3 — Fusion client entry point. Core phase only: seeds
-	ClientStore from mock data and mounts the StandardHotbarStorage layout
-	under the DefaultModern skin via LayoutManager. No networking, no
-	dragging, no gamepad/hooks yet — see Controller/LayoutManager.luau and
-	the Layouts/ folder for how a Carousel or Utility Belt HotbarType slots
-	in later without touching this file, CoreStore, or Controller.
+	Client entry point. Seeds ClientStore from mock data and mounts the
+	StandardHotbarStorage layout with the DefaultModern skin.
 ]]
 -----------------------------
 -- VARIABLES --

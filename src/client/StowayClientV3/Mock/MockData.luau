@@ -3,13 +3,7 @@
 --@author: yyumchi
 --@date: 2026-08-19
 --[[@description:
-	Seeded mock inventory snapshot for running the client with no server
-	round trip. Mirrors InventoryState exactly, so swapping this for a real
-	NetworkReceiver payload later is a one-line change in init.luau.
-
-	Includes one "Trinket" item deliberately outside Settings.Categories, to
-	exercise StorageView's uncategorized-group fallback path (falls back to
-	the raw type name, sorts after every known category).
+	Mock inventory snapshot for local testing.
 ]]
 -----------------------------
 -- VARIABLES --
@@ -52,6 +46,7 @@ function MockData.build(): SharedTypes.InventoryState
 		["fire-bow-1"] = item("fire-bow-1", "FireBow", 1, "Legendary", "Weapon"),
 		["health-potion-1"] = item("health-potion-1", "HealthPotion", 3, "Common", "Consumable"),
 		["health-potion-2"] = item("health-potion-2", "HealthPotion", 320, "Common", "Consumable"),
+		["health-potion-3"] = item("health-potion-2", "HealthPotion", 520, "Mythic", "Consumable"),
 		["mana-potion-1"] = item("mana-potion-1", "ManaPotion", 2, "Uncommon", "Consumable"),
 		["iron-ingot-1"] = item("iron-ingot-1", "IronIngot", 1300, "Common", "Material"),
 		["leather-1"] = item("leather-1", "Leather", 12345, "Common", "Material"),
@@ -70,7 +65,7 @@ function MockData.build(): SharedTypes.InventoryState
 		Storage = {
 			"steel-dagger-1", "health-potion-2", "mana-potion-1",
 			"iron-ingot-1", "leather-1", "greatshield-1", "platehelm-1",
-			"mystery-charm-1",
+			"mystery-charm-1", "health-potion-3"
 		},
 		EquippedItemUUID = "iron-sword-1",
 		Weight = 22,

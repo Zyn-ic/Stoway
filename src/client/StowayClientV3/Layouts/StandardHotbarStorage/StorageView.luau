@@ -3,25 +3,8 @@
 --@author: yyumchi
 --@date: 2026-08-19
 --[[@description:
-	Sectioned storage: slots are visually bucketed by item Metadata.Type
-	(Settings.Categories controls each group's display name/color/order)
-	with collapsible group headers, gated by Settings.GroupByCategory. When
-	that setting is false, Storage renders as a single flat, ungrouped list
-	straight into the backpack ScrollingFrame instead — the "pure" backpack
-	view, with grouping as an example of a settings-driven display toggle
-	you can flip before or during runtime.
-
-	This is all presentation-only. Storage stays a flat, order-preserving
-	array the whole time; collapsing a header or typing a search only hides
-	slot frames, it never reorders, filters, or otherwise touches the
-	underlying data (see CoreStore.Query.groupStorageByType/filterRecordsBySearch).
-
-	Group header is a sibling of its slot grid, not a parent — collapsing
-	only hides the grid, so the header (and the ability to expand again)
-	always stays visible. Getting this backwards was the collapse bug: an
-	earlier version toggled Visible on the shared header+grid container, so
-	collapsing hid the header along with the slots and there was nothing
-	left to click to reopen it.
+	Sectioned storage view. Buckets Storage by item type with collapsible
+	headers; supports flat ungrouped mode and local search/sort.
 ]]
 -----------------------------
 -- VARIABLES --
@@ -41,12 +24,44 @@ local StorageView = {}
 -- CONSTANTS --
 -----------------------------
 
-local CELL_PADDING = 8
-local CELL_HEIGHT = 96
-local TARGET_COLUMNS = 5
-local MIN_CELL_WIDTH = 48
+local CELL_PADDING = 7
 local HEADER_HEIGHT = 26
 local FALLBACK_HEADER_COLOR = Color3.fromRGB(80, 80, 90)
+
+-- Match hotbar sizing for uniform slots.
+local SLOT_SIZE_MIN = 36
+local SLOT_SIZE_MAX = 62
+local REFERENCE_VIEWPORT_MIN = 390
+local REFERENCE_VIEWPORT_MAX = 1440
+
+-- Gap above hotbar, with small reclaim on phones.
+local MOBILE_HOTBAR_GAP = 8
+local DESKTOP_HOTBAR_GAP = 12
+local HOTBAR_GAP_TAPER_START_WIDTH = 900
+local HOTBAR_GAP_TAPER_END_WIDTH = 1300
+local PHONE_RECLAIM_PX = 16
+
+-- Reserve taper keeps thumbstick area on phones, tight gap on desktop.
+local TAPER_START_WIDTH = 900
+local TAPER_END_WIDTH = 1600
+
+-----------------------------
+-- PRIVATE FUNCTIONS --
+-----------------------------
+
+local function computeSlotSize(viewportWidth: number): number
+	local t = if REFERENCE_VIEWPORT_MAX > REFERENCE_VIEWPORT_MIN
+		then (viewportWidth - REFERENCE_VIEWPORT_MIN) / (REFERENCE_VIEWPORT_MAX - REFERENCE_VIEWPORT_MIN)
+		else 1
+	t = math.clamp(t, 0, 1)
+	return SLOT_SIZE_MIN + (SLOT_SIZE_MAX - SLOT_SIZE_MIN) * t
+end
+
+local function computeHotbarGap(viewportWidth: number): number
+	local t = (viewportWidth - HOTBAR_GAP_TAPER_START_WIDTH) / (HOTBAR_GAP_TAPER_END_WIDTH - HOTBAR_GAP_TAPER_START_WIDTH)
+	t = math.clamp(t, 0, 1)
+	return MOBILE_HOTBAR_GAP + (DESKTOP_HOTBAR_GAP - MOBILE_HOTBAR_GAP) * t
+end
 
 -----------------------------
 -- PUBLIC FUNCTIONS --
@@ -59,10 +74,62 @@ function StorageView.Create(scope: Fusion.Scope<any>, skin: CoreTypes.SkinHandle
 	end
 	local backpackFrame = skin.BackpackFrame
 
+	-- Reserve hotbar height from the backpack so they never overlap.
+	local hotbarFrame = skin.HotbarFrame
+	local originalBackpackWidth = backpackFrame.Size.X
+	local bottomReserve = scope:Value(0)
+	local camera = workspace.CurrentCamera
+	local viewportWidthValue = scope:Value(if camera then camera.ViewportSize.X else REFERENCE_VIEWPORT_MAX)
+	if camera then
+		table.insert(
+			scope,
+			camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+				viewportWidthValue:set(camera.ViewportSize.X)
+			end)
+		)
+	end
+	if hotbarFrame then
+		local gui = skin.Gui
+		local function updateBottomReserve()
+			local viewportHeight = if camera then camera.ViewportSize.Y else 0
+			if viewportHeight <= 0 then
+				return
+			end
+			local viewportWidth = if camera then camera.ViewportSize.X else TAPER_END_WIDTH
+			local hotbarTopY = hotbarFrame.AbsolutePosition.Y
+			local gap = computeHotbarGap(viewportWidth)
+			local viewportReserve = math.max(0, viewportHeight - hotbarTopY) + gap
+			local guiReserve = viewportReserve
+			if gui then
+				local guiBottom = gui.AbsolutePosition.Y + gui.AbsoluteSize.Y
+				guiReserve = math.max(0, guiBottom - hotbarTopY) + gap
+			end
+			local t = (viewportWidth - TAPER_START_WIDTH) / (TAPER_END_WIDTH - TAPER_START_WIDTH)
+			t = math.clamp(t, 0, 1)
+			local tapered = viewportReserve + (guiReserve - viewportReserve) * t
+			local phoneT = 1 - t
+			tapered -= PHONE_RECLAIM_PX * phoneT
+			bottomReserve:set(math.max(gap, tapered))
+		end
+		table.insert(scope, hotbarFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateBottomReserve))
+		table.insert(scope, hotbarFrame:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateBottomReserve))
+		if camera then
+			table.insert(scope, camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateBottomReserve))
+		end
+		if gui then
+			table.insert(scope, gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateBottomReserve))
+			table.insert(scope, gui:GetPropertyChangedSignal("AbsolutePosition"):Connect(updateBottomReserve))
+		end
+		task.defer(updateBottomReserve)
+	end
+
 	scope:Hydrate(backpackFrame) {
 		Visible = scope:Computed(function(use)
 			local settings = use(store.Settings)
 			return settings ~= nil and settings.BackpackEnabled
+		end),
+		Size = scope:Computed(function(use)
+			return UDim2.new(originalBackpackWidth.Scale, originalBackpackWidth.Offset, 1, -use(bottomReserve))
 		end),
 	}
 
@@ -80,8 +147,7 @@ function StorageView.Create(scope: Fusion.Scope<any>, skin: CoreTypes.SkinHandle
 		}
 	end
 
-	-- Local-only search text. Never touches Storage or CoreStore — purely
-	-- filters which slot records each group (or the flat list) renders.
+	-- Local search, no CoreStore mutation.
 	local searchText = scope:Value("")
 	if skin.SearchFilter then
 		local searchFilterBox = skin.SearchFilter
@@ -99,21 +165,10 @@ function StorageView.Create(scope: Fusion.Scope<any>, skin: CoreTypes.SkinHandle
 	local scrollingFrame = skin.ScrollingFrame
 	local slotTemplate = skin.SlotTemplate
 
-	-- Responsive cell width: always TARGET_COLUMNS per row, regardless of
-	-- screen size. The backpack frame is a fixed % of screen width, so the
-	-- ScrollingFrame's width changes with it — recompute the cell on resize.
-	local cellWidth = scope:Value(MIN_CELL_WIDTH)
-	local function updateCellWidth()
-		local width = scrollingFrame.AbsoluteSize.X
-		if width > 0 then
-			cellWidth:set(math.max(MIN_CELL_WIDTH, (width - (TARGET_COLUMNS - 1) * CELL_PADDING) / TARGET_COLUMNS))
-		end
-	end
-	table.insert(scope, scrollingFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateCellWidth))
-	task.defer(updateCellWidth)
-
+	-- Square cells sized like the hotbar.
 	local cellSize = scope:Computed(function(use)
-		return UDim2.fromOffset(use(cellWidth), CELL_HEIGHT)
+		local size = computeSlotSize(use(viewportWidthValue))
+		return UDim2.fromOffset(size, size)
 	end)
 
 	local groupedSlots = scope:Computed(function(use)
@@ -122,9 +177,6 @@ function StorageView.Create(scope: Fusion.Scope<any>, skin: CoreTypes.SkinHandle
 		return Query.groupStorageByType(use(store.Storage), use(store.Items), groupByCategory)
 	end)
 
-	-- { [Type] = true } while a group's slot grid is hidden. Purely local UI
-	-- state — never touches Storage or CoreStore. Irrelevant (and unused)
-	-- for the ungrouped case, since there's no header to click there.
 	local collapsedGroups = scope:Value({} :: { [string]: boolean })
 
 	local groupOrder = scope:Computed(function(use)
@@ -152,16 +204,17 @@ function StorageView.Create(scope: Fusion.Scope<any>, skin: CoreTypes.SkinHandle
 
 		local records = groupScope:Computed(function(use)
 			local raw = use(groupedSlots)[itemType] or {}
-			return Query.filterRecordsBySearch(raw, use(store.Items), use(searchText))
+			local items = use(store.Items)
+			local filtered = Query.filterRecordsBySearch(raw, items, use(searchText))
+			local settings = use(store.Settings)
+			return Query.sortRecords(filtered, items, if settings then settings.SortOrder else "None")
 		end)
 
 		local isCollapsed = groupScope:Computed(function(use)
 			return not isUngrouped and use(collapsedGroups)[itemType] == true
 		end)
 
-		-- Header always visible while it has matches (or nothing is being
-		-- searched) — search hides a group entirely only when it has zero
-		-- matching items, so an empty header never lingers mid-search.
+		-- Container hidden during search when no matches.
 		local container = groupScope:New("Frame") {
 			Name = if isUngrouped then "Ungrouped" else "Group-" .. itemType,
 			LayoutOrder = orderIndex,
@@ -206,9 +259,7 @@ function StorageView.Create(scope: Fusion.Scope<any>, skin: CoreTypes.SkinHandle
 				Parent = container,
 			}
 
-			-- Local-only toggle: flips this group's entry in collapsedGroups.
-			-- The header itself is a sibling of the slot grid below, so it
-			-- stays visible (and clickable) regardless of collapse state.
+			-- Toggle collapses grid, header stays visible.
 			header.Activated:Connect(function()
 				local nextCollapsed = table.clone(Fusion.peek(collapsedGroups))
 				nextCollapsed[itemType] = not (nextCollapsed[itemType] == true)
