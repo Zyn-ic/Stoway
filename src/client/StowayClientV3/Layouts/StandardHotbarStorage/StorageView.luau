@@ -258,8 +258,7 @@ function StorageView.Create(
 				TextXAlignment = Enum.TextXAlignment.Left,
 				AutoButtonColor = false,
 				Text = groupScope:Computed(function(use)
-					local arrow = if use(isCollapsed) then "▸" else "▾"
-					return `{arrow} {use(displayName)} ({#use(records)})`
+					return `{use(displayName)} ({#use(records)})`
 				end),
 				Parent = container,
 			}
