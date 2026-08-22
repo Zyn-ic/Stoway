@@ -29,13 +29,14 @@ local StandardHotbarStorage = {}
 function StandardHotbarStorage.Mount(scope: Fusion.Scope<any>, skin: CoreTypes.SkinHandle, store: typeof(ClientStore))
 	local draggingGui = skin.DraggingGui or (skin.Gui and skin.Gui:FindFirstChild("DraggingGui") :: ScreenGui?)
 	if not draggingGui then
-		-- fallback ScreenGui if skin did not provide one (headless Rojo build)
 		draggingGui = Instance.new("ScreenGui")
 		draggingGui.Name = "DraggingGui"
 		draggingGui.DisplayOrder = 100
-		draggingGui.IgnoreGuiInset = true
+		draggingGui.IgnoreGuiInset = false
 		draggingGui.Parent = skin.Gui and skin.Gui.Parent or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 		table.insert(scope, draggingGui)
+	else
+		draggingGui.IgnoreGuiInset = false
 	end
 	local dragService = PointerDragService.new(scope, draggingGui, function(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
 		-- Direct core write, not Signals – Signals are mock RemoteEvents for the 5s smoke test only

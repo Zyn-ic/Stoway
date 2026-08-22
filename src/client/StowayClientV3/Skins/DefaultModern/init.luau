@@ -52,12 +52,12 @@ function DefaultModern.Load(scope: Fusion.Scope<any>, playerGui: PlayerGui, skin
 		draggingGui = Instance.new("ScreenGui")
 		draggingGui.Name = "DraggingGui"
 		draggingGui.DisplayOrder = 100
-		draggingGui.IgnoreGuiInset = true
+		draggingGui.IgnoreGuiInset = false
 		draggingGui.ResetOnSpawn = false
 		draggingGui.Parent = playerGui
 		table.insert(scope, draggingGui)
 	else
-		-- reparent existing to PlayerGui if it was inside StowayGui
+		draggingGui.IgnoreGuiInset = false
 		if draggingGui.Parent ~= playerGui then draggingGui.Parent = playerGui end
 	end
 
