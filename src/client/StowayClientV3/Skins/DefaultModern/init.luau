@@ -46,6 +46,21 @@ function DefaultModern.Load(scope: Fusion.Scope<any>, playerGui: PlayerGui, skin
 	local backpack = gui:FindFirstChild("Backpack") :: Frame?
 	local slotFolder = root:FindFirstChild("Slot")
 
+	-- Ensure a dedicated DraggingGui for spring ghost – create if prefab lacks it
+	local draggingGui = gui:FindFirstChild("DraggingGui") :: ScreenGui?
+	if not draggingGui then
+		draggingGui = Instance.new("ScreenGui")
+		draggingGui.Name = "DraggingGui"
+		draggingGui.DisplayOrder = 100
+		draggingGui.IgnoreGuiInset = true
+		draggingGui.ResetOnSpawn = false
+		draggingGui.Parent = playerGui
+		table.insert(scope, draggingGui)
+	else
+		-- reparent existing to PlayerGui if it was inside StowayGui
+		if draggingGui.Parent ~= playerGui then draggingGui.Parent = playerGui end
+	end
+
 	return {
 		Gui = gui,
 		HotbarFrame = gui:FindFirstChild("Hotbar") :: Frame?,
@@ -55,6 +70,7 @@ function DefaultModern.Load(scope: Fusion.Scope<any>, playerGui: PlayerGui, skin
 		SearchFilter = backpack and (backpack:FindFirstChild("SearchFilter") :: TextBox?),
 		BackpackStuff = gui:FindFirstChild("BackpackStuff") :: ImageButton?,
 		SlotTemplate = slotFolder and (slotFolder:FindFirstChild("template") :: Frame?),
+		DraggingGui = draggingGui,
 	}
 end
 

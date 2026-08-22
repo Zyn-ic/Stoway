@@ -193,6 +193,47 @@ function ClientController.Sync()
 	sync()
 end
 
+-- Direct core API for Interactions (drag, input). No Signals, just add onto core.
+function ClientController.Swap(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
+	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
+	hydrateIfNeeded(_state)
+	local res = CoreStore.swap(_state, from, to)
+	if res.ok then sync() end
+	return res
+end
+
+function ClientController.Move(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
+	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
+	hydrateIfNeeded(_state)
+	local res = CoreStore.move(_state, from, to)
+	if res.ok then sync() end
+	return res
+end
+
+function ClientController.Remove(uuid: string, amount: number?)
+	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
+	hydrateIfNeeded(_state)
+	local res = CoreStore.remove(_state, uuid, amount)
+	if res.ok then sync() end
+	return res
+end
+
+function ClientController.Equip(uuid: string)
+	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
+	hydrateIfNeeded(_state)
+	local res = CoreStore.equip(_state, uuid)
+	if res.ok then sync() end
+	return res
+end
+
+function ClientController.Unequip()
+	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
+	hydrateIfNeeded(_state)
+	local res = CoreStore.unequip(_state)
+	if res.ok then sync() end
+	return res
+end
+
 -----------------------------
 -- MAIN --
 -----------------------------

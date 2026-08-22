@@ -75,7 +75,12 @@ end
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
-function HotbarView.Create(scope: Fusion.Scope<any>, skin: CoreTypes.SkinHandle, store: typeof(ClientStore))
+function HotbarView.Create(
+	scope: Fusion.Scope<any>,
+	skin: CoreTypes.SkinHandle,
+	store: typeof(ClientStore),
+	dragService: any?
+)
 	if not skin.HotbarFrame then
 		warn("[StandardHotbarStorage] HotbarView: skin has no Hotbar frame")
 		return
@@ -186,6 +191,13 @@ function HotbarView.Create(scope: Fusion.Scope<any>, skin: CoreTypes.SkinHandle,
 		slotScope:Hydrate(slotFrame) {
 			Size = slotSizeUDim,
 		}
+
+		if dragService then
+			local slotRef: CoreTypes.SlotRef = { Type = "Hotbar", Slot = slotIndex }
+			local handle = slotFrame:FindFirstChild("slotbutton") :: GuiButton?
+			if handle then dragService:RegisterDraggable(slotScope, handle, slotRef) end
+			dragService:RegisterDropTarget(slotScope, slotFrame, slotRef)
+		end
 
 		return slotIndex, true
 	end)

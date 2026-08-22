@@ -54,6 +54,7 @@ export type SkinHandle = {
 	SearchFilter: TextBox?,
 	BackpackStuff: ImageButton?,
 	SlotTemplate: Frame?,
+	DraggingGui: ScreenGui?,
 }
 
 -----------------------------

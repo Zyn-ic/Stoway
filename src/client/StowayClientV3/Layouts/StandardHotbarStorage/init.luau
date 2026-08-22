@@ -10,9 +10,12 @@
 -----------------------------
 
 local Fusion = require(game:GetService("ReplicatedStorage").Packages.fusion)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CoreTypes = require(script.Parent.Parent.CoreStore.Types)
 local ClientStore = require(script.Parent.Parent.Controller.ClientStore)
+local ClientController = require(script.Parent.Parent.Controller.ClientController)
+local PointerDragService = require(script.Parent.Parent.Interactions.PointerDragService)
 
 local HotbarView = require(script.HotbarView)
 local StorageView = require(script.StorageView)
@@ -24,8 +27,23 @@ local StandardHotbarStorage = {}
 -----------------------------
 
 function StandardHotbarStorage.Mount(scope: Fusion.Scope<any>, skin: CoreTypes.SkinHandle, store: typeof(ClientStore))
-	HotbarView.Create(scope, skin, store)
-	StorageView.Create(scope, skin, store)
+	local draggingGui = skin.DraggingGui or (skin.Gui and skin.Gui:FindFirstChild("DraggingGui") :: ScreenGui?)
+	if not draggingGui then
+		-- fallback ScreenGui if skin did not provide one (headless Rojo build)
+		draggingGui = Instance.new("ScreenGui")
+		draggingGui.Name = "DraggingGui"
+		draggingGui.DisplayOrder = 100
+		draggingGui.IgnoreGuiInset = true
+		draggingGui.Parent = skin.Gui and skin.Gui.Parent or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+		table.insert(scope, draggingGui)
+	end
+	local dragService = PointerDragService.new(scope, draggingGui, function(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
+		-- Direct core write, not Signals – Signals are mock RemoteEvents for the 5s smoke test only
+		ClientController.Swap(from, to)
+	end, skin.SlotTemplate)
+
+	HotbarView.Create(scope, skin, store, dragService)
+	StorageView.Create(scope, skin, store, dragService)
 end
 
 -----------------------------

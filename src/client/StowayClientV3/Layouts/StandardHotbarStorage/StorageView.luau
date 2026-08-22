@@ -67,7 +67,12 @@ end
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
-function StorageView.Create(scope: Fusion.Scope<any>, skin: CoreTypes.SkinHandle, store: typeof(ClientStore))
+function StorageView.Create(
+	scope: Fusion.Scope<any>,
+	skin: CoreTypes.SkinHandle,
+	store: typeof(ClientStore),
+	dragService: any?
+)
 	if not skin.BackpackFrame then
 		warn("[StandardHotbarStorage] StorageView: skin has no Backpack frame")
 		return
@@ -307,6 +312,14 @@ function StorageView.Create(scope: Fusion.Scope<any>, skin: CoreTypes.SkinHandle
 				LayoutOrder = orderState,
 				Size = cellSize,
 			}
+
+			if dragService then
+				local slotRef: CoreTypes.SlotRef = { Type = "Storage", Slot = record.index }
+				local handle = slotFrame:FindFirstChild("slotbutton") :: GuiButton?
+				if handle then dragService:RegisterDraggable(slotScope, handle, slotRef) end
+				dragService:RegisterDropTarget(slotScope, slotFrame, slotRef)
+			end
+
 			return listIndex, record
 		end)
 
