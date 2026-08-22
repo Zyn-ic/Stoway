@@ -8,9 +8,11 @@ This file helps AI agents understand the Stoway project. Read this before making
 
 Stoway is a Roblox inventory framework. The core is a pure Luau inventory engine called `CoreStore` — no Roblox types, no UI, no networking. It lives inside an orchestration layer called `StowayServerV3_0_0` that connects it to Roblox-specific systems.
 
-**CoreStore lives at:** `src/server/Services/StowayServerV3_0_0/CoreStore/`
+**CoreStore lives at:** `ReplicatedStorage/Shared/Stoway/CoreStore/` (canonical, pure Luau, no Instances)
 
-**Orchestration layer:** `src/server/Services/StowayServerV3_0_0/init.luau`
+**Client mirror (light):** `src/client/StowayClientV3/CoreStore/` — re-exports Types + pure Query/State for Fusion views (see below)
+
+**Orchestration layer:** `src/server/Services/StowayServerV3_0_0/init.luau` (requires `ReplicatedStorage.Shared.Stoway.CoreStore` at runtime, `@CoreStore` via `.luaurc` for Lune)
 
 **Communications adapter:** `src/server/Services/StowayServerV3_0_0/Communications.luau`
 
@@ -18,7 +20,7 @@ Stoway is a Roblox inventory framework. The core is a pure Luau inventory engine
 
 **Client (StowayClientV3, branch `client-v3-sonnet`):** `src/client/StowayClientV3/` — Fusion 0.3.1 client. Mapped to `StarterPlayer.StarterPlayerScripts` via `default.project.json`. Core phase: settings-driven hotbar + sectioned storage from mock data. Drag, multi-platform, hooks come later. Structured around the master plan's `HotbarType` vs `UiSkin` split: `CoreStore/` (pure state+query), `Controller/` (Fusion RootScope + `LayoutManager`), `Layouts/<HotbarType>/` (render engines), `Skins/<SkinName>/` (GUI prefab loaders), `Slot/SlotView.luau` (shared across layouts). See `src/client/StowayClientV3/README.md`.
 
-**Shared (Stoway):** `ReplicatedStorage/Shared/Stoway/` — shared types, settings defaults, colors, Result type, StowayRemotes wire.
+**Shared (Stoway):** `ReplicatedStorage/Shared/Stoway/` — shared types, settings defaults, colors, Result type, StowayRemotes wire, **CoreStore** (see below).
 
 **Vendored Fusion:** `ReplicatedStorage/Packages/fusion/` (Fusion 0.3.1, copied from wally install; do NOT wally install again or the root `Packages/` folder will reappear).
 
@@ -62,8 +64,10 @@ All modules use `.luaurc` aliases instead of relative paths. This works in both 
 ```json
 {
   "aliases": {
-    "CoreStore": "./src/server/Services/StowayServerV3_0_0/CoreStore",
-    "Stoway": "./src/server/Services/StowayServerV3_0_0"
+    "CoreStore": "./ReplicatedStorage/Shared/Stoway/CoreStore",
+    "Stoway": "./src/server/Services/StowayServerV3_0_0",
+    "Shared": "./ReplicatedStorage/Shared",
+    "Result": "./ReplicatedStorage/Shared/Stoway/Result"
   }
 }
 ```
@@ -71,8 +75,10 @@ All modules use `.luaurc` aliases instead of relative paths. This works in both 
 **Usage in modules:**
 
 ```luau
-local Types = require("@CoreStore/Types")
-local Operations = require("@CoreStore/Operations")
+local Types = require("@CoreStore/Types") -- Lune / LSP alias
+-- At runtime in Studio, CoreStore is at ReplicatedStorage.Shared.Stoway.CoreStore:
+-- local Types = require(game:GetService("ReplicatedStorage").Shared.Stoway.CoreStore.Types)
+-- CoreStore internal files handle both via pcall fallback.
 ```
 
 **Usage in test files:**
@@ -85,7 +91,6 @@ local Stoway = require("@Stoway")
 **Do NOT use:**
 - Relative paths like `require("../CoreStore/Types")` — break in luau-lsp Roblox mode
 - Bare names like `require("CoreStore")` — Luau CLI requires `@` prefix for aliases
-- Roblox-style paths like `require(game.ReplicatedStorage.CoreStore.Types)`
 
 ---
 
@@ -164,7 +169,7 @@ return ModuleName
 | `Result.luau` | Result type shared with server | Result |
 | `StowayRemotes.luau` | Remote event definitions (wire) | Wire |
 
-### CoreStore (Pure Luau Engine)
+### CoreStore (Pure Luau Engine) — now at `ReplicatedStorage/Shared/Stoway/CoreStore/`
 
 | File | Purpose | Public API |
 |------|---------|-----------|
@@ -256,6 +261,10 @@ Tests for: add operations, stacking, overflow, capacity, weight, placement modes
 ### manual_test.luau
 
 Lune REPL for interactive testing. Load modules, save/load JSON state.
+
+### Studio Data Specs (new)
+
+`ReplicatedStorage/Tests/ClientData.spec.luau` + `Runner.luau` — pure table checks for client Query (grouping, search, sortRecords, packedHotbarOrder, formatAmount) and Shared CoreStore MetadataIndex/sort. Run in Studio: `require(game.ReplicatedStorage.Tests.Runner).run()` in Command Bar. No Fusion/Instances needed. Lune suites are kept for now and will be retired as Studio coverage grows.
 
 ### Web Test Tool (12 scenarios)
 

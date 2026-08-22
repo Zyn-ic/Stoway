@@ -9,14 +9,33 @@
 -- VARIABLES --
 -----------------------------
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Result = require(ReplicatedStorage.Shared.Stoway.Result)
-local Types = require("./Types")
-local Metadata = require("./Metadata")
-local Slots = require("./Slots")
-local Stack = require("./Stack")
-local State = require("./State")
-local Utils = require("./Utils")
+local Result
+do
+	local ok, mod = pcall(function()
+		return require(game:GetService("ReplicatedStorage").Shared.Stoway.Result)
+	end)
+	if ok and mod then
+		Result = mod
+	else
+		Result = require("@Result")
+	end
+end
+local function importCore(name: string)
+	local ok, mod = pcall(function()
+		return require(game:GetService("ReplicatedStorage").Shared.Stoway.CoreStore[name])
+	end)
+	if ok and mod then
+		return mod
+	end
+	return require("@CoreStore/" .. name)
+end
+
+local Types = importCore("Types")
+local Metadata = importCore("Metadata")
+local Slots = importCore("Slots")
+local Stack = importCore("Stack")
+local State = importCore("State")
+local Utils = importCore("Utils")
 
 local Operations = {}
 

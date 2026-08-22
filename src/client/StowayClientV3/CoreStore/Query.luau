@@ -70,15 +70,16 @@ function Query.packedHotbarOrder(
 	if not isDynamic then
 		return slot
 	end
+	local uuid = hotbar[slot]
+	if not uuid or not items[uuid] then
+		return 1000 + slot
+	end
 	local visible = 0
 	for i = 1, slot do
-		local uuid = hotbar[i]
-		if uuid and items[uuid] then
+		local u = hotbar[i]
+		if u and items[u] then
 			visible += 1
 		end
-	end
-	if visible == 0 then
-		return 1000 + slot
 	end
 	return visible
 end

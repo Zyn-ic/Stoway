@@ -39,14 +39,19 @@ ClientStore.Settings = Scope:Value(nil :: Types.Settings?)
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
--- Populates atoms from a full snapshot.
+-- Populates atoms from a full snapshot. Clones tables so Fusion sees new refs
+-- and future in-place mutations of snapshot don't alias the Value interior.
 function ClientStore.Init(snapshot: Types.InventoryState)
-	ClientStore.Items:set(snapshot.Items)
-	ClientStore.Hotbar:set(snapshot.Hotbar)
-	ClientStore.Storage:set(snapshot.Storage)
+	ClientStore.Items:set(table.clone(snapshot.Items))
+	ClientStore.Hotbar:set(table.clone(snapshot.Hotbar))
+	ClientStore.Storage:set(table.clone(snapshot.Storage))
 	ClientStore.EquippedItemUUID:set(snapshot.EquippedItemUUID)
 	ClientStore.Weight:set(snapshot.Weight)
-	ClientStore.Settings:set(snapshot.Settings)
+	if typeof(snapshot.Settings) == "table" then
+		ClientStore.Settings:set(table.clone(snapshot.Settings))
+	else
+		ClientStore.Settings:set(snapshot.Settings)
+	end
 end
 
 function ClientStore.GetSnapshot(): Types.InventoryState

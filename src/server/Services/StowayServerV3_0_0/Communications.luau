@@ -11,12 +11,42 @@
 -- VARIABLES --
 -----------------------------
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ReplicatedStorage: any = nil
+local Remotes: any = nil
+do
+	local ok, rs = pcall(function() return (game :: any):GetService("ReplicatedStorage") end)
+	if ok then ReplicatedStorage = rs end
+	if ReplicatedStorage then
+		local ok2, mod = pcall(function()
+			return require(ReplicatedStorage.Shared.Stoway.StowayRemotes)
+		end)
+		if ok2 then Remotes = mod end
+	end
+end
 
-local Remotes = require(ReplicatedStorage.Shared.Stoway.StowayRemotes)
+local Protocol
+do
+	local ok, mod = pcall(function()
+		return require(script.Protocol)
+	end)
+	if ok and mod then
+		Protocol = mod
+	else
+		Protocol = require("@Stoway/Protocol")
+	end
+end
 
-local Protocol = require("./Protocol")
-local _Types = require("./CoreStore/Types")
+local _Types
+do
+	local ok, mod = pcall(function()
+		return require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
+	end)
+	if ok and mod then
+		_Types = mod
+	else
+		_Types = require("@CoreStore/Types")
+	end
+end
 
 local Communications = {}
 

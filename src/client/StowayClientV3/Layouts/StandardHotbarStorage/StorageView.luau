@@ -296,8 +296,15 @@ function StorageView.Create(scope: Fusion.Scope<any>, skin: CoreTypes.SkinHandle
 				Template = slotTemplate,
 				Store = store,
 			})
-			slotFrame.LayoutOrder = listIndex
-			groupScope:Hydrate(slotFrame) {
+			-- LayoutOrder via Hydrate+Computed so reorder is task.defer coalesced
+			-- with the SlotView image/stack/rarity updates (atomic with hotbar swaps).
+			-- listIndex is the ForPairs key (1..n) – wrap in Computed to make it a
+			-- state so applyInstanceProps defers it.
+			local orderState = slotScope:Computed(function()
+				return listIndex
+			end)
+			slotScope:Hydrate(slotFrame) {
+				LayoutOrder = orderState,
 				Size = cellSize,
 			}
 			return listIndex, record

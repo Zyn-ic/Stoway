@@ -7,7 +7,17 @@
 -- VARIABLES --
 -----------------------------
 
-local Types = require("./Types")
+local Types
+do
+	local ok, mod = pcall(function()
+		return require(game:GetService("ReplicatedStorage").Shared.Stoway.CoreStore.Types)
+	end)
+	if ok and mod then
+		Types = mod
+	else
+		Types = require("@CoreStore/Types")
+	end
+end
 
 local Slots = {}
 

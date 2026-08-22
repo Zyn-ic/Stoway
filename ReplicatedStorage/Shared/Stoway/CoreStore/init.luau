@@ -7,11 +7,21 @@
 -- VARIABLES --
 -----------------------------
 
-local Types = require("./CoreStore/Types")
-local State = require("./CoreStore/State")
-local Operations = require("./CoreStore/Operations")
-local Query = require("./CoreStore/Query")
-local Slots = require("./CoreStore/Slots")
+local function importCore(name: string)
+	local ok, mod = pcall(function()
+		return require(game:GetService("ReplicatedStorage").Shared.Stoway.CoreStore[name])
+	end)
+	if ok and mod then
+		return mod
+	end
+	return require("@CoreStore/" .. name)
+end
+
+local Types = importCore("Types")
+local State = importCore("State")
+local Operations = importCore("Operations")
+local Query = importCore("Query")
+local Slots = importCore("Slots")
 
 local CoreStore = {}
 

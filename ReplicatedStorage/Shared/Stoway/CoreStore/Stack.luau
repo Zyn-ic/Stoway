@@ -8,9 +8,19 @@
 -- VARIABLES --
 -----------------------------
 
-local Types = require("./Types")
-local Metadata = require("./Metadata")
-local State = require("./State")
+local function importCore(name: string)
+	local ok, mod = pcall(function()
+		return require(game:GetService("ReplicatedStorage").Shared.Stoway.CoreStore[name])
+	end)
+	if ok and mod then
+		return mod
+	end
+	return require("@CoreStore/" .. name)
+end
+
+local Types = importCore("Types")
+local Metadata = importCore("Metadata")
+local State = importCore("State")
 
 local Stack = {}
 

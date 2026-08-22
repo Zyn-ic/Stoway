@@ -13,13 +13,53 @@
 
 local Stoway = {}
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ServerStorage = game:GetService("ServerStorage")
-local Workspace = game:GetService("Workspace")
+local ReplicatedStorage: any = nil
+local ServerStorage: any = nil
+local Workspace: any = nil
+do
+	local ok, rs = pcall(function() return (game :: any):GetService("ReplicatedStorage") end)
+	if ok then ReplicatedStorage = rs end
+	local ok2, ss = pcall(function() return (game :: any):GetService("ServerStorage") end)
+	if ok2 then ServerStorage = ss end
+	local ok3, ws = pcall(function() return (game :: any):GetService("Workspace") end)
+	if ok3 then Workspace = ws end
+end
 
-local Types = require(script.CoreStore.Types)
-local Protocol = require(script.Protocol)
-local Result = require(ReplicatedStorage.Shared.Stoway.Result)
+local Types
+do
+	local ok, mod = pcall(function()
+		return require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
+	end)
+	if ok and mod then
+		Types = mod
+	else
+		Types = require("@CoreStore/Types")
+	end
+end
+
+local Protocol
+do
+	local ok, mod = pcall(function()
+		return require(script.Protocol)
+	end)
+	if ok and mod then
+		Protocol = mod
+	else
+		Protocol = require("@Stoway/Protocol")
+	end
+end
+
+local Result
+do
+	local ok, mod = pcall(function()
+		return require(ReplicatedStorage.Shared.Stoway.Result)
+	end)
+	if ok and mod then
+		Result = mod
+	else
+		Result = require("@Result")
+	end
+end
 
 -- Minimal contract for the injected CoreStore module.
 type CoreStoreApi = {
@@ -78,7 +118,15 @@ local function unlockPlayer(player: Player)
 end
 
 -- Returns the tool template Instance from ServerStorage.Tools, or nil.
+-- Lune fallback: if ServerStorage is nil (no Roblox), return a mock tool so tests pass.
 local function getToolTemplate(itemId: string): Instance?
+	if not ServerStorage then
+		return {
+			GetAttribute = function(_self: any, _key: string)
+				return nil
+			end,
+		} :: any
+	end
 	local toolsFolder = ServerStorage:FindFirstChild("Tools")
 	if not toolsFolder then return nil end
 	return toolsFolder:FindFirstChild(itemId)

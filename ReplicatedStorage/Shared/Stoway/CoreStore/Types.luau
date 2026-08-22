@@ -1,5 +1,14 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Result = require(ReplicatedStorage.Shared.Stoway.Result)
+local Result
+do
+	local ok, mod = pcall(function()
+		return require(game:GetService("ReplicatedStorage").Shared.Stoway.Result)
+	end)
+	if ok and mod then
+		Result = mod
+	else
+		Result = require("@Result")
+	end
+end
 
 local Types = {}
 

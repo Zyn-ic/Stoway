@@ -18,9 +18,11 @@ local ServerScriptService = game:GetService("ServerScriptService")
 -- DEPENDENCIES --
 -----------------------------
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local PlayerServiceSignals = require(ServerScriptService.Libraries.PlayerServiceSignals)
 local Stoway = require(ServerScriptService.Services.StowayServerV3_0_0)
-local CoreStore = require(ServerScriptService.Services.StowayServerV3_0_0.CoreStore)
+local CoreStore = require(ReplicatedStorage.Shared.Stoway.CoreStore)
 local Communications = require(ServerScriptService.Services.StowayServerV3_0_0.Communications)
 local ChatCommands = require(ServerScriptService.Services.StowayServerV3_0_0.Debug.ChatCommands)
 

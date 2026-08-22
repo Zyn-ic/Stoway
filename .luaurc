@@ -1,6 +1,6 @@
 {
   "aliases": {
-    "CoreStore": "./src/server/Services/StowayServerV3_0_0/CoreStore",
+    "CoreStore": "./ReplicatedStorage/Shared/Stoway/CoreStore",
     "Stoway": "./src/server/Services/StowayServerV3_0_0",
     "Shared": "./ReplicatedStorage/Shared",
     "Result": "./ReplicatedStorage/Shared/Stoway/Result",
