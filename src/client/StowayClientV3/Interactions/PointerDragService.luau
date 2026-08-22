@@ -164,26 +164,48 @@ function PointerDragService._beginDrag(self: any, curPos: Vector2)
 	if self._dragging then return end
 	self._dragging = true
 
+	-- Perfect replica: clone the LIVE hydrated slotFrame (has item image,
+	-- rarity color, stack badge, selecticon baked in by SlotView), fall back
+	-- to the blank skin template only when pressFrame is unavailable.
+	local pressFrame = self._pressFrame :: GuiObject?
 	local template = self._slotTemplate :: Frame?
+	local source: Instance? = nil
+	if pressFrame and (pressFrame :: any):FindFirstChild("slotbutton") then
+		source = pressFrame :: Instance
+	elseif template then
+		source = template :: Instance
+	end
+
 	local ghost: Frame
-	if template then
-		ghost = (template :: Frame):Clone() :: Frame
-		ghost.Name = "DragGhost"
-		local sn = ghost:FindFirstChild("slotnumber")
-		if sn then (sn :: GuiObject).Visible = false end
-		local kb = ghost:FindFirstChild("keybindbackground")
-		if kb then (kb :: GuiObject).Visible = false end
-		ghost.AnchorPoint = Vector2.new(0, 0)
-		ghost.Size = (self._pressFrame and (self._pressFrame :: GuiObject).Size) or UDim2.fromOffset(62, 62)
-		ghost.ZIndex = 100
-		ghost.Parent = self._draggingGui :: ScreenGui
+	if source then
+		ghost = source:Clone() :: Frame
 	else
 		ghost = Instance.new("Frame")
-		ghost.Name = "DragGhost"
-		ghost.Size = UDim2.fromOffset(62, 62)
-		ghost.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-		ghost.Parent = self._draggingGui :: ScreenGui
 	end
+	ghost.Name = "DragGhost"
+
+	-- Strip interaction + layout noise so the ghost is purely visual
+	for _, desc in ghost:GetDescendants() do
+		if desc:IsA("GuiButton") then
+			desc.Active = false
+			desc.Selectable = false
+			desc.AutoButtonColor = false
+		end
+	end
+	local sn = ghost:FindFirstChild("slotnumber")
+	if sn then (sn :: GuiObject).Visible = false end
+	local kb = ghost:FindFirstChild("keybindbackground")
+	if kb then (kb :: GuiObject).Visible = false end
+	ghost.AnchorPoint = Vector2.new(0, 0)
+	ghost.LayoutOrder = 0
+	ghost.Visible = true
+	if pressFrame then
+		ghost.Size = (pressFrame :: GuiObject).Size
+	else
+		ghost.Size = UDim2.fromOffset(62, 62)
+	end
+	ghost.ZIndex = 100
+	ghost.Parent = self._draggingGui :: ScreenGui
 	self._ghost = ghost
 
 	local posValue = (self._layoutScope :: Fusion.Scope<any>):Value(UDim2.fromOffset(curPos.X, curPos.Y)) :: Fusion.Value<UDim2>
@@ -195,7 +217,7 @@ function PointerDragService._beginDrag(self: any, curPos: Vector2)
 	self._ghostRotValue = rotValue
 	self._ghostRotSpring = rotSpring
 	self._lastMousePos = curPos
-	(self._layoutScope :: Fusion.Scope<any>):Hydrate(ghost) {
+	;(self._layoutScope :: Fusion.Scope<any>):Hydrate(ghost) {
 		Position = springPos,
 		Rotation = rotSpring,
 	}
@@ -203,7 +225,7 @@ function PointerDragService._beginDrag(self: any, curPos: Vector2)
 	self._moveConn = RunService.RenderStepped:Connect(function()
 		if not self._dragging or not self._ghostPosValue then return end
 		local m = getMousePos()
-		(self._ghostPosValue :: Fusion.Value<UDim2>):set(UDim2.fromOffset(m.X, m.Y))
+		;(self._ghostPosValue :: Fusion.Value<UDim2>):set(UDim2.fromOffset(m.X, m.Y))
 		local velX = m.X - self._lastMousePos.X
 		local velY = m.Y - self._lastMousePos.Y
 		self._lastMousePos = m
@@ -214,7 +236,7 @@ function PointerDragService._beginDrag(self: any, curPos: Vector2)
 		else
 			targetRot += math.sin(tick() * 10) * 0.8
 		end
-		(self._ghostRotValue :: Fusion.Value<number>):set(targetRot)
+		;(self._ghostRotValue :: Fusion.Value<number>):set(targetRot)
 	end) :: RBXScriptConnection
 	table.insert(self._layoutScope :: Fusion.Scope<any>, self._moveConn)
 end
