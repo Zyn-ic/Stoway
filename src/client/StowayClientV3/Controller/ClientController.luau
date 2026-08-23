@@ -20,18 +20,18 @@
 -----------------------------
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Fusion = require(ReplicatedStorage.Packages.fusion)
 local SignalPlus = require(ReplicatedStorage.Packages.SignalPlus)
 
 local CoreStore = require(ReplicatedStorage.Shared.Stoway.CoreStore)
 local ClientStore = require(script.Parent.ClientStore)
 local CoreTypes = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
+local Signals = require(script.Parent.Parent.Signals)
 
 local ClientController = {}
 
-local _state: CoreStore.InventoryState? = nil
+local _state: CoreTypes.InventoryState? = nil
 local _connections: { SignalPlus.Connection } = {}
-local _signals: typeof(require(script.Parent.Parent.Signals))? = nil
+local _signals: typeof(Signals)? = nil
 
 -----------------------------
 -- PRIVATE FUNCTIONS --
@@ -85,13 +85,13 @@ local function sync()
 	ClientStore.EquippedItemUUID:set(_state.EquippedItemUUID)
 	ClientStore.Weight:set(_state.Weight)
 	if typeof(_state.Settings) == "table" then
-		ClientStore.Settings:set(table.clone(_state.Settings))
+		ClientStore.Settings:set(table.clone(_state.Settings) :: any)
 	else
 		ClientStore.Settings:set(_state.Settings)
 	end
 end
 
-local function bindSignals(signals: typeof(require(script.Parent.Parent.Signals)))
+local function bindSignals(signals: typeof(Signals))
 	table.clear(_connections)
 	_signals = signals
 
@@ -162,11 +162,14 @@ end
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
-function ClientController.Init(signals: typeof(require(script.Parent.Parent.Signals)), snapshot: CoreStore.InventoryState?)
+function ClientController.Init(signals: typeof(Signals), snapshot: CoreTypes.InventoryState?)
 	if snapshot then
-		_state = snapshot :: any
-		hydrateIfNeeded(_state)
-		ClientStore.Init(_state)
+		local full: CoreTypes.InventoryState = snapshot
+		_state = full
+		hydrateIfNeeded(full)
+		-- Boundary cast: full engine state carries server-only indexes
+		-- (ItemsByID, LocationByUUID, MetadataIndex) beyond the client mirror shape.
+		ClientStore.Init(full :: any)
 		sync()
 	else
 		_state = ClientStore.GetSnapshot() :: any
@@ -178,15 +181,14 @@ end
 function ClientController.Destroy()
 	for _, conn in _connections do
 		if conn and conn.Disconnect then conn:Disconnect() end
-		if conn and conn.disconnect then conn:disconnect() end
 	end
 	table.clear(_connections)
 	_state = nil
 	_signals = nil
 end
 
-function ClientController.GetState(): CoreStore.InventoryState?
-	return _state :: any
+function ClientController.GetState(): CoreTypes.InventoryState?
+	return _state
 end
 
 function ClientController.Sync()

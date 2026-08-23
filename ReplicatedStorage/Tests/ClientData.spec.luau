@@ -18,45 +18,14 @@
 	These specs intentionally avoid Fusion/Instances — pure table checks.
 ]]
 
-local function tryRequireClientQuery()
-	local ok, mod = pcall(function()
-		-- Studio Instance path: StarterPlayerScripts is under StarterPlayer
-		return require(game:GetService("StarterPlayer").StarterPlayerScripts.StowayClientV3.CoreStore.Query)
-	end)
-	if ok and mod then return mod end
-	-- Fallback for Lune or Rojo file alias (if added)
-	local ok2, mod2 = pcall(function()
-		return require("@ClientQuery")
-	end)
-	if ok2 then return mod2 end
-	-- Direct file fallback when running from src/client alias
-	local ok3, mod3 = pcall(function()
-		return require(game:GetService("ReplicatedStorage").Shared.Stoway.CoreStore.Query)
-	end)
-	if ok3 then return mod3 end
-	return nil
-end
-
-local function tryRequireSharedCore()
-	local ok, mod = pcall(function()
-		return require(game:GetService("ReplicatedStorage").Shared.Stoway.CoreStore)
-	end)
-	if ok then return mod end
-	local ok2, mod2 = pcall(function()
-		return require("@CoreStore")
-	end)
-	if ok2 then return mod2 end
-	return nil
-end
-
-local ClientQuery = tryRequireClientQuery()
-local SharedCore = tryRequireSharedCore()
+local ClientQuery = require(game:GetService("StarterPlayer").StarterPlayerScripts.StowayClientV3.CoreStore.Query)
+local ClientTypes = require(game:GetService("StarterPlayer").StarterPlayerScripts.StowayClientV3.CoreStore.Types)
+local SharedCore = require(game:GetService("ReplicatedStorage").Shared.Stoway.CoreStore)
 
 return function(describe: any, it: any, expect: any)
 	describe("ClientQuery - groupStorageByType", function()
 		it("groups by Type and preserves order", function()
-			if not ClientQuery then warn("[spec] ClientQuery not available, skipping"); return end
-			local items = {
+			local items: { [string]: ClientTypes.Item } = {
 				a = { UUID = "a", Id = "Sword", Amount = 1, Metadata = { Type = "Weapon", Rarity = "Common" } },
 				b = { UUID = "b", Id = "Apple", Amount = 3, Metadata = { Type = "Food" } },
 				c = { UUID = "c", Id = "Axe", Amount = 1, Metadata = { Type = "Weapon" } },
@@ -71,7 +40,6 @@ return function(describe: any, it: any, expect: any)
 		end)
 
 		it("flat mode returns UNGROUPED_KEY", function()
-			if not ClientQuery then return end
 			local items = { a = { UUID = "a", Id = "X", Amount = 1, Metadata = {} } }
 			local grouped = ClientQuery.groupStorageByType({ "a" }, items, false)
 			expect(grouped[ClientQuery.UNGROUPED_KEY]).never.toBeNil()
@@ -79,7 +47,6 @@ return function(describe: any, it: any, expect: any)
 		end)
 
 		it("orderedGroupKeys respects Categories.Order", function()
-			if not ClientQuery then return end
 			local groups = { Weapon = {}, Food = {}, Material = {} }
 			local categories = {
 				Weapon = { DisplayName = "Weapons", Color = Color3.new(1, 0, 0), Order = 1 },
@@ -93,7 +60,6 @@ return function(describe: any, it: any, expect: any)
 		end)
 
 		it("unknown type sorts after known categories", function()
-			if not ClientQuery then return end
 			local groups = { Weapon = {}, Trinket = {} }
 			local categories = { Weapon = { DisplayName = "W", Color = Color3.new(1, 1, 1), Order = 1 } }
 			local keys = ClientQuery.orderedGroupKeys(groups, categories)
@@ -104,17 +70,15 @@ return function(describe: any, it: any, expect: any)
 
 	describe("ClientQuery - search & sortRecords", function()
 		it("matchesSearch is case-insensitive on Id and Description", function()
-			if not ClientQuery then return end
-			expect(ClientQuery.matchesSearch({ Id = "IronSword", Metadata = { Description = "Sharp" } }, "iron")).toBe(true)
-			expect(ClientQuery.matchesSearch({ Id = "IronSword", Metadata = { Description = "Sharp" } }, "SHARP")).toBe(true)
-			expect(ClientQuery.matchesSearch({ Id = "IronSword", Metadata = {} }, "bow")).toBe(false)
+			expect(ClientQuery.matchesSearch({ UUID = "a", Id = "IronSword", Amount = 1, Metadata = { Description = "Sharp" } }, "iron")).toBe(true)
+			expect(ClientQuery.matchesSearch({ UUID = "a", Id = "IronSword", Amount = 1, Metadata = { Description = "Sharp" } }, "SHARP")).toBe(true)
+			expect(ClientQuery.matchesSearch({ UUID = "a", Id = "IronSword", Amount = 1, Metadata = {} }, "bow")).toBe(false)
 		end)
 
 		it("filterRecordsBySearch filters correctly", function()
-			if not ClientQuery then return end
 			local items = {
-				a = { Id = "Sword", Metadata = {} },
-				b = { Id = "Apple", Metadata = {} },
+				a = { UUID = "a", Id = "Sword", Amount = 1, Metadata = {} },
+				b = { UUID = "b", Id = "Apple", Amount = 2, Metadata = {} },
 			}
 			local records = { { index = 1, uuid = "a" }, { index = 2, uuid = "b" } }
 			local filtered = ClientQuery.filterRecordsBySearch(records, items, "app")
@@ -123,10 +87,9 @@ return function(describe: any, it: any, expect: any)
 		end)
 
 		it("sortRecords by Name is stable", function()
-			if not ClientQuery then return end
 			local items = {
-				a = { Id = "Zebra", Metadata = {} },
-				b = { Id = "Apple", Metadata = {} },
+				a = { UUID = "a", Id = "Zebra", Amount = 1, Metadata = {} },
+				b = { UUID = "b", Id = "Apple", Amount = 1, Metadata = {} },
 			}
 			local records = { { index = 2, uuid = "a" }, { index = 1, uuid = "b" } }
 			local sorted = ClientQuery.sortRecords(records, items, "Name")
@@ -135,12 +98,11 @@ return function(describe: any, it: any, expect: any)
 		end)
 
 		it("sortRecords by Rarity is descending", function()
-			if not ClientQuery then return end
 			-- Requires Colors.getRarityRank to be available in Studio
-			local items = {
-				a = { Id = "S", Metadata = { Rarity = "Common" } },
-				b = { Id = "S", Metadata = { Rarity = "Legendary" } },
-				c = { Id = "S", Metadata = { Rarity = "Rare" } },
+			local items: { [string]: ClientTypes.Item } = {
+				a = { UUID = "a", Id = "S", Amount = 1, Metadata = { Rarity = "Common" } },
+				b = { UUID = "b", Id = "S", Amount = 1, Metadata = { Rarity = "Legendary" } },
+				c = { UUID = "c", Id = "S", Amount = 1, Metadata = { Rarity = "Rare" } },
 			}
 			local records = { { index = 1, uuid = "a" }, { index = 2, uuid = "b" }, { index = 3, uuid = "c" } }
 			local sorted = ClientQuery.sortRecords(records, items, "Rarity")
@@ -152,29 +114,31 @@ return function(describe: any, it: any, expect: any)
 
 	describe("ClientQuery - packedHotbarOrder & format", function()
 		it("packedHotbarOrder Static returns slot", function()
-			if not ClientQuery then return end
-			local hotbar = { [1] = "a", [3] = "b" }
-			local items = { a = { UUID = "a", Id = "S" }, b = { UUID = "b", Id = "S" } }
+			local hotbar: { [number]: string? } = { [1] = "a", [3] = "b" }
+			local items: { [string]: ClientTypes.Item } = {
+				a = { UUID = "a", Id = "S", Amount = 1, Metadata = {} },
+				b = { UUID = "b", Id = "S", Amount = 1, Metadata = {} },
+			}
 			expect(ClientQuery.packedHotbarOrder(hotbar, items, 3, false)).toBe(3)
 		end)
 
 		it("packedHotbarOrder Dynamic packs holes", function()
-			if not ClientQuery then return end
-			local hotbar = { [1] = "a", [2] = nil, [3] = "b" }
-			local items = { a = {}, b = {} }
+			local hotbar: { [number]: string? } = { [1] = "a", [3] = "b" }
+			local items: { [string]: ClientTypes.Item } = {
+				a = { UUID = "a", Id = "S", Amount = 1, Metadata = {} },
+				b = { UUID = "b", Id = "S", Amount = 1, Metadata = {} },
+			}
 			expect(ClientQuery.packedHotbarOrder(hotbar, items, 3, true)).toBe(2)
 			expect(ClientQuery.packedHotbarOrder(hotbar, items, 2, true)).toBe(1002) -- hole maps past end
 		end)
 
 		it("formatAmount abbreviates", function()
-			if not ClientQuery then return end
 			expect(ClientQuery.formatAmount(999)).toBe("999x")
 			expect(ClientQuery.formatAmount(1500)).toBe("1.5k")
 			expect(ClientQuery.formatAmount(1_500_000)).toBe("1.5m")
 		end)
 
 		it("formatWeight shows limit", function()
-			if not ClientQuery then return end
 			expect(ClientQuery.formatWeight(5, 10)).toBe("5/10")
 			expect(ClientQuery.formatWeight(5, 0)).toBe("5")
 		end)
@@ -182,18 +146,17 @@ return function(describe: any, it: any, expect: any)
 
 	describe("Shared CoreStore - MetadataIndex & sort", function()
 		it("MetadataIndex tracks Rarity/Type on add and evicts on remove", function()
-			if not SharedCore then warn("[spec] SharedCore not available"); return end
 			local state = SharedCore.new({ Limit = 100 })
 			SharedCore.addToHotbar(state, { Id = "Sword", Amount = 1, Metadata = { Rarity = "Legendary", Type = "Weapon" } })
 			expect(state.MetadataIndex.Rarity.Legendary).never.toBeNil()
 			expect(#state.MetadataIndex.Rarity.Legendary).toBe(1)
 			local uuid = state.Hotbar[1]
+			if not uuid then error("expected hotbar uuid after addToHotbar") end
 			SharedCore.remove(state, uuid)
 			expect(#(state.MetadataIndex.Rarity.Legendary or {})).toBe(0)
 		end)
 
 		it("Shared sortStorage by Rarity is descending via MetadataIndex", function()
-			if not SharedCore then return end
 			local state = SharedCore.new({ Limit = 100, Sorting = false, SortOrder = "Rarity" })
 			SharedCore.addToBackpack(state, { Id = "Sword", Metadata = { Rarity = "Common" } })
 			SharedCore.addToBackpack(state, { Id = "Axe", Metadata = { Rarity = "Legendary" } })

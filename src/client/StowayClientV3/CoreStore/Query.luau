@@ -232,12 +232,12 @@ function Query.sortRecords(
 		return records
 	end
 	local sorted = table.clone(records)
-	table.sort(sorted, function(a, b)
+	table.sort(sorted, function(a: Types.ItemRecord, b: Types.ItemRecord)
 		local itemA = items[a.uuid]
 		local itemB = items[b.uuid]
 		if sortOrder == "Name" then
-			local nameA = if itemA then itemA.Id else ""
-			local nameB = if itemB then itemB.Id else ""
+			local nameA: string = if itemA then itemA.Id else ""
+			local nameB: string = if itemB then itemB.Id else ""
 			if nameA ~= nameB then
 				return nameA < nameB
 			end

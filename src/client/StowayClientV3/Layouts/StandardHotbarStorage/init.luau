@@ -10,7 +10,6 @@
 -----------------------------
 
 local Fusion = require(game:GetService("ReplicatedStorage").Packages.fusion)
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CoreTypes = require(script.Parent.Parent.CoreStore.Types)
 local ClientStore = require(script.Parent.Parent.Controller.ClientStore)
@@ -26,17 +25,21 @@ local StandardHotbarStorage = {}
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
-function StandardHotbarStorage.Mount(scope: Fusion.Scope<any>, skin: CoreTypes.SkinHandle, store: typeof(ClientStore))
-	local draggingGui = skin.DraggingGui or (skin.Gui and skin.Gui:FindFirstChild("DraggingGui") :: ScreenGui?)
-	if not draggingGui then
-		draggingGui = Instance.new("ScreenGui")
-		draggingGui.Name = "DraggingGui"
-		draggingGui.DisplayOrder = 100
-		draggingGui.IgnoreGuiInset = false
-		draggingGui.Parent = skin.Gui and skin.Gui.Parent or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
-		table.insert(scope, draggingGui)
+function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: CoreTypes.SkinHandle, store: typeof(ClientStore))
+	local existingDragging = skin.DraggingGui
+		or (skin.Gui and (skin.Gui:FindFirstChild("DraggingGui") :: ScreenGui?))
+	local draggingGui: ScreenGui
+	if existingDragging then
+		existingDragging.IgnoreGuiInset = false
+		draggingGui = existingDragging
 	else
-		draggingGui.IgnoreGuiInset = false
+		local created = Instance.new("ScreenGui")
+		created.Name = "DraggingGui"
+		created.DisplayOrder = 100
+		created.IgnoreGuiInset = false
+		created.Parent = skin.Gui and skin.Gui.Parent or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+		table.insert(scope, created)
+		draggingGui = created
 	end
 	local dragService = PointerDragService.new(scope, draggingGui, function(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
 		-- Direct core write, not Signals – Signals are mock RemoteEvents for the 5s smoke test only

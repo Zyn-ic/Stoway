@@ -10,8 +10,8 @@
 -- DEPENDENCIES --
 -----------------------------
 
-local CoreStore = require("../CoreStore")
-local Types = require("../CoreStore/Types")
+local CoreStore = require(game:GetService("ReplicatedStorage").Shared.Stoway.CoreStore)
+local Types = require(game:GetService("ReplicatedStorage").Shared.Stoway.CoreStore.Types)
 
 -----------------------------
 -- VARIABLES --

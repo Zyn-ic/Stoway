@@ -65,7 +65,9 @@ local currentDescribe = ""
 local function describe(name: string, fn: () -> ())
 	currentDescribe = name
 	print(`\n[Suite] {name}`)
-	local ok, err = pcall(fn)
+	local packed = table.pack(pcall(fn))
+	local ok = packed[1] :: boolean
+	local err = packed[2]
 	if not ok then
 		failed += 1
 		warn(`  [DESCRIBE FAIL] {name}: {err}`)
@@ -74,7 +76,9 @@ end
 
 local function it(name: string, fn: () -> ())
 	total += 1
-	local ok, err = pcall(fn)
+	local packed = table.pack(pcall(fn))
+	local ok = packed[1] :: boolean
+	local err = packed[2]
 	if ok then
 		passed += 1
 		print(`  [PASS] {currentDescribe} > {name}`)

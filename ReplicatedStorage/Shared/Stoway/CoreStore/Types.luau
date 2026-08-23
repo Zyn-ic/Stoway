@@ -1,14 +1,4 @@
-local Result
-do
-	local ok, mod = pcall(function()
-		return require(game:GetService("ReplicatedStorage").Shared.Stoway.Result)
-	end)
-	if ok and mod then
-		Result = mod
-	else
-		Result = require("@Result")
-	end
-end
+local Result = require(game:GetService("ReplicatedStorage").Shared.Stoway.Result)
 
 local Types = {}
 
@@ -60,7 +50,7 @@ export type Settings = {
 
     StackOnSwap: boolean,
     StackRequiredFields: { string },
-    StackBlacklist: { boolean },
+    StackBlacklist: { [string]: boolean },
 
     DefaultDroppable: boolean,
 }
@@ -79,7 +69,7 @@ export type SettingsOverrides = {
 
     StackOnSwap: boolean?,
     StackRequiredFields: { string }?,
-    StackBlacklist: { boolean }?,
+    StackBlacklist: { [string]: boolean }?,
 
     DefaultDroppable: boolean?,
 }

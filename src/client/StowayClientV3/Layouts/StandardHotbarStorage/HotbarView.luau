@@ -76,7 +76,7 @@ end
 -----------------------------
 
 function HotbarView.Create(
-	scope: Fusion.Scope<any>,
+	scope: Fusion.Scope<typeof(Fusion)>,
 	skin: CoreTypes.SkinHandle,
 	store: typeof(ClientStore),
 	dragService: any?
@@ -126,55 +126,67 @@ function HotbarView.Create(
 		)
 	end
 
-	local maxSlots = scope:Computed(function(use)
-		return State.getMaxHotbarSlots(use(store.Settings))
+	local maxSlots = scope:Computed(function(use: Fusion.Use)
+		return State.getMaxHotbarSlots(use(store.Settings) :: CoreTypes.Settings?)
 	end)
 
-	local slotSize = scope:Computed(function(use)
+	local slotSize = scope:Computed(function(use: Fusion.Use)
 		return computeSlotSize(use(viewportWidth))
 	end)
 
 	scope:Hydrate(hotbarFrame) {
 		AutomaticSize = Enum.AutomaticSize.None,
-		Size = scope:Computed(function(use)
-			local size = use(slotSize)
-			local slots = use(maxSlots)
+		Size = scope:Computed(function(use: Fusion.Use)
+			local size = use(slotSize) :: number
+			local slots = use(maxSlots) :: number
 			local width = INNER_PADDING * 2 + slots * size + math.max(0, slots - 1) * SLOT_GAP
 			local height = INNER_PADDING * 2 + size
 			return UDim2.fromOffset(width, height)
 		end),
-		Position = scope:Computed(function(use)
+		Position = scope:Computed(function(use: Fusion.Use)
 			local marginPx = computeBottomMarginPx(use(viewportWidth))
 			local xScale = computeHotbarXScale(use(viewportWidth))
 			return UDim2.new(xScale, originalPosition.X.Offset, 1, -marginPx)
 		end),
 	}
 
-	local slotSizeUDim = scope:Computed(function(use)
+	local slotSizeUDim = scope:Computed(function(use: Fusion.Use)
 		local size = use(slotSize)
 		return UDim2.fromOffset(size, size)
 	end)
 
-	local isDynamic = scope:Computed(function(use)
-		return Query.isDynamicHotbar(use(store.Settings))
+	local isDynamic = scope:Computed(function(use: Fusion.Use)
+		return Query.isDynamicHotbar(use(store.Settings) :: CoreTypes.Settings?)
 	end)
 
-	local slotIndices = scope:Computed(function(use)
-		return State.slotIndices(State.getMaxHotbarSlots(use(store.Settings)))
+	local slotIndices = scope:Computed(function(use: Fusion.Use)
+		return State.slotIndices(State.getMaxHotbarSlots(use(store.Settings) :: CoreTypes.Settings?))
 	end)
 
-	scope:ForPairs(slotIndices, function(use, slotScope, slotIndex)
-		local packOrder = slotScope:Computed(function(use)
-			return Query.packedHotbarOrder(use(store.Hotbar), use(store.Items), slotIndex, use(isDynamic))
+	local hotbarFor = scope:ForPairs(slotIndices, function(_use, slotScope: Fusion.Scope<typeof(Fusion)>, slotIndex: number)
+		local packOrder = slotScope:Computed(function(use: Fusion.Use)
+			local get = use :: any
+			return Query.packedHotbarOrder(
+				get(store.Hotbar) :: { [number]: string? },
+				get(store.Items) :: { [string]: CoreTypes.Item },
+				slotIndex,
+				get(isDynamic) :: boolean
+			)
 		end)
 
-		local keybind = slotScope:Computed(function(use)
+		local keybind = slotScope:Computed(function(use: Fusion.Use)
 			local display = use(packOrder)
 			return if display == 10 then "0" else tostring(display)
 		end)
 
-		local visibility = slotScope:Computed(function(use)
-			return Query.isHotbarSlotVisible(use(store.Hotbar), use(store.Items), slotIndex, use(isDynamic))
+		local visibility = slotScope:Computed(function(use: Fusion.Use)
+			local get = use :: any
+			return Query.isHotbarSlotVisible(
+				get(store.Hotbar) :: { [number]: string? },
+				get(store.Items) :: { [string]: CoreTypes.Item },
+				slotIndex,
+				get(isDynamic) :: boolean
+			)
 		end)
 
 		local slotFrame = SlotView.Create(slotScope, {
@@ -201,6 +213,9 @@ function HotbarView.Create(
 
 		return slotIndex, true
 	end)
+	-- New Fusion 0.3 For is lazy; side-effect For must be observed to run
+	Fusion.peek(hotbarFor)
+	scope:Observer(hotbarFor)
 end
 
 -----------------------------

@@ -40,7 +40,7 @@ export type SlotProps = {
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
-function SlotView.Create(scope: Fusion.Scope<any>, props: SlotProps): Frame
+function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps): Frame
 	local slotFrame = props.Template:Clone()
 	slotFrame.Name = props.SlotType .. "-" .. tostring(props.SlotIndex)
 	slotFrame.Parent = props.Parent
@@ -48,34 +48,42 @@ function SlotView.Create(scope: Fusion.Scope<any>, props: SlotProps): Frame
 
 	local store = props.Store
 
-	local slotbutton = slotFrame:FindFirstChild("slotbutton")
-	local stackcount = slotFrame:FindFirstChild("stackcount")
-	local slotnumber = slotFrame:FindFirstChild("slotnumber")
-	local selecticon = slotFrame:FindFirstChild("selecticon")
-	local rarityframe = slotFrame:FindFirstChild("rarityframe")
+	local slotbutton = slotFrame:FindFirstChild("slotbutton") :: ImageButton?
+	local stackcount = slotFrame:FindFirstChild("stackcount") :: TextLabel?
+	local slotnumber = slotFrame:FindFirstChild("slotnumber") :: TextLabel?
+	local selecticon = slotFrame:FindFirstChild("selecticon") :: GuiObject?
+	local rarityframe = slotFrame:FindFirstChild("rarityframe") :: ImageLabel?
 
-	local slotUUID = scope:Computed(function(use)
-		if props.SlotType == "Hotbar" then
-			return Query.getHotbarUUID(use(store.Hotbar), props.SlotIndex)
-		end
+	local hotbarSlotUUID = scope:Computed(function(use: Fusion.Use)
+		return Query.getHotbarUUID(use(store.Hotbar), props.SlotIndex)
+	end)
+
+	local storageSlotUUID = scope:Computed(function(use: Fusion.Use)
 		return Query.getStorageUUID(use(store.Storage), props.SlotIndex)
 	end)
 
-	local currentItem = scope:Computed(function(use)
-		return Query.getItem(use(store.Items), use(slotUUID))
+	local slotUUID = scope:Computed(function(use: Fusion.Use)
+		if props.SlotType == "Hotbar" then
+			return use(hotbarSlotUUID)
+		end
+		return use(storageSlotUUID)
 	end)
 
-	local hasItem = scope:Computed(function(use)
+	local currentItem = scope:Computed(function(use: Fusion.Use)
+		return Query.getItem(use(store.Items) :: { [string]: CoreTypes.Item }, use(slotUUID) :: string?)
+	end)
+
+	local hasItem = scope:Computed(function(use: Fusion.Use)
 		return use(currentItem) ~= nil
 	end)
 
-	local isEquipped = scope:Computed(function(use)
+	local isEquipped = scope:Computed(function(use: Fusion.Use)
 		return Query.isEquipped(use(store.EquippedItemUUID), use(slotUUID))
 	end)
 
 	if slotbutton then
 		scope:Hydrate(slotbutton) {
-			Image = scope:Computed(function(use)
+			Image = scope:Computed(function(use: Fusion.Use): string
 				local item = use(currentItem)
 				return if item and item.Metadata then item.Metadata.Image or "" else ""
 			end),
@@ -85,7 +93,7 @@ function SlotView.Create(scope: Fusion.Scope<any>, props: SlotProps): Frame
 
 	if rarityframe then
 		scope:Hydrate(rarityframe) {
-			ImageColor3 = scope:Computed(function(use)
+			ImageColor3 = scope:Computed(function(use: Fusion.Use): Color3
 				local item = use(currentItem)
 				return Colors.getRarityColor(item and item.Metadata and item.Metadata.Rarity)
 			end),
@@ -111,12 +119,12 @@ function SlotView.Create(scope: Fusion.Scope<any>, props: SlotProps): Frame
 			stackcount.Rotation = -15
 		end
 		scope:Hydrate(stackcount) {
-			Visible = scope:Computed(function(use)
+			Visible = scope:Computed(function(use: Fusion.Use): boolean
 				local item = use(currentItem)
 				local settings = use(store.Settings)
 				return settings ~= nil and settings.CanStack and item ~= nil
 			end),
-			Text = scope:Computed(function(use)
+			Text = scope:Computed(function(use: Fusion.Use): string
 				local item = use(currentItem)
 				if item then
 					return Query.formatAmount(item.Amount)

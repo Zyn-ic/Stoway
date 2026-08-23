@@ -60,13 +60,6 @@ local function getSlotFrame(hotbar: Frame?, name: string): Frame?
 	return hotbar:FindFirstChild(name) :: Frame?
 end
 
-local function hasVisibleSlot(hotbar: Frame?, slotIndex: number): boolean
-	if not hotbar then return false end
-	local f = hotbar:FindFirstChild(`Hotbar-{slotIndex}`) :: Frame?
-	if not f then return false end
-	return f.Visible
-end
-
 local function getStackcountVisible(slotFrame: Frame?): boolean
 	if not slotFrame then return false end
 	local sc = slotFrame:FindFirstChild("stackcount") :: TextLabel?
@@ -118,7 +111,9 @@ table.insert(cases, {
 	end,
 	assert = function(state, _gui, hotbar, backpack, _scrolling, weight)
 		assertTrue(backpack ~= nil, "Backpack exists")
-		assertTrue(backpack.Visible, "Backpack Visible")
+		if backpack then
+			assertTrue(backpack.Visible, "Backpack Visible")
+		end
 		assertTrue(weight ~= nil, "Weight exists")
 		if weight then
 			local expected = `{state.Weight}/{state.Settings.Limit}`
@@ -229,7 +224,9 @@ function VisualHarness.run(intervalSec: number?)
 		end
 		flush()
 		local gui, hotbar, backpack, scrolling, weight, _search = getGui()
-		local okAssert, errAssert = pcall(case.assert, state, gui, hotbar, backpack, scrolling, weight)
+		local packed = table.pack(pcall(case.assert, state, gui, hotbar, backpack, scrolling, weight))
+		local okAssert = packed[1] :: boolean
+		local errAssert = packed[2]
 		if okAssert then print(`  [PASS] {case.title}`) else warn(`  [FAIL] {case.title}: {errAssert}`) end
 		task.wait(interval)
 	end
@@ -248,7 +245,9 @@ function VisualHarness.runCase(idx: number, intervalSec: number?)
 	if not isSignalCase then ClientStore.Init(state) else state = ClientController.GetState() or state end
 	flush()
 	local gui, hotbar, backpack, scrolling, weight, _ = getGui()
-	local ok, err = pcall(case.assert, state, gui, hotbar, backpack, scrolling, weight)
+	local packed = table.pack(pcall(case.assert, state, gui, hotbar, backpack, scrolling, weight))
+	local ok = packed[1] :: boolean
+	local err = packed[2]
 	if ok then print(`  [PASS] {case.title}`) else warn(`  [FAIL] {case.title}: {err}`) end
 	task.wait(interval)
 	pcall(function() ClientController.Destroy() end)

@@ -7,23 +7,42 @@
 -- VARIABLES --
 -----------------------------
 
-local function importCore(name: string)
-	local ok, mod = pcall(function()
-		return require(game:GetService("ReplicatedStorage").Shared.Stoway.CoreStore[name])
-	end)
-	if ok and mod then
-		return mod
-	end
-	return require("@CoreStore/" .. name)
-end
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Types = importCore("Types")
-local State = importCore("State")
-local Operations = importCore("Operations")
-local Query = importCore("Query")
-local Slots = importCore("Slots")
+local Types = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
+local State = require(ReplicatedStorage.Shared.Stoway.CoreStore.State)
+local Operations = require(ReplicatedStorage.Shared.Stoway.CoreStore.Operations)
+local Query = require(ReplicatedStorage.Shared.Stoway.CoreStore.Query)
+local Slots = require(ReplicatedStorage.Shared.Stoway.CoreStore.Slots)
 
 local CoreStore = {}
+
+-----------------------------
+-- TYPE RE-EXPORTS --
+-----------------------------
+
+export type HotbarType = Types.HotbarType
+export type SortOrder = Types.SortOrder
+export type SlotType = Types.SlotType
+export type PlacementMode = Types.PlacementMode
+export type SlotRef = Types.SlotRef
+export type Item = Types.Item
+export type ItemMetadata = Types.ItemMetadata
+export type ItemInput = Types.ItemInput
+export type Settings = Types.Settings
+export type SettingsOverrides = Types.SettingsOverrides
+export type InventoryState = Types.InventoryState
+export type AddOptions = Types.AddOptions
+export type AddResult = Types.AddResult
+export type RemoveResult = Types.RemoveResult
+export type SwapResult = Types.SwapResult
+export type MoveResult = Types.MoveResult
+export type SplitResult = Types.SplitResult
+export type MetadataUpdateResult = Types.MetadataUpdateResult
+export type SortResult = Types.SortResult
+export type EquipResult = Types.EquipResult
+export type UnequipResult = Types.UnequipResult
+export type DropResult = Types.DropResult
 
 -----------------------------
 -- CONSTANTS --

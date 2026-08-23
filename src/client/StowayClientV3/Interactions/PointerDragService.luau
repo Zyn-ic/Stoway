@@ -30,12 +30,32 @@ local CoreTypes = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
 local PointerDragService = {}
 PointerDragService.__index = PointerDragService
 
+export type Service = typeof(setmetatable({} :: SelfData, PointerDragService))
+
 export type SlotRef = CoreTypes.SlotRef
-export type Service = {
-	RegisterDraggable: (self: Service, slotScope: Fusion.Scope<any>, handle: GuiButton, slotRef: SlotRef) -> (),
-	RegisterDropTarget: (self: Service, dropScope: Fusion.Scope<any>, targetFrame: GuiObject, slotRef: SlotRef) -> (),
-	SetEnabled: (self: Service, enabled: boolean) -> (),
-	Destroy: (self: Service) -> (),
+
+type SelfData = {
+	_layoutScope: Fusion.Scope<typeof(Fusion)>,
+	_draggingGui: ScreenGui,
+	_onCommit: (from: SlotRef, to: SlotRef) -> (),
+	_slotTemplate: Frame?,
+	_enabled: boolean,
+	_dropMap: { [GuiObject]: SlotRef },
+	_dropFrames: { GuiObject },
+	_ghost: Frame?,
+	_ghostSpringPos: Fusion.Spring<UDim2>?,
+	_ghostPosValue: Fusion.Value<UDim2>?,
+	_ghostRotValue: Fusion.Value<number>?,
+	_ghostRotSpring: Fusion.Spring<number>?,
+	_lastMousePos: Vector2,
+	_dragging: boolean,
+	_pressPos: Vector2,
+	_pressSlotRef: SlotRef?,
+	_pressFrame: GuiObject?,
+	_pressOffset: Vector2,
+	_checkConn: RBXScriptConnection?,
+	_releaseConn: RBXScriptConnection?,
+	_moveConn: RBXScriptConnection?,
 }
 
 -----------------------------
@@ -59,12 +79,12 @@ end
 -----------------------------
 
 function PointerDragService.new(
-	layoutScope: Fusion.Scope<any>,
+	layoutScope: Fusion.Scope<typeof(Fusion)>,
 	draggingGui: ScreenGui,
 	onCommit: (from: SlotRef, to: SlotRef) -> (),
 	slotTemplate: Frame?
 ): Service
-	local self = setmetatable({}, PointerDragService) :: any
+	local self = setmetatable({}, PointerDragService) :: Service
 	self._layoutScope = layoutScope
 	self._draggingGui = draggingGui
 	self._onCommit = onCommit
@@ -73,21 +93,21 @@ function PointerDragService.new(
 	self._dropMap = {} :: { [GuiObject]: SlotRef }
 	self._dropFrames = {} :: { GuiObject }
 	self._ghost = nil :: Frame?
-	self._ghostSpringPos = nil :: Fusion.Value<UDim2>?
+	self.	_ghostSpringPos = nil :: Fusion.Spring<UDim2>?
 	self._ghostPosValue = nil :: Fusion.Value<UDim2>?
 	self._ghostRotValue = nil :: Fusion.Value<number>?
-	self._ghostRotSpring = nil :: Fusion.Computed<number>?
-	self._lastMousePos = Vector2.new(0, 0) :: Vector2
+	self._ghostRotSpring = nil :: Fusion.Spring<number>?
+	self._lastMousePos = Vector2.zero :: Vector2
 	self._dragging = false
-	self._pressPos = Vector2.new(0, 0) :: Vector2
+	self._pressPos = Vector2.zero :: Vector2
 	self._pressSlotRef = nil :: SlotRef?
 	self._pressFrame = nil :: GuiObject?
-	self._pressOffset = Vector2.new(0, 0) :: Vector2
+	self._pressOffset = Vector2.zero :: Vector2
 	self._checkConn = nil :: RBXScriptConnection?
 	self._releaseConn = nil :: RBXScriptConnection?
 	self._moveConn = nil :: RBXScriptConnection?
 
-	self._releaseConn = UserInputService.InputEnded:Connect(function(input: InputObject)
+	local releaseConn = UserInputService.InputEnded:Connect(function(input: InputObject)
 		if not self._enabled then return end
 		if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
 		if self._dragging then
@@ -96,22 +116,23 @@ function PointerDragService.new(
 			self:_cancelPress()
 		end
 	end) :: RBXScriptConnection
-	table.insert(layoutScope, self._releaseConn)
+	self._releaseConn = releaseConn
+	table.insert(layoutScope, releaseConn)
 
-	return self :: Service
+	return self
 end
 
-function PointerDragService:RegisterDraggable(slotScope: Fusion.Scope<any>, handle: GuiButton, slotRef: SlotRef)
+function PointerDragService.RegisterDraggable(self: Service, slotScope: Fusion.Scope<typeof(Fusion)>, handle: GuiButton, slotRef: SlotRef)
 	local conn = handle.MouseButton1Down:Connect(function()
 		if not self._enabled then return end
 		if not handle.Visible then return end
 		self._pressPos = getMousePos()
 		self._pressSlotRef = table.clone(slotRef)
 		self._pressFrame = handle.Parent :: GuiObject
-		self._pressOffset = Vector2.new(0, 0)
+		self._pressOffset = Vector2.zero
 
 		if self._checkConn then (self._checkConn :: RBXScriptConnection):Disconnect() end
-		self._checkConn = UserInputService.InputChanged:Connect(function(input: InputObject)
+		local checkConn = UserInputService.InputChanged:Connect(function(input: InputObject)
 			if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
 			local cur = Vector2.new(input.Position.X, input.Position.Y)
 			self._lastMousePos = cur
@@ -122,13 +143,14 @@ function PointerDragService:RegisterDraggable(slotScope: Fusion.Scope<any>, hand
 				self:_beginDrag(cur)
 			end
 		end) :: RBXScriptConnection
-		table.insert(slotScope, self._checkConn)
+		self._checkConn = checkConn
+		table.insert(slotScope, checkConn)
 		table.insert(slotScope, handle)
 	end) :: RBXScriptConnection
 	table.insert(slotScope, conn)
 end
 
-function PointerDragService:RegisterDropTarget(dropScope: Fusion.Scope<any>, targetFrame: GuiObject, slotRef: SlotRef)
+function PointerDragService.RegisterDropTarget(self: Service, dropScope: Fusion.Scope<typeof(Fusion)>, targetFrame: GuiObject, slotRef: SlotRef)
 	self._dropMap[targetFrame] = table.clone(slotRef)
 	table.insert(self._dropFrames, targetFrame)
 	table.insert(dropScope, targetFrame)
@@ -139,12 +161,12 @@ function PointerDragService:RegisterDropTarget(dropScope: Fusion.Scope<any>, tar
 	end)
 end
 
-function PointerDragService:SetEnabled(enabled: boolean)
+function PointerDragService.SetEnabled(self: Service, enabled: boolean)
 	self._enabled = enabled
 	if not enabled and self._dragging then self:_cancelPress(); self:_endDrag() end
 end
 
-function PointerDragService:Destroy()
+function PointerDragService.Destroy(self: Service)
 	if self._checkConn then (self._checkConn :: RBXScriptConnection):Disconnect(); self._checkConn = nil end
 	if self._moveConn then (self._moveConn :: RBXScriptConnection):Disconnect(); self._moveConn = nil end
 	if self._ghost then (self._ghost :: Frame):Destroy(); self._ghost = nil end
@@ -160,7 +182,7 @@ end
 -- INTERNAL --
 -----------------------------
 
-function PointerDragService._beginDrag(self: any, curPos: Vector2)
+function PointerDragService._beginDrag(self: Service, curPos: Vector2)
 	if self._dragging then return end
 	self._dragging = true
 
@@ -208,21 +230,21 @@ function PointerDragService._beginDrag(self: any, curPos: Vector2)
 	ghost.Parent = self._draggingGui :: ScreenGui
 	self._ghost = ghost
 
-	local posValue = (self._layoutScope :: Fusion.Scope<any>):Value(UDim2.fromOffset(curPos.X, curPos.Y)) :: Fusion.Value<UDim2>
-	local springPos = (self._layoutScope :: Fusion.Scope<any>):Spring(posValue, 70, 1) :: Fusion.Computed<UDim2>
+	local posValue = (self._layoutScope :: Fusion.Scope<typeof(Fusion)>):Value(UDim2.fromOffset(curPos.X, curPos.Y)) :: Fusion.Value<UDim2>
+	local springPos = (self._layoutScope :: Fusion.Scope<typeof(Fusion)>):Spring(posValue, 70, 1) :: Fusion.Spring<UDim2>
 	self._ghostPosValue = posValue
 	self._ghostSpringPos = springPos
-	local rotValue = (self._layoutScope :: Fusion.Scope<any>):Value(0) :: Fusion.Value<number>
-	local rotSpring = (self._layoutScope :: Fusion.Scope<any>):Spring(rotValue, 22, 0.4) :: Fusion.Computed<number>
+	local rotValue = (self._layoutScope :: Fusion.Scope<typeof(Fusion)>):Value(0) :: Fusion.Value<number>
+	local rotSpring = (self._layoutScope :: Fusion.Scope<typeof(Fusion)>):Spring(rotValue, 22, 0.4) :: Fusion.Spring<number>
 	self._ghostRotValue = rotValue
 	self._ghostRotSpring = rotSpring
 	self._lastMousePos = curPos
-	;(self._layoutScope :: Fusion.Scope<any>):Hydrate(ghost) {
+	;(self._layoutScope :: Fusion.Scope<typeof(Fusion)>):Hydrate(ghost) {
 		Position = springPos,
 		Rotation = rotSpring,
 	}
 
-	self._moveConn = RunService.RenderStepped:Connect(function()
+	local moveConn = RunService.RenderStepped:Connect(function()
 		if not self._dragging or not self._ghostPosValue then return end
 		local m = getMousePos()
 		;(self._ghostPosValue :: Fusion.Value<UDim2>):set(UDim2.fromOffset(m.X, m.Y))
@@ -238,10 +260,11 @@ function PointerDragService._beginDrag(self: any, curPos: Vector2)
 		end
 		;(self._ghostRotValue :: Fusion.Value<number>):set(targetRot)
 	end) :: RBXScriptConnection
-	table.insert(self._layoutScope :: Fusion.Scope<any>, self._moveConn)
+	self._moveConn = moveConn
+	table.insert(self._layoutScope :: Fusion.Scope<typeof(Fusion)>, moveConn)
 end
 
-function PointerDragService._endDrag(self: any, input: InputObject?)
+function PointerDragService._endDrag(self: Service, input: InputObject?)
 	if not self._dragging then self:_cancelPress(); return end
 	self._dragging = false
 	if self._moveConn then (self._moveConn :: RBXScriptConnection):Disconnect(); self._moveConn = nil end
@@ -261,9 +284,9 @@ function PointerDragService._endDrag(self: any, input: InputObject?)
 	end
 	local ok, res = pcall(function()
 		if playerGui then
-			return (playerGui :: PlayerGui):GetGuiObjectsAtPosition(mousePos.X, mousePos.Y)
+			return playerGui:GetGuiObjectsAtPosition(mousePos.X, mousePos.Y)
 		end
-		return GuiService:GetGuiObjectsAtPosition(mousePos.X, mousePos.Y)
+		return {}
 	end)
 	if ok and res then hitFrames = res :: { GuiObject } else hitFrames = {} end
 
@@ -299,7 +322,7 @@ function PointerDragService._endDrag(self: any, input: InputObject?)
 	end
 end
 
-function PointerDragService._cancelPress(self: any)
+function PointerDragService._cancelPress(self: Service)
 	if self._checkConn then (self._checkConn :: RBXScriptConnection):Disconnect(); self._checkConn = nil end
 	self._pressSlotRef = nil
 	self._pressFrame = nil

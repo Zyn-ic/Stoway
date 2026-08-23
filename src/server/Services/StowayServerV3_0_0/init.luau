@@ -13,53 +13,15 @@
 
 local Stoway = {}
 
-local ReplicatedStorage: any = nil
-local ServerStorage: any = nil
-local Workspace: any = nil
-do
-	local ok, rs = pcall(function() return (game :: any):GetService("ReplicatedStorage") end)
-	if ok then ReplicatedStorage = rs end
-	local ok2, ss = pcall(function() return (game :: any):GetService("ServerStorage") end)
-	if ok2 then ServerStorage = ss end
-	local ok3, ws = pcall(function() return (game :: any):GetService("Workspace") end)
-	if ok3 then Workspace = ws end
-end
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+local Workspace = game:GetService("Workspace")
 
-local Types
-do
-	local ok, mod = pcall(function()
-		return require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
-	end)
-	if ok and mod then
-		Types = mod
-	else
-		Types = require("@CoreStore/Types")
-	end
-end
+local Types = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
 
-local Protocol
-do
-	local ok, mod = pcall(function()
-		return require(script.Protocol)
-	end)
-	if ok and mod then
-		Protocol = mod
-	else
-		Protocol = require("@Stoway/Protocol")
-	end
-end
+local Protocol = require(script.Protocol)
 
-local Result
-do
-	local ok, mod = pcall(function()
-		return require(ReplicatedStorage.Shared.Stoway.Result)
-	end)
-	if ok and mod then
-		Result = mod
-	else
-		Result = require("@Result")
-	end
-end
+local Result = require(ReplicatedStorage.Shared.Stoway.Result)
 
 -- Minimal contract for the injected CoreStore module.
 type CoreStoreApi = {

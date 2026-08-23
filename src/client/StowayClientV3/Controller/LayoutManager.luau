@@ -25,7 +25,7 @@ local Skins = {
 	DefaultModern = require(script.Parent.Parent.Skins.DefaultModern),
 }
 
-local currentLayoutScope: Fusion.Scope<any>? = nil
+local currentLayoutScope: Fusion.Scope<typeof(Fusion)>? = nil
 local currentLayoutKey: string? = nil
 local currentSkinKey: string? = nil
 
@@ -34,7 +34,7 @@ local currentSkinKey: string? = nil
 -----------------------------
 
 function LayoutManager.SetLayout(
-	rootScope: Fusion.Scope<any>,
+	rootScope: Fusion.Scope<typeof(Fusion)>,
 	playerGui: PlayerGui,
 	store: typeof(ClientStore),
 	hotbarTypeKey: string,

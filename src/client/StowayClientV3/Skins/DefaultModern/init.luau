@@ -22,7 +22,7 @@ local DefaultModern = {}
 -----------------------------
 
 -- Loads the skin GUI onto the given scope.
-function DefaultModern.Load(scope: Fusion.Scope<any>, playerGui: PlayerGui, skinAssetName: string): CoreTypes.SkinHandle?
+function DefaultModern.Load(scope: Fusion.Scope<typeof(Fusion)>, playerGui: PlayerGui, skinAssetName: string): CoreTypes.SkinHandle?
 	local guiRoot = ReplicatedStorage:FindFirstChild("Stoway")
 	local guiFolder = guiRoot and guiRoot:FindFirstChild("GUI")
 	local skinFolder = guiFolder and guiFolder:FindFirstChild(skinAssetName)
@@ -39,7 +39,7 @@ function DefaultModern.Load(scope: Fusion.Scope<any>, playerGui: PlayerGui, skin
 		return nil
 	end
 
-	local gui = guiTemplate:Clone()
+	local gui = guiTemplate:Clone() :: ScreenGui
 	gui.Parent = playerGui
 	table.insert(scope, gui)
 
@@ -47,18 +47,21 @@ function DefaultModern.Load(scope: Fusion.Scope<any>, playerGui: PlayerGui, skin
 	local slotFolder = root:FindFirstChild("Slot")
 
 	-- Ensure a dedicated DraggingGui for spring ghost – create if prefab lacks it
-	local draggingGui = gui:FindFirstChild("DraggingGui") :: ScreenGui?
-	if not draggingGui then
-		draggingGui = Instance.new("ScreenGui")
-		draggingGui.Name = "DraggingGui"
-		draggingGui.DisplayOrder = 100
-		draggingGui.IgnoreGuiInset = false
-		draggingGui.ResetOnSpawn = false
-		draggingGui.Parent = playerGui
-		table.insert(scope, draggingGui)
+	local existingDragging = gui:FindFirstChild("DraggingGui") :: ScreenGui?
+	local draggingGui: ScreenGui
+	if existingDragging then
+		existingDragging.IgnoreGuiInset = false
+		if existingDragging.Parent ~= playerGui then existingDragging.Parent = playerGui end
+		draggingGui = existingDragging
 	else
-		draggingGui.IgnoreGuiInset = false
-		if draggingGui.Parent ~= playerGui then draggingGui.Parent = playerGui end
+		local created = Instance.new("ScreenGui")
+		created.Name = "DraggingGui"
+		created.DisplayOrder = 100
+		created.IgnoreGuiInset = false
+		created.ResetOnSpawn = false
+		created.Parent = playerGui
+		table.insert(scope, created)
+		draggingGui = created
 	end
 
 	return {

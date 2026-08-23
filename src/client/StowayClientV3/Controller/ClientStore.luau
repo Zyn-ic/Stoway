@@ -28,12 +28,12 @@ ClientStore.RootScope = Fusion.scoped(Fusion)
 
 local Scope = ClientStore.RootScope
 
-ClientStore.Items = Scope:Value({} :: { [string]: Types.Item })
-ClientStore.Hotbar = Scope:Value({} :: { [number]: string? })
-ClientStore.Storage = Scope:Value({} :: { string })
-ClientStore.EquippedItemUUID = Scope:Value(nil :: string?)
-ClientStore.Weight = Scope:Value(0)
-ClientStore.Settings = Scope:Value(nil :: Types.Settings?)
+ClientStore.Items = (Scope:Value({} :: { [string]: Types.Item }) :: Fusion.Value<{ [string]: Types.Item }>)
+ClientStore.Hotbar = (Scope:Value({} :: { [number]: string? }) :: Fusion.Value<{ [number]: string? }>)
+ClientStore.Storage = (Scope:Value({} :: { string }) :: Fusion.Value<{ string }>)
+ClientStore.EquippedItemUUID = (Scope:Value(nil :: string?) :: Fusion.Value<string?>)
+ClientStore.Weight = (Scope:Value(0) :: Fusion.Value<number>)
+ClientStore.Settings = (Scope:Value(nil :: Types.Settings?) :: Fusion.Value<Types.Settings?>)
 
 -----------------------------
 -- PUBLIC FUNCTIONS --
