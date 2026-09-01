@@ -13,11 +13,11 @@
 local Players = game:GetService("Players")
 local StarterGui = game:GetService("StarterGui")
 
-local ClientStore = require(script.Controller.ClientStore)
-local ClientController = require(script.Controller.ClientController)
-local LayoutManager = require(script.Controller.LayoutManager)
-local MockData = require(script.Mock.MockData)
-local Signals = require(script.Signals)
+local ClientStore = require("@self/Controller/ClientStore")
+local ClientController = require("@self/Controller/ClientController")
+local LayoutManager = require("@self/Controller/LayoutManager")
+local MockData = require("@self/Mock/MockData")
+local Signals = require("@self/Signals")
 
 local StowayClient = {}
 StowayClient.Signals = Signals

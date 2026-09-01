@@ -17,6 +17,7 @@ local Colors = require(ReplicatedStorage.Shared.Stoway.Colors)
 local CoreTypes = require(script.Parent.Parent.CoreStore.Types)
 local Query = require(script.Parent.Parent.CoreStore.Query)
 local ClientStore = require(script.Parent.Parent.Controller.ClientStore)
+local ClientController = require(script.Parent.Parent.Controller.ClientController)
 
 local SlotView = {}
 
@@ -89,6 +90,23 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 			end),
 			Visible = hasItem,
 		}
+
+		-- Click to equip / unequip. Tracked by Fusion scope so ForPairs cleanup
+		-- disconnects it (fixes master issue #2: connection leak per slot).
+		table.insert(
+			scope,
+			slotbutton.MouseButton1Click:Connect(function()
+				local uuid = Fusion.peek(slotUUID)
+				if not uuid then return end
+				if not Fusion.peek(hasItem) then return end
+				local equipped = Fusion.peek(store.EquippedItemUUID)
+				if equipped == uuid then
+					ClientController.Unequip()
+				else
+					ClientController.Equip(uuid)
+				end
+			end)
+		)
 	end
 
 	if rarityframe then

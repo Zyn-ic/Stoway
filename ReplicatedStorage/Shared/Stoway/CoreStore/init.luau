@@ -7,13 +7,11 @@
 -- VARIABLES --
 -----------------------------
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local Types = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
-local State = require(ReplicatedStorage.Shared.Stoway.CoreStore.State)
-local Operations = require(ReplicatedStorage.Shared.Stoway.CoreStore.Operations)
-local Query = require(ReplicatedStorage.Shared.Stoway.CoreStore.Query)
-local Slots = require(ReplicatedStorage.Shared.Stoway.CoreStore.Slots)
+local Types = require("@self/Types")
+local State = require("@self/State")
+local Operations = require("@self/Operations")
+local Query = require("@self/Query")
+local Slots = require("@self/Slots")
 
 local CoreStore = {}
 
@@ -95,8 +93,8 @@ function CoreStore.addToBackpack(
 	local finalOptions: Types.AddOptions = {}
 
 	if options then
-		for key, value in options :: any do
-			(finalOptions :: any)[key] = value
+		for key, value in options do
+			finalOptions[key] = value
 		end
 	end
 

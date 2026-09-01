@@ -9,15 +9,13 @@
 -- VARIABLES --
 -----------------------------
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local Result = require(ReplicatedStorage.Shared.Stoway.Result)
-local Types = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
-local Metadata = require(ReplicatedStorage.Shared.Stoway.CoreStore.Metadata)
-local Slots = require(ReplicatedStorage.Shared.Stoway.CoreStore.Slots)
-local Stack = require(ReplicatedStorage.Shared.Stoway.CoreStore.Stack)
-local State = require(ReplicatedStorage.Shared.Stoway.CoreStore.State)
-local Utils = require(ReplicatedStorage.Shared.Stoway.CoreStore.Utils)
+local Result = require("@game/ReplicatedStorage/Shared/Stoway/Result")
+local Types = require("./Types")
+local Metadata = require("./Metadata")
+local Slots = require("./Slots")
+local Stack = require("./Stack")
+local State = require("./State")
+local Utils = require("./Utils")
 
 local Operations = {}
 

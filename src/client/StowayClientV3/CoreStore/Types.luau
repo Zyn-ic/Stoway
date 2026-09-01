@@ -9,8 +9,7 @@
 -- VARIABLES --
 -----------------------------
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local SharedTypes = require(ReplicatedStorage.Shared.Stoway.Types)
+local SharedTypes = require("@game/ReplicatedStorage/Shared/Stoway/Types")
 
 local Types = {}
 

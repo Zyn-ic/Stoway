@@ -45,29 +45,29 @@ local function hydrateIfNeeded(state: any)
 	state.MetadataIndex = state.MetadataIndex or {}
 	-- rebuild from current Items/Hotbar/Storage if empty
 	if next(state.LocationByUUID) == nil and state.Hotbar and state.Storage then
-		for slot, uuid in state.Hotbar :: any do
-			if uuid then (state.LocationByUUID :: any)[uuid] = { Type = "Hotbar", Slot = slot } end
+		for slot, uuid in state.Hotbar do
+			if uuid then state.LocationByUUID[uuid] = { Type = "Hotbar", Slot = slot } end
 		end
-		for idx, uuid in state.Storage :: any do
-			(state.LocationByUUID :: any)[uuid] = { Type = "Storage", Slot = idx }
+		for idx, uuid in state.Storage do
+			state.LocationByUUID[uuid] = { Type = "Storage", Slot = idx }
 		end
 	end
 	if next(state.ItemsByID) == nil and state.Items then
 		for uuid, it in state.Items :: any do
-			local id = (it :: any).Id
-			local bucket = (state.ItemsByID :: any)[id]
-			if not bucket then bucket = {}; (state.ItemsByID :: any)[id] = bucket end
+			local id = it.Id
+			local bucket = state.ItemsByID[id]
+			if not bucket then bucket = {}; state.ItemsByID[id] = bucket end
 			table.insert(bucket, uuid)
 		end
 	end
 	if next(state.MetadataIndex) == nil and state.Items then
 		for uuid, it in state.Items :: any do
 			for _, field in { "Rarity", "Type" } do
-				local v = (it :: any).Metadata and (it :: any).Metadata[field]
+				local v = it.Metadata and it.Metadata[field]
 				if v ~= nil then
 					local sv = tostring(v)
-					local ft = (state.MetadataIndex :: any)[field]
-					if not ft then ft = {}; (state.MetadataIndex :: any)[field] = ft end
+					local ft = state.MetadataIndex[field]
+					if not ft then ft = {}; state.MetadataIndex[field] = ft end
 					local b = ft[sv]
 					if not b then b = {}; ft[sv] = b end
 					table.insert(b, uuid)

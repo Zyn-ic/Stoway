@@ -41,10 +41,107 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 		table.insert(scope, created)
 		draggingGui = created
 	end
-	local dragService = PointerDragService.new(scope, draggingGui, function(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
-		-- Direct core write, not Signals – Signals are mock RemoteEvents for the 5s smoke test only
-		ClientController.Swap(from, to)
-	end, skin.SlotTemplate)
+	local function hasDestItem(target: CoreTypes.SlotRef): boolean
+		if target.Type == "Hotbar" then
+			return Fusion.peek(store.Hotbar)[target.Slot] ~= nil
+		else
+			return Fusion.peek(store.Storage)[target.Slot] ~= nil
+		end
+	end
+
+	local function handleSwap(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
+		local res = ClientController.Swap(from, to)
+		if not res.ok then
+			warn("[StandardHotbarStorage] Swap rejected", res.error and res.error.message or tostring(res))
+		end
+		return res
+	end
+
+	local function handleMove(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
+		local res = ClientController.Move(from, to)
+		if not res.ok then
+			warn("[StandardHotbarStorage] Move rejected", res.error and res.error.message or tostring(res))
+		end
+		return res
+	end
+
+	local dragService = PointerDragService.new(
+		scope,
+		draggingGui,
+		function(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef?, context: PointerDragService.DragContext)
+			local settings = Fusion.peek(store.Settings) :: CoreTypes.Settings?
+			local backpackEnabled = settings == nil or settings.BackpackEnabled ~= false
+			local hotbarType: CoreTypes.HotbarType = if settings then settings.HotbarType else "Static"
+
+			-- Guard: storage-involved drags when backpack disabled
+			if not backpackEnabled then
+				if from.Type == "Storage" then return end
+				if to and to.Type == "Storage" then return end
+				if context.overBackpack then return end
+			end
+
+			if to then
+				if from.Type == to.Type and from.Slot == to.Slot then return end
+				local destHasItem = hasDestItem(to)
+				if destHasItem then
+					-- Occupied -> Swap (StackOnSwap can stack; Move would reject DESTINATION_OCCUPIED)
+					handleSwap(from, to)
+				else
+					-- Empty slot -> Move (never stacks). Fallback to Swap if Move rejects (e.g. Static HH empty via Move is allowed but keep fallback)
+					local res = handleMove(from, to)
+					if not res.ok and res.error and res.error.message == "DESTINATION_UNAVAILABLE" then
+						-- Dynamic hotbar empty-hole guard already handled by Operations; try Swap as fallback only for Static
+						if hotbarType == "Static" then handleSwap(from, to) end
+					end
+				end
+				return
+			end
+
+			-- No slot hit: empty-area vs outside
+			if context.overBackpack and from.Type == "Hotbar" and backpackEnabled then
+				-- AddToBackpack: Hotbar -> Storage append (Move HS path ignores dest slot and appends)
+				local storage = Fusion.peek(store.Storage)
+				local appendSlot = #storage + 1
+				handleMove(from, { Type = "Storage", Slot = appendSlot })
+				return
+			end
+
+			if context.overHotbar and from.Type == "Storage" and hotbarType == "Dynamic" then
+				-- Dynamic hotbar: dropping storage item over hotbar background inserts at first empty hotbar slot
+				local hotbar = Fusion.peek(store.Hotbar) :: { [number]: string? }
+				local maxSlots = if settings then settings.MaxHotbarSlots else 10
+				local appendSlot: number? = nil
+				for i = 1, maxSlots do
+					if hotbar[i] == nil then
+						appendSlot = i
+						break
+					end
+				end
+				if appendSlot then handleSwap(from, { Type = "Hotbar", Slot = appendSlot }) end
+				return
+			end
+
+			if not context.overBackpack and not context.overHotbar then
+				-- Outside both -> Remove (full delete). Client-side only until QuickNet.
+				local uuid: string? = nil
+				if from.Type == "Hotbar" then
+					uuid = Fusion.peek(store.Hotbar)[from.Slot]
+				else
+					uuid = Fusion.peek(store.Storage)[from.Slot]
+				end
+				if uuid then
+					local res = ClientController.Remove(uuid)
+					if not res.ok then
+						warn("[StandardHotbarStorage] Remove rejected", res.error and res.error.message or tostring(res))
+					end
+				end
+				return
+			end
+		end,
+		skin.SlotTemplate,
+		skin.BackpackFrame,
+		skin.HotbarFrame
+	)
 
 	HotbarView.Create(scope, skin, store, dragService)
 	StorageView.Create(scope, skin, store, dragService)

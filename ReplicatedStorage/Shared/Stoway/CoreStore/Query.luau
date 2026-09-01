@@ -7,7 +7,7 @@
 -- VARIABLES --
 -----------------------------
 
-local Types = require(game:GetService("ReplicatedStorage").Shared.Stoway.CoreStore.Types)
+local Types = require("./Types")
 
 local Query = {}
 

@@ -1,4 +1,5 @@
-local Result = require(game:GetService("ReplicatedStorage").Shared.Stoway.Result)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Result = require(ReplicatedStorage.Shared.Stoway.Result)
 
 local Types = {}
 

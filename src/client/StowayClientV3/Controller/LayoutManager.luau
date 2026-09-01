@@ -40,13 +40,13 @@ function LayoutManager.SetLayout(
 	hotbarTypeKey: string,
 	skinKey: string
 )
-	local engine = (Layouts :: any)[hotbarTypeKey]
+	local engine = Layouts[hotbarTypeKey]
 	if not engine then
 		warn(`[LayoutManager] unknown HotbarType layout '{hotbarTypeKey}'`)
 		return
 	end
 
-	local skinLoader = (Skins :: any)[skinKey]
+	local skinLoader = Skins[skinKey]
 	if not skinLoader then
 		warn(`[LayoutManager] unknown UiSkin '{skinKey}'`)
 		return
@@ -74,7 +74,7 @@ end
 -- Cleans up the current layout scope and its instances.
 function LayoutManager.Teardown()
 	if currentLayoutScope then
-		(currentLayoutScope :: any):doCleanup()
+		currentLayoutScope:doCleanup()
 		currentLayoutScope = nil
 		currentLayoutKey = nil
 		currentSkinKey = nil

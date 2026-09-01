@@ -34,11 +34,20 @@ export type Service = typeof(setmetatable({} :: SelfData, PointerDragService))
 
 export type SlotRef = CoreTypes.SlotRef
 
+-- Context passed to onCommit when no target hit (empty area / outside)
+export type DragContext = {
+	overBackpack: boolean,
+	overHotbar: boolean,
+	mousePos: Vector2,
+}
+
 type SelfData = {
 	_layoutScope: Fusion.Scope<typeof(Fusion)>,
 	_draggingGui: ScreenGui,
-	_onCommit: (from: SlotRef, to: SlotRef) -> (),
+	_onCommit: (from: SlotRef, to: SlotRef?, context: DragContext) -> (),
 	_slotTemplate: Frame?,
+	_backpackFrame: Frame?,
+	_hotbarFrame: Frame?,
 	_enabled: boolean,
 	_dropMap: { [GuiObject]: SlotRef },
 	_dropFrames: { GuiObject },
@@ -81,19 +90,23 @@ end
 function PointerDragService.new(
 	layoutScope: Fusion.Scope<typeof(Fusion)>,
 	draggingGui: ScreenGui,
-	onCommit: (from: SlotRef, to: SlotRef) -> (),
-	slotTemplate: Frame?
+	onCommit: (from: SlotRef, to: SlotRef?, context: DragContext) -> (),
+	slotTemplate: Frame?,
+	backpackFrame: Frame?,
+	hotbarFrame: Frame?
 ): Service
 	local self = setmetatable({}, PointerDragService) :: Service
 	self._layoutScope = layoutScope
 	self._draggingGui = draggingGui
 	self._onCommit = onCommit
 	self._slotTemplate = slotTemplate
+	self._backpackFrame = backpackFrame
+	self._hotbarFrame = hotbarFrame
 	self._enabled = true
 	self._dropMap = {} :: { [GuiObject]: SlotRef }
 	self._dropFrames = {} :: { GuiObject }
 	self._ghost = nil :: Frame?
-	self.	_ghostSpringPos = nil :: Fusion.Spring<UDim2>?
+	self._ghostSpringPos = nil :: Fusion.Spring<UDim2>?
 	self._ghostPosValue = nil :: Fusion.Value<UDim2>?
 	self._ghostRotValue = nil :: Fusion.Value<number>?
 	self._ghostRotSpring = nil :: Fusion.Spring<number>?
@@ -115,7 +128,7 @@ function PointerDragService.new(
 		else
 			self:_cancelPress()
 		end
-	end) :: RBXScriptConnection
+	end)
 	self._releaseConn = releaseConn
 	table.insert(layoutScope, releaseConn)
 
@@ -131,7 +144,7 @@ function PointerDragService.RegisterDraggable(self: Service, slotScope: Fusion.S
 		self._pressFrame = handle.Parent :: GuiObject
 		self._pressOffset = Vector2.zero
 
-		if self._checkConn then (self._checkConn :: RBXScriptConnection):Disconnect() end
+		if self._checkConn then self._checkConn:Disconnect() end
 		local checkConn = UserInputService.InputChanged:Connect(function(input: InputObject)
 			if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
 			local cur = Vector2.new(input.Position.X, input.Position.Y)
@@ -139,14 +152,14 @@ function PointerDragService.RegisterDraggable(self: Service, slotScope: Fusion.S
 			local dist = (cur - self._pressPos).Magnitude
 			local threshold = if input.UserInputType == Enum.UserInputType.Touch then 10 else 5
 			if dist >= threshold and not self._dragging then
-				if self._checkConn then (self._checkConn :: RBXScriptConnection):Disconnect(); self._checkConn = nil end
+				if self._checkConn then self._checkConn:Disconnect(); self._checkConn = nil end
 				self:_beginDrag(cur)
 			end
-		end) :: RBXScriptConnection
+		end)
 		self._checkConn = checkConn
 		table.insert(slotScope, checkConn)
 		table.insert(slotScope, handle)
-	end) :: RBXScriptConnection
+	end)
 	table.insert(slotScope, conn)
 end
 
@@ -167,8 +180,8 @@ function PointerDragService.SetEnabled(self: Service, enabled: boolean)
 end
 
 function PointerDragService.Destroy(self: Service)
-	if self._checkConn then (self._checkConn :: RBXScriptConnection):Disconnect(); self._checkConn = nil end
-	if self._moveConn then (self._moveConn :: RBXScriptConnection):Disconnect(); self._moveConn = nil end
+	if self._checkConn then self._checkConn:Disconnect(); self._checkConn = nil end
+	if self._moveConn then self._moveConn:Disconnect(); self._moveConn = nil end
 	if self._ghost then (self._ghost :: Frame):Destroy(); self._ghost = nil end
 	self._dropMap = {}
 	self._dropFrames = {}
@@ -259,7 +272,7 @@ function PointerDragService._beginDrag(self: Service, curPos: Vector2)
 			targetRot += math.sin(tick() * 10) * 0.8
 		end
 		;(self._ghostRotValue :: Fusion.Value<number>):set(targetRot)
-	end) :: RBXScriptConnection
+	end)
 	self._moveConn = moveConn
 	table.insert(self._layoutScope :: Fusion.Scope<typeof(Fusion)>, moveConn)
 end
@@ -267,8 +280,8 @@ end
 function PointerDragService._endDrag(self: Service, input: InputObject?)
 	if not self._dragging then self:_cancelPress(); return end
 	self._dragging = false
-	if self._moveConn then (self._moveConn :: RBXScriptConnection):Disconnect(); self._moveConn = nil end
-	if self._checkConn then (self._checkConn :: RBXScriptConnection):Disconnect(); self._checkConn = nil end
+	if self._moveConn then self._moveConn:Disconnect(); self._moveConn = nil end
+	if self._checkConn then self._checkConn:Disconnect(); self._checkConn = nil end
 
 	local mousePos: Vector2
 	if input and (input :: InputObject).Position then
@@ -306,6 +319,21 @@ function PointerDragService._endDrag(self: Service, input: InputObject?)
 		end
 	end
 
+	-- Determine container hover for empty-area semantics (AddToBackpack / Remove / Dynamic insert)
+	local overBackpack = false
+	local overHotbar = false
+	if self._backpackFrame and self._backpackFrame.Visible then
+		overBackpack = isInside(self._backpackFrame :: GuiObject, mousePos)
+	end
+	if self._hotbarFrame and self._hotbarFrame.Visible then
+		overHotbar = isInside(self._hotbarFrame :: GuiObject, mousePos)
+	end
+	local context: DragContext = {
+		overBackpack = overBackpack,
+		overHotbar = overHotbar,
+		mousePos = mousePos,
+	}
+
 	if self._ghost then (self._ghost :: Frame):Destroy(); self._ghost = nil end
 	self._ghostPosValue = nil
 	self._ghostSpringPos = nil
@@ -315,15 +343,20 @@ function PointerDragService._endDrag(self: Service, input: InputObject?)
 	local from = self._pressSlotRef :: SlotRef?
 	self._pressSlotRef = nil
 	self._pressFrame = nil
-	if from and targetRef then
-		if from.Type ~= targetRef.Type or from.Slot ~= targetRef.Slot then
-			(self._onCommit :: (SlotRef, SlotRef) -> ())(from, targetRef)
+	if from then
+		if targetRef then
+			if from.Type ~= targetRef.Type or from.Slot ~= targetRef.Slot then
+				(self._onCommit :: (SlotRef, SlotRef?, DragContext) -> ())(from, targetRef, context)
+			end
+		else
+			-- No slot hit but still hovering a container or outside: delegate for AddToBackpack / Remove / Dynamic hotbar insert
+			(self._onCommit :: (SlotRef, SlotRef?, DragContext) -> ())(from, nil, context)
 		end
 	end
 end
 
 function PointerDragService._cancelPress(self: Service)
-	if self._checkConn then (self._checkConn :: RBXScriptConnection):Disconnect(); self._checkConn = nil end
+	if self._checkConn then self._checkConn:Disconnect(); self._checkConn = nil end
 	self._pressSlotRef = nil
 	self._pressFrame = nil
 end

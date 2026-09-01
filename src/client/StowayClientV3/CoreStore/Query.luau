@@ -9,8 +9,8 @@
 -- VARIABLES --
 -----------------------------
 
-local Types = require(script.Parent.Types)
-local Colors = require(game:GetService("ReplicatedStorage").Shared.Stoway.Colors)
+local Types = require("./Types")
+local Colors = require("@game/ReplicatedStorage/Shared/Stoway/Colors")
 
 local Query = {}
 

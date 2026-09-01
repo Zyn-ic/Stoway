@@ -8,11 +8,9 @@
 -- VARIABLES --
 -----------------------------
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local Types = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
-local Metadata = require(ReplicatedStorage.Shared.Stoway.CoreStore.Metadata)
-local State = require(ReplicatedStorage.Shared.Stoway.CoreStore.State)
+local Types = require("./Types")
+local Metadata = require("./Metadata")
+local State = require("./State")
 
 local Stack = {}
 

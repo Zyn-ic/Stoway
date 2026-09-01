@@ -7,7 +7,7 @@
 -- VARIABLES --
 -----------------------------
 
-local Types = require(game:GetService("ReplicatedStorage").Shared.Stoway.CoreStore.Types)
+local Types = require("./Types")
 
 local State = {}
 
@@ -50,8 +50,8 @@ local function mergeSettings(overrides: Types.SettingsOverrides?): Types.Setting
 	local settings = table.clone(DEFAULT_SETTINGS) :: Types.Settings
 
 	if overrides then
-		for key, value in overrides :: any do
-			(settings :: any)[key] = value
+		for key, value in overrides do
+			settings[key] = value
 		end
 	end
 

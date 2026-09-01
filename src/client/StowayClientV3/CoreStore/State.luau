@@ -9,7 +9,7 @@
 -- VARIABLES --
 -----------------------------
 
-local Types = require(script.Parent.Types)
+local Types = require("./Types")
 
 local State = {}
 
