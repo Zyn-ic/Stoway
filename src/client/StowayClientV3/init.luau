@@ -42,9 +42,8 @@ function StowayClient.Init()
 
 	LayoutManager.SetLayout(ClientStore.RootScope, playerGui, ClientStore, "StandardHotbarStorage", "DefaultModern")
 
-	-- SignalPlus bus mirrors master NetworkHandler: UI mutations go through
-	-- ClientController which clone→set ClientStore atoms so Fusion Hydrate
-	-- updates are deferred+coalesced (atomic rebuild like master).
+	-- SignalPlus bus: UI mutations go through ClientController, which
+	-- clone→sets ClientStore atoms so Hydrate updates coalesce into one frame.
 	ClientController.Init(Signals, snapshot)
 
 	print("[StowayClientV3] core initialized (mock data, StandardHotbarStorage / DefaultModern) — Signals bound")

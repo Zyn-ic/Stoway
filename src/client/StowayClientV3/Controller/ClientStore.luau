@@ -16,24 +16,32 @@ local Fusion = require(ReplicatedStorage.Packages.fusion)
 local Types = require(script.Parent.Parent.CoreStore.Types)
 local Query = require(script.Parent.Parent.CoreStore.Query)
 
-local peek = Fusion.peek
-
 local ClientStore = {}
 
 -----------------------------
 -- ROOT SCOPE + ATOMS --
 -----------------------------
 
-ClientStore.RootScope = Fusion.scoped(Fusion)
+ClientStore.RootScope = Fusion.scoped(Fusion) :: Fusion.Scope<typeof(Fusion)>
 
-local Scope = ClientStore.RootScope
+local Scope: Fusion.Scope<typeof(Fusion)> = ClientStore.RootScope
 
-ClientStore.Items = (Scope:Value({} :: { [string]: Types.Item }) :: Fusion.Value<{ [string]: Types.Item }>)
-ClientStore.Hotbar = (Scope:Value({} :: { [number]: string? }) :: Fusion.Value<{ [number]: string? }>)
-ClientStore.Storage = (Scope:Value({} :: { string }) :: Fusion.Value<{ string }>)
-ClientStore.EquippedItemUUID = (Scope:Value(nil :: string?) :: Fusion.Value<string?>)
-ClientStore.Weight = (Scope:Value(0) :: Fusion.Value<number>)
-ClientStore.Settings = (Scope:Value(nil :: Types.Settings?) :: Fusion.Value<Types.Settings?>)
+-- Typed wrappers hide Fusion's unannotated generics from the new solver.
+-- Call sites stay strictly typed, single :: any lives inside wrapper.
+local function peekValue(v: any): any
+	return (Fusion.peek :: any)(v)
+end
+
+local function newValue<T>(init: T): Fusion.Value<T>
+	return (Scope :: any):Value(init) :: Fusion.Value<T>
+end
+
+ClientStore.Items = newValue({} :: { [string]: Types.Item })
+ClientStore.Hotbar = newValue({} :: { [number]: string? })
+ClientStore.Storage = newValue({} :: { string })
+ClientStore.EquippedItemUUID = newValue(nil :: string?)
+ClientStore.Weight = newValue(0)
+ClientStore.Settings = newValue(nil :: Types.Settings?)
 
 -----------------------------
 -- PUBLIC FUNCTIONS --
@@ -48,33 +56,45 @@ function ClientStore.Init(snapshot: Types.InventoryState)
 	ClientStore.EquippedItemUUID:set(snapshot.EquippedItemUUID)
 	ClientStore.Weight:set(snapshot.Weight)
 	if typeof(snapshot.Settings) == "table" then
-		ClientStore.Settings:set(table.clone(snapshot.Settings))
+		ClientStore.Settings:set((table.clone :: any)(snapshot.Settings) :: Types.Settings)
 	else
-		ClientStore.Settings:set(snapshot.Settings)
+		ClientStore.Settings:set((snapshot.Settings :: any) :: Types.Settings?)
 	end
 end
 
 function ClientStore.GetSnapshot(): Types.InventoryState
+	local items: { [string]: Types.Item } = peekValue(ClientStore.Items)
+	local hotbar: { [number]: string? } = peekValue(ClientStore.Hotbar)
+	local storage: { string } = peekValue(ClientStore.Storage)
+	local equipped: string? = peekValue(ClientStore.EquippedItemUUID)
+	local weight: number = peekValue(ClientStore.Weight)
+	local settingsRaw: Types.Settings? = peekValue(ClientStore.Settings)
+	-- Snapshot expects Settings non-nil after Init (cold start falls back to nil-spoofed any)
+	local settings: Types.Settings = settingsRaw :: any
 	return {
-		Items = peek(ClientStore.Items),
-		Hotbar = peek(ClientStore.Hotbar),
-		Storage = peek(ClientStore.Storage),
-		EquippedItemUUID = peek(ClientStore.EquippedItemUUID),
-		Weight = peek(ClientStore.Weight),
-		Settings = peek(ClientStore.Settings) :: any,
+		Items = items,
+		Hotbar = hotbar,
+		Storage = storage,
+		EquippedItemUUID = equipped,
+		Weight = weight,
+		Settings = settings,
 	}
 end
 
 function ClientStore.GetSettings(): Types.Settings?
-	return peek(ClientStore.Settings)
+	local settings: Types.Settings? = peekValue(ClientStore.Settings)
+	return settings
 end
 
 function ClientStore.GetItem(uuid: string?): Types.Item?
-	return Query.getItem(peek(ClientStore.Items), uuid)
+	local items: { [string]: Types.Item } = peekValue(ClientStore.Items)
+	return Query.getItem(items, uuid)
 end
 
 function ClientStore.GetSlotOf(uuid: string): (Types.SlotType?, number?)
-	return Query.findSlotByUUID(peek(ClientStore.Hotbar), peek(ClientStore.Storage), uuid)
+	local hotbar: { [number]: string? } = peekValue(ClientStore.Hotbar)
+	local storage: { string } = peekValue(ClientStore.Storage)
+	return Query.findSlotByUUID(hotbar, storage, uuid)
 end
 
 -----------------------------

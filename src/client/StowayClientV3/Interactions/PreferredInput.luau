@@ -39,13 +39,13 @@ end
 
 function PreferredInput.Init(scope: any?)
 	-- scope optional: if provided, auto-cleanup conn on doCleanup
-	if _defaultConn then return end
+	if _defaultConn ~= nil then return end
 	_current = UserInputService.PreferredInput
 	_defaultConn = UserInputService:GetPropertyChangedSignal("PreferredInput"):Connect(function()
-		if _customSignal then return end -- custom source wins while set
+		if _customSignal ~= nil then return end -- custom source wins while set
 		setCurrent(UserInputService.PreferredInput)
 	end)
-	if scope and _defaultConn then
+	if scope ~= nil and _defaultConn ~= nil then
 		table.insert(scope, _defaultConn)
 		table.insert(scope, function()
 			_defaultConn = nil
@@ -56,13 +56,13 @@ end
 -- Inject a game-wide signal. That signal must Fire(Enum.PreferredInput)
 -- or a string mapped via ToPreferredInput. Passing nil restores default UIS.
 function PreferredInput.SetSource(customSignal: any?)
-	if _customConn then
-		_customConn:Disconnect()
+	if _customConn ~= nil then
+		(_customConn :: any):Disconnect()
 		_customConn = nil
 	end
 	_customSignal = customSignal
-	if customSignal and customSignal.Connect then
-		_customConn = customSignal:Connect(function(val: any)
+	if customSignal ~= nil and (customSignal :: any).Connect ~= nil then
+		_customConn = (customSignal :: any):Connect(function(val: any)
 			local mapped: any = nil
 			if typeof(val) == "EnumItem" then
 				mapped = val
@@ -70,7 +70,7 @@ function PreferredInput.SetSource(customSignal: any?)
 				-- string fallback: "KeyboardAndMouse" / "Gamepad" / "Touch"
 				mapped = (Enum :: any).PreferredInput[val]
 			end
-			if mapped then setCurrent(mapped) end
+			if mapped ~= nil then setCurrent(mapped) end
 		end)
 	else
 		-- restore UIS polling
@@ -79,8 +79,8 @@ function PreferredInput.SetSource(customSignal: any?)
 end
 
 function PreferredInput.Destroy()
-	if _defaultConn then _defaultConn:Disconnect(); _defaultConn = nil end
-	if _customConn then _customConn:Disconnect(); _customConn = nil end
+	if _defaultConn ~= nil then _defaultConn:Disconnect(); _defaultConn = nil end
+	if _customConn ~= nil then (_customConn :: any):Disconnect(); _customConn = nil end
 	_customSignal = nil
 end
 

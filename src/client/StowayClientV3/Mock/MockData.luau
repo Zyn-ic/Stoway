@@ -39,6 +39,8 @@ end
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
+-- any: seed straddles the full engine state and the client mirror (nominally
+-- distinct under the new solver); both Init paths narrow it on receipt.
 function MockData.build(): any
 	local items: { [string]: SharedTypes.Item } = {
 		["iron-sword-1"] = item("iron-sword-1", "IronSword", 1, "Rare", "Weapon"),

@@ -21,9 +21,24 @@ local ClientController = require(script.Parent.Parent.Controller.ClientControlle
 
 local SlotView = {}
 
+-- Wrappers hide Fusion's unannotated generics from the new solver.
+-- Call sites stay strictly typed via the left-hand annotation.
+local function useTyped(useFn: Fusion.Use, target: any): any
+	return (useFn :: any)(target)
+end
+
+local function peekValue(target: any): any
+	return (Fusion.peek :: any)(target)
+end
+
 -----------------------------
 -- TYPES --
 -----------------------------
+
+export type DragLike = {
+	IsDragging: (self: DragLike) -> boolean,
+	WasRecentlyDragging: (self: DragLike, number?) -> boolean,
+}
 
 export type SlotProps = {
 	SlotType: CoreTypes.SlotType,
@@ -35,7 +50,7 @@ export type SlotProps = {
 	PackOrder: Fusion.Computed<number>?,
 	Keybind: Fusion.Computed<string>?,
 	Visibility: Fusion.Computed<boolean>?,
-	DragService: any?,
+	DragService: DragLike?,
 }
 
 -----------------------------
@@ -56,40 +71,46 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 	local selecticon = slotFrame:FindFirstChild("selecticon") :: GuiObject?
 	local rarityframe = slotFrame:FindFirstChild("rarityframe") :: ImageLabel?
 
-	local hotbarSlotUUID = scope:Computed(function(use: Fusion.Use)
-		return Query.getHotbarUUID(use(store.Hotbar), props.SlotIndex)
+	local hotbarSlotUUID = scope:Computed(function(use: Fusion.Use): string?
+		local hotbar: { [number]: string? } = useTyped(use, store.Hotbar)
+		return Query.getHotbarUUID(hotbar, props.SlotIndex)
 	end)
 
-	local storageSlotUUID = scope:Computed(function(use: Fusion.Use)
-		return Query.getStorageUUID(use(store.Storage), props.SlotIndex)
+	local storageSlotUUID = scope:Computed(function(use: Fusion.Use): string?
+		local storage: { string } = useTyped(use, store.Storage)
+		return Query.getStorageUUID(storage, props.SlotIndex)
 	end)
 
-	local slotUUID = scope:Computed(function(use: Fusion.Use)
+	local slotUUID = scope:Computed(function(use: Fusion.Use): string?
 		if props.SlotType == "Hotbar" then
-			return use(hotbarSlotUUID)
+			return useTyped(use, hotbarSlotUUID)
 		end
-		return use(storageSlotUUID)
+		return useTyped(use, storageSlotUUID)
 	end)
 
-	local currentItem = scope:Computed(function(use: Fusion.Use)
-		return Query.getItem(use(store.Items) :: { [string]: CoreTypes.Item }, use(slotUUID) :: string?)
+	local currentItem = scope:Computed(function(use: Fusion.Use): CoreTypes.Item?
+		local items: { [string]: CoreTypes.Item } = useTyped(use, store.Items)
+		local uuid: string? = useTyped(use, slotUUID)
+		return Query.getItem(items, uuid)
 	end)
 
-	local hasItem = scope:Computed(function(use: Fusion.Use)
-		return use(currentItem) ~= nil
+	local hasItem = scope:Computed(function(use: Fusion.Use): boolean
+		return useTyped(use, currentItem) ~= nil
 	end)
 
-	local isEquipped = scope:Computed(function(use: Fusion.Use)
-		return Query.isEquipped(use(store.EquippedItemUUID), use(slotUUID))
+	local isEquipped = scope:Computed(function(use: Fusion.Use): boolean
+		local uuid: string? = useTyped(use, slotUUID)
+		local equipped: string? = useTyped(use, store.EquippedItemUUID)
+		return Query.isEquipped(equipped, uuid)
 	end)
 
 	local hasImage = scope:Computed(function(use: Fusion.Use): boolean
-		local item = use(currentItem)
+		local item: CoreTypes.Item? = useTyped(use, currentItem)
 		return item ~= nil and item.Metadata ~= nil and item.Metadata.Image ~= nil and item.Metadata.Image ~= ""
 	end)
 
 	local fallbackText = scope:Computed(function(use: Fusion.Use): string
-		local item = use(currentItem)
+		local item: CoreTypes.Item? = useTyped(use, currentItem)
 		if not item then return "" end
 		local id = item.Id or "?"
 		if #id > 12 then return string.sub(id, 1, 10) .. ".." end
@@ -129,11 +150,11 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 
 		scope:Hydrate(slotbutton) {
 			Image = scope:Computed(function(use: Fusion.Use): string
-				local item = use(currentItem)
+				local item: CoreTypes.Item? = useTyped(use, currentItem)
 				return if item and item.Metadata then item.Metadata.Image or "" else ""
 			end),
 			ImageTransparency = scope:Computed(function(use: Fusion.Use): number
-				return if use(hasImage) then 0 else 1
+				return if useTyped(use, hasImage) then 0 else 1
 			end),
 			Visible = hasItem,
 		}
@@ -141,10 +162,10 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 		scope:Hydrate(fallbackLabel) {
 			Text = fallbackText,
 			Visible = scope:Computed(function(use: Fusion.Use): boolean
-				return use(hasItem) and not use(hasImage)
+				return useTyped(use, hasItem) and not useTyped(use, hasImage)
 			end),
 			TextColor3 = scope:Computed(function(use: Fusion.Use): Color3
-				local item = use(currentItem)
+				local item: CoreTypes.Item? = useTyped(use, currentItem)
 				-- Use rarity tint for fallback text so color-blind still has Id, but hue helps
 				return Colors.getRarityColor(item and item.Metadata and item.Metadata.Rarity)
 			end),
@@ -152,19 +173,20 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 
 		-- Tap/Activated to equip (covers Mouse, Touch, and Gamepad ButtonA via
 		-- GuiService.SelectedObject + Activated). Guard against firing right
-		-- after a drag so master double-fire doesn't duplicate.
-		local dragService: any = (props :: any).DragService
+		-- after a drag so a drag-release doesn't also equip.
+		local dragService = props.DragService
 		table.insert(
 			scope,
 			slotbutton.Activated:Connect(function()
-				if dragService then
-					if dragService.IsDragging and dragService:IsDragging() then return end
-					if dragService.WasRecentlyDragging and dragService:WasRecentlyDragging(0.25) then return end
+				if dragService ~= nil then
+					if dragService:IsDragging() then return end
+					if dragService:WasRecentlyDragging(0.25) then return end
 				end
-				local uuid = Fusion.peek(slotUUID)
+				local uuid: string? = peekValue(slotUUID)
 				if not uuid then return end
-				if not Fusion.peek(hasItem) then return end
-				local equipped = Fusion.peek(store.EquippedItemUUID)
+				local has: boolean = peekValue(hasItem)
+				if not has then return end
+				local equipped: string? = peekValue(store.EquippedItemUUID)
 				if equipped == uuid then
 					ClientController.Unequip()
 				else
@@ -177,7 +199,7 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 	if rarityframe then
 		scope:Hydrate(rarityframe) {
 			ImageColor3 = scope:Computed(function(use: Fusion.Use): Color3
-				local item = use(currentItem)
+				local item: CoreTypes.Item? = useTyped(use, currentItem)
 				return Colors.getRarityColor(item and item.Metadata and item.Metadata.Rarity)
 			end),
 			Visible = hasItem,
@@ -203,12 +225,12 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 		end
 		scope:Hydrate(stackcount) {
 			Visible = scope:Computed(function(use: Fusion.Use): boolean
-				local item = use(currentItem)
-				local settings = use(store.Settings)
+				local item: CoreTypes.Item? = useTyped(use, currentItem)
+				local settings: CoreTypes.Settings? = useTyped(use, store.Settings)
 				return settings ~= nil and settings.CanStack and item ~= nil
 			end),
 			Text = scope:Computed(function(use: Fusion.Use): string
-				local item = use(currentItem)
+				local item: CoreTypes.Item? = useTyped(use, currentItem)
 				if item then
 					return Query.formatAmount(item.Amount)
 				end

@@ -111,12 +111,12 @@ function PointerDragService.new(
 	self._ghostPosValue = nil :: Fusion.Value<UDim2>?
 	self._ghostRotValue = nil :: Fusion.Value<number>?
 	self._ghostRotSpring = nil :: Fusion.Spring<number>?
-	self._lastMousePos = Vector2.zero :: Vector2
+	self._lastMousePos = Vector2.zero
 	self._dragging = false
-	self._pressPos = Vector2.zero :: Vector2
+	self._pressPos = Vector2.zero
 	self._pressSlotRef = nil :: SlotRef?
 	self._pressFrame = nil :: GuiObject?
-	self._pressOffset = Vector2.zero :: Vector2
+	self._pressOffset = Vector2.zero
 	self._checkConn = nil :: RBXScriptConnection?
 	self._releaseConn = nil :: RBXScriptConnection?
 	self._moveConn = nil :: RBXScriptConnection?
@@ -193,7 +193,7 @@ end
 function PointerDragService.Destroy(self: Service)
 	if self._checkConn then self._checkConn:Disconnect(); self._checkConn = nil end
 	if self._moveConn then self._moveConn:Disconnect(); self._moveConn = nil end
-	if self._ghost then (self._ghost :: Frame):Destroy(); self._ghost = nil end
+	if self._ghost then self._ghost:Destroy(); self._ghost = nil end
 	self._dropMap = {}
 	self._dropFrames = {}
 	self._dragging = false
@@ -213,18 +213,14 @@ function PointerDragService._beginDrag(self: Service, curPos: Vector2)
 	-- Perfect replica: clone the LIVE hydrated slotFrame (has item image,
 	-- rarity color, stack badge, selecticon baked in by SlotView), fall back
 	-- to the blank skin template only when pressFrame is unavailable.
-	local pressFrame = self._pressFrame :: GuiObject?
-	local template = self._slotTemplate :: Frame?
-	local source: Instance? = nil
-	if pressFrame and (pressFrame :: any):FindFirstChild("slotbutton") then
-		source = pressFrame :: Instance
-	elseif template then
-		source = template :: Instance
-	end
+	local pressFrame = self._pressFrame
+	local template = self._slotTemplate
 
 	local ghost: Frame
-	if source then
-		ghost = source:Clone() :: Frame
+	if pressFrame and pressFrame:FindFirstChild("slotbutton") then
+		ghost = pressFrame:Clone() :: Frame
+	elseif template then
+		ghost = template:Clone() :: Frame
 	else
 		ghost = Instance.new("Frame")
 	end
@@ -239,39 +235,39 @@ function PointerDragService._beginDrag(self: Service, curPos: Vector2)
 		end
 	end
 	local sn = ghost:FindFirstChild("slotnumber")
-	if sn then (sn :: GuiObject).Visible = false end
+	if sn and sn:IsA("GuiObject") then sn.Visible = false end
 	local kb = ghost:FindFirstChild("keybindbackground")
-	if kb then (kb :: GuiObject).Visible = false end
+	if kb and kb:IsA("GuiObject") then kb.Visible = false end
 	ghost.AnchorPoint = Vector2.new(0, 0)
 	ghost.LayoutOrder = 0
 	ghost.Visible = true
 	if pressFrame then
-		ghost.Size = (pressFrame :: GuiObject).Size
+		ghost.Size = pressFrame.Size
 	else
 		ghost.Size = UDim2.fromOffset(62, 62)
 	end
 	ghost.ZIndex = 100
-	ghost.Parent = self._draggingGui :: ScreenGui
+	ghost.Parent = self._draggingGui
 	self._ghost = ghost
 
-	local posValue = (self._layoutScope :: Fusion.Scope<typeof(Fusion)>):Value(UDim2.fromOffset(curPos.X, curPos.Y)) :: Fusion.Value<UDim2>
-	local springPos = (self._layoutScope :: Fusion.Scope<typeof(Fusion)>):Spring(posValue, 70, 1) :: Fusion.Spring<UDim2>
+	local posValue: Fusion.Value<UDim2> = self._layoutScope:Value(UDim2.fromOffset(curPos.X, curPos.Y))
+	local springPos: Fusion.Spring<UDim2> = self._layoutScope:Spring(posValue, 70, 1)
 	self._ghostPosValue = posValue
 	self._ghostSpringPos = springPos
-	local rotValue = (self._layoutScope :: Fusion.Scope<typeof(Fusion)>):Value(0) :: Fusion.Value<number>
-	local rotSpring = (self._layoutScope :: Fusion.Scope<typeof(Fusion)>):Spring(rotValue, 22, 0.4) :: Fusion.Spring<number>
+	local rotValue: Fusion.Value<number> = self._layoutScope:Value(0)
+	local rotSpring: Fusion.Spring<number> = self._layoutScope:Spring(rotValue, 22, 0.4)
 	self._ghostRotValue = rotValue
 	self._ghostRotSpring = rotSpring
 	self._lastMousePos = curPos
-	;(self._layoutScope :: Fusion.Scope<typeof(Fusion)>):Hydrate(ghost) {
+	;self._layoutScope:Hydrate(ghost) {
 		Position = springPos,
 		Rotation = rotSpring,
 	}
 
 	local moveConn = RunService.RenderStepped:Connect(function()
-		if not self._dragging or not self._ghostPosValue then return end
+		if not self._dragging or not self._ghostPosValue or not self._ghostRotValue then return end
 		local m = getMousePos()
-		;(self._ghostPosValue :: Fusion.Value<UDim2>):set(UDim2.fromOffset(m.X, m.Y))
+		;self._ghostPosValue:set(UDim2.fromOffset(m.X, m.Y))
 		local velX = m.X - self._lastMousePos.X
 		local velY = m.Y - self._lastMousePos.Y
 		self._lastMousePos = m
@@ -282,10 +278,10 @@ function PointerDragService._beginDrag(self: Service, curPos: Vector2)
 		else
 			targetRot += math.sin(tick() * 10) * 0.8
 		end
-		;(self._ghostRotValue :: Fusion.Value<number>):set(targetRot)
+		;self._ghostRotValue:set(targetRot)
 	end)
 	self._moveConn = moveConn
-	table.insert(self._layoutScope :: Fusion.Scope<typeof(Fusion)>, moveConn)
+	table.insert(self._layoutScope, moveConn)
 end
 
 function PointerDragService._endDrag(self: Service, input: InputObject?)
@@ -296,14 +292,14 @@ function PointerDragService._endDrag(self: Service, input: InputObject?)
 	if self._checkConn then self._checkConn:Disconnect(); self._checkConn = nil end
 
 	local mousePos: Vector2
-	if input and (input :: InputObject).Position then
-		mousePos = Vector2.new((input :: InputObject).Position.X, (input :: InputObject).Position.Y)
+	if input and input.Position then
+		mousePos = Vector2.new(input.Position.X, input.Position.Y)
 	else
 		mousePos = getMousePos()
 	end
 
 	local hitFrames: { GuiObject } = {}
-	local playerGui = (self._draggingGui :: ScreenGui).Parent :: PlayerGui?
+	local playerGui = self._draggingGui.Parent :: PlayerGui?
 	if not playerGui then
 		playerGui = Players.LocalPlayer:FindFirstChild("PlayerGui") :: PlayerGui?
 	end
@@ -317,9 +313,9 @@ function PointerDragService._endDrag(self: Service, input: InputObject?)
 
 	local targetRef: SlotRef? = nil
 	for _, guiObj in hitFrames do
-		local ref = self._dropMap[guiObj :: GuiObject]
+		local ref = self._dropMap[guiObj]
 		if ref then targetRef = ref; break end
-		local parent = (guiObj :: GuiObject).Parent
+		local parent = guiObj.Parent
 		if parent then
 			local pr = self._dropMap[parent :: GuiObject]
 			if pr then targetRef = pr; break end
@@ -327,7 +323,7 @@ function PointerDragService._endDrag(self: Service, input: InputObject?)
 	end
 	if not targetRef then
 		for frame, ref in self._dropMap do
-			if (frame :: GuiObject).Visible and isInside(frame :: GuiObject, mousePos) then targetRef = ref; break end
+			if frame.Visible and isInside(frame, mousePos) then targetRef = ref; break end
 		end
 	end
 
@@ -335,10 +331,10 @@ function PointerDragService._endDrag(self: Service, input: InputObject?)
 	local overBackpack = false
 	local overHotbar = false
 	if self._backpackFrame and self._backpackFrame.Visible then
-		overBackpack = isInside(self._backpackFrame :: GuiObject, mousePos)
+		overBackpack = isInside(self._backpackFrame, mousePos)
 	end
 	if self._hotbarFrame and self._hotbarFrame.Visible then
-		overHotbar = isInside(self._hotbarFrame :: GuiObject, mousePos)
+		overHotbar = isInside(self._hotbarFrame, mousePos)
 	end
 	local context: DragContext = {
 		overBackpack = overBackpack,
@@ -346,23 +342,23 @@ function PointerDragService._endDrag(self: Service, input: InputObject?)
 		mousePos = mousePos,
 	}
 
-	if self._ghost then (self._ghost :: Frame):Destroy(); self._ghost = nil end
+	if self._ghost then self._ghost:Destroy(); self._ghost = nil end
 	self._ghostPosValue = nil
 	self._ghostSpringPos = nil
 	self._ghostRotValue = nil
 	self._ghostRotSpring = nil
 
-	local from = self._pressSlotRef :: SlotRef?
+	local from = self._pressSlotRef
 	self._pressSlotRef = nil
 	self._pressFrame = nil
 	if from then
 		if targetRef then
 			if from.Type ~= targetRef.Type or from.Slot ~= targetRef.Slot then
-				(self._onCommit :: (SlotRef, SlotRef?, DragContext) -> ())(from, targetRef, context)
+				self._onCommit(from, targetRef, context)
 			end
 		else
 			-- No slot hit but still hovering a container or outside: delegate for AddToBackpack / Remove / Dynamic hotbar insert
-			(self._onCommit :: (SlotRef, SlotRef?, DragContext) -> ())(from, nil, context)
+			self._onCommit(from, nil, context)
 		end
 	end
 end

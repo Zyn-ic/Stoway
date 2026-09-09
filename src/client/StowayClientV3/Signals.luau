@@ -3,11 +3,10 @@
 --@author: yyumchi
 --@date: 2026-08-21
 --[[@description:
-	Local SignalPlus bus mirroring master NetworkHandler pattern.
+	Local SignalPlus bus, one signal per CoreStore operation.
 	No Roblox Remotes – pure in-memory signals for mock-phase client tests.
-	Each signal corresponds to a CoreStore operation. ClientController connects
-	to these and performs clone->mutate->set on ClientStore atoms so Fusion
-	recomputes atomically (same as master InventoryController).
+	ClientController connects these and clone->mutate->sets ClientStore
+	atoms so Fusion recomputes atomically.
 ]]
 -----------------------------
 -- VARIABLES --

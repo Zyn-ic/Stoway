@@ -3,17 +3,10 @@
 --@author: yyumchi
 --@date: 2026-08-22
 --[[@description:
-	Mirrors master InventoryController: SignalPlus bus -> ClientStore atoms.
-	Holds single InventoryState (from MockData or server snapshot) and delegates
-	mutations to Shared CoreStore (pure). After each CoreStore op, clones
-	atoms before set so Fusion sees new table refs and recomputes SlotView
-	computeds atomically (image, stackcount, rarity, selecticon, layout).
-
-	Master: src/client/StowayClientv1_2/Operations/InventoryController.luau
-	        used peek+clone per container then set().
-	This:   state: InventoryState -- mutated in-place by CoreStore
-	        sync() clones shallow and sets all atoms back-to-back;
-	        Hydrate's task.defer coalesces instance writes to one frame.
+	SignalPlus bus -> ClientStore atoms. Holds the single InventoryState
+	(from MockData or server snapshot) and delegates mutations to Shared
+	CoreStore (pure). sync() clones shallow and sets all atoms back-to-back
+	so Hydrate's task.defer coalesces instance writes to one frame.
 ]]
 -----------------------------
 -- VARIABLES --

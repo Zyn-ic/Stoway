@@ -21,6 +21,10 @@ local ClientStore = require(script.Parent.Parent.Parent.Controller.ClientStore)
 local SlotView = require(script.Parent.Parent.Parent.Slot.SlotView)
 local Binds = require(script.Parent.Binds)
 
+local function useTyped(useFn: Fusion.Use, target: any): any
+	return (useFn :: any)(target)
+end
+
 local HotbarView = {}
 
 -----------------------------
@@ -127,71 +131,70 @@ function HotbarView.Create(
 		)
 	end
 
-	local maxSlots = scope:Computed(function(use: Fusion.Use)
-		return State.getMaxHotbarSlots(use(store.Settings) :: CoreTypes.Settings?)
+	local maxSlots = scope:Computed(function(use: Fusion.Use): number
+		local settings: CoreTypes.Settings? = useTyped(use, store.Settings)
+		return State.getMaxHotbarSlots(settings)
 	end)
 
-	local slotSize = scope:Computed(function(use: Fusion.Use)
-		return computeSlotSize(use(viewportWidth))
+	local slotSize = scope:Computed(function(use: Fusion.Use): number
+		local vw: number = useTyped(use, viewportWidth)
+		return computeSlotSize(vw)
 	end)
 
 	scope:Hydrate(hotbarFrame) {
 		AutomaticSize = Enum.AutomaticSize.None,
-		Size = scope:Computed(function(use: Fusion.Use)
-			local size = use(slotSize) :: number
-			local slots = use(maxSlots) :: number
+		Size = scope:Computed(function(use: Fusion.Use): UDim2
+			local size: number = useTyped(use, slotSize)
+			local slots: number = useTyped(use, maxSlots)
 			local width = INNER_PADDING * 2 + slots * size + math.max(0, slots - 1) * SLOT_GAP
 			local height = INNER_PADDING * 2 + size
 			return UDim2.fromOffset(width, height)
 		end),
-		Position = scope:Computed(function(use: Fusion.Use)
-			local marginPx = computeBottomMarginPx(use(viewportWidth))
-			local xScale = computeHotbarXScale(use(viewportWidth))
+		Position = scope:Computed(function(use: Fusion.Use): UDim2
+			local vw: number = useTyped(use, viewportWidth)
+			local marginPx = computeBottomMarginPx(vw)
+			local xScale = computeHotbarXScale(vw)
 			return UDim2.new(xScale, originalPosition.X.Offset, 1, -marginPx)
 		end),
 	}
 
-	local slotSizeUDim = scope:Computed(function(use: Fusion.Use)
-		local size = use(slotSize)
+	local slotSizeUDim = scope:Computed(function(use: Fusion.Use): UDim2
+		local size: number = useTyped(use, slotSize)
 		return UDim2.fromOffset(size, size)
 	end)
 
-	local isDynamic = scope:Computed(function(use: Fusion.Use)
-		return Query.isDynamicHotbar(use(store.Settings) :: CoreTypes.Settings?)
+	local isDynamic = scope:Computed(function(use: Fusion.Use): boolean
+		local settings: CoreTypes.Settings? = useTyped(use, store.Settings)
+		return Query.isDynamicHotbar(settings)
 	end)
 
-	local slotIndices = scope:Computed(function(use: Fusion.Use)
-		return State.slotIndices(State.getMaxHotbarSlots(use(store.Settings) :: CoreTypes.Settings?))
+	local slotIndices = scope:Computed(function(use: Fusion.Use): { [number]: boolean }
+		local settings: CoreTypes.Settings? = useTyped(use, store.Settings)
+		return State.slotIndices(State.getMaxHotbarSlots(settings))
 	end)
 
-	local hotbarFor = scope:ForPairs(slotIndices, function(_use, slotScope: Fusion.Scope<typeof(Fusion)>, slotIndex: number)
-		local packOrder = slotScope:Computed(function(use: Fusion.Use)
-			local get = use :: any
-			return Query.packedHotbarOrder(
-				get(store.Hotbar) :: { [number]: string? },
-				get(store.Items) :: { [string]: CoreTypes.Item },
-				slotIndex,
-				get(isDynamic) :: boolean
-			)
+	local hotbarFor = (scope :: any):ForPairs(slotIndices :: any, function(_use, slotScope: Fusion.Scope<typeof(Fusion)>, slotIndex: number)
+		local packOrder = slotScope:Computed(function(use: Fusion.Use): number
+			local hotbar: { [number]: string? } = useTyped(use, store.Hotbar)
+			local items: { [string]: CoreTypes.Item } = useTyped(use, store.Items)
+			local dyn: boolean = useTyped(use, isDynamic)
+			return Query.packedHotbarOrder(hotbar, items, slotIndex, dyn)
 		end)
 
-		local keybind = slotScope:Computed(function(use: Fusion.Use)
+		local keybind = slotScope:Computed(function(use: Fusion.Use): string
 			-- Sparse: if Binds entry missing, hide label (slot still visible via Visible but no bind)
 			if Binds.HotbarSlots[slotIndex] == nil then return "" end
-			local display = use(packOrder)
+			local display: number = useTyped(use, packOrder)
 			return if display == 10 then "0" else tostring(display)
 		end)
 
 		local showKeybind = Binds.HotbarSlots[slotIndex] ~= nil
 
-		local visibility = slotScope:Computed(function(use: Fusion.Use)
-			local get = use :: any
-			return Query.isHotbarSlotVisible(
-				get(store.Hotbar) :: { [number]: string? },
-				get(store.Items) :: { [string]: CoreTypes.Item },
-				slotIndex,
-				get(isDynamic) :: boolean
-			)
+		local visibility = slotScope:Computed(function(use: Fusion.Use): boolean
+			local hotbar: { [number]: string? } = useTyped(use, store.Hotbar)
+			local items: { [string]: CoreTypes.Item } = useTyped(use, store.Items)
+			local dyn: boolean = useTyped(use, isDynamic)
+			return Query.isHotbarSlotVisible(hotbar, items, slotIndex, dyn)
 		end)
 
 		local slotFrame = SlotView.Create(slotScope, {
@@ -212,23 +215,23 @@ function HotbarView.Create(
 
 		-- Override default selection cursor for gamepad with skin's custom Frame
 		do
-			local cursor = (skin :: any).SelectionCursorTemplate :: GuiObject?
+			local cursor = skin.SelectionCursorTemplate
 			local btn = slotFrame:FindFirstChild("slotbutton") :: GuiButton?
-			if cursor and btn then (btn :: any).SelectionImageObject = cursor end
+			if cursor ~= nil and btn ~= nil then btn.SelectionImageObject = cursor end
 		end
 
-		if dragService then
+		if dragService ~= nil then
 			local slotRef: CoreTypes.SlotRef = { Type = "Hotbar", Slot = slotIndex }
 			local handle = slotFrame:FindFirstChild("slotbutton") :: GuiButton?
-			if handle then dragService:RegisterDraggable(slotScope, handle, slotRef) end
+			if handle ~= nil then dragService:RegisterDraggable(slotScope, handle, slotRef) end
 			dragService:RegisterDropTarget(slotScope, slotFrame, slotRef)
 		end
 
 		return slotIndex, true
 	end)
 	-- New Fusion 0.3 For is lazy; side-effect For must be observed to run
-	Fusion.peek(hotbarFor)
-	scope:Observer(hotbarFor)
+	;(Fusion.peek :: any)(hotbarFor)
+	;(scope :: any):Observer(hotbarFor)
 end
 
 -----------------------------

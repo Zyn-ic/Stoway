@@ -55,19 +55,24 @@ type SkinHandle = {
 
 local LONG_PRESS_SEC = 0.5
 
+local function peekValue(v: any): any
+	return (Fusion.peek :: any)(v)
+end
+
 local function getMaxSlots(store: typeof(ClientStore)): number
-	return State.getMaxHotbarSlots(Fusion.peek(store.Settings) :: any)
+	local settings: any = peekValue(store.Settings)
+	return State.getMaxHotbarSlots(settings)
 end
 
 local function isBackpackEnabled(store: typeof(ClientStore)): boolean
-	local s = Fusion.peek(store.Settings) :: any
+	local s: any = peekValue(store.Settings)
 	return s == nil or s.BackpackEnabled ~= false
 end
 
 local function resolveHotbarUUID(store: typeof(ClientStore), visibleIndex: number): string?
-	local settings = Fusion.peek(store.Settings) :: any
-	local hotbar = Fusion.peek(store.Hotbar) :: { [number]: string? }
-	local items = Fusion.peek(store.Items) :: any
+	local settings: any = peekValue(store.Settings)
+	local hotbar: { [number]: string? } = peekValue(store.Hotbar)
+	local items: { [string]: any } = peekValue(store.Items)
 	local hotbarType = if settings then settings.HotbarType else "Static"
 	if hotbarType == "Dynamic" then
 		-- visibleIndex 1.. is packOrder; map to actual slot uuid
@@ -86,7 +91,7 @@ end
 local function doEquipSlot(store: typeof(ClientStore), visibleIndex: number)
 	local uuid = resolveHotbarUUID(store, visibleIndex)
 	if not uuid then return end
-	local equipped = Fusion.peek(store.EquippedItemUUID)
+	local equipped: string? = peekValue(store.EquippedItemUUID)
 	if equipped == uuid then
 		ClientController.Unequip()
 	else
@@ -109,11 +114,15 @@ end
 local function getSelectedUUID(store: typeof(ClientStore), ref: { Type: string, Slot: number }?): string?
 	if not ref then return nil end
 	if ref.Type == "Hotbar" then
-		return (Fusion.peek(store.Hotbar) :: any)[ref.Slot]
+		local hotbar: { [number]: string? } = peekValue(store.Hotbar)
+		return hotbar[ref.Slot]
 	else
-		return (Fusion.peek(store.Storage) :: any)[ref.Slot]
+		local storage: { string } = peekValue(store.Storage)
+		return storage[ref.Slot]
 	end
 end
+
+type BindingObject = any -- IllusionIAS.BindingObject<boolean> unannotated, keep any locally
 
 function Input.Mount(
 	scope: Fusion.Scope<typeof(Fusion)>,
@@ -121,12 +130,12 @@ function Input.Mount(
 	store: typeof(ClientStore),
 	dragService: any?
 )
-	local actions: { any } = {}
-	local inventoryActions: { any } = {}
+	local actions: { BindingObject } = {}
+	local inventoryActions: { BindingObject } = {}
 	local pendingThreads: { thread } = {}
 
-	local backpackAction: any = nil
-	local switchAction: any = nil
+	local backpackAction: BindingObject? = nil
+	local switchAction: BindingObject? = nil
 	local switchHoldThread: thread? = nil
 
 	local consoleMode: string = "Hotbar" -- "Hotbar" | "Inventory"
@@ -134,16 +143,16 @@ function Input.Mount(
 
 	local function cleanupActions()
 		for _, a in actions do
-			if a and a.Destroy then pcall(function() a:Destroy() end) end
+			if a ~= nil then pcall(function() (a :: BindingObject):Destroy() end) end
 		end
 		table.clear(actions)
 		for _, a in inventoryActions do
-			if a and a.Destroy then pcall(function() a:Destroy() end) end
+			if a ~= nil then pcall(function() (a :: BindingObject):Destroy() end) end
 		end
 		table.clear(inventoryActions)
-		if backpackAction and backpackAction.Destroy then pcall(function() backpackAction:Destroy() end); backpackAction = nil end
-		if switchAction and switchAction.Destroy then pcall(function() switchAction:Destroy() end); switchAction = nil end
-		if switchHoldThread then task.cancel(switchHoldThread); switchHoldThread = nil end
+		if backpackAction ~= nil then pcall(function() (backpackAction :: BindingObject):Destroy() end); backpackAction = nil end
+		if switchAction ~= nil then pcall(function() (switchAction :: BindingObject):Destroy() end); switchAction = nil end
+		if switchHoldThread ~= nil then task.cancel(switchHoldThread); switchHoldThread = nil end
 		for _, th in pendingThreads do task.cancel(th) end
 		table.clear(pendingThreads)
 		-- contexts
@@ -199,7 +208,7 @@ function Input.Mount(
 		consoleMode = "Inventory"
 		pcall(function() IllusionIAS.enableContext("StowayHotbar", false) end)
 		pcall(function() IllusionIAS.enableContext("StowayInventory", true) end)
-		if dragService and dragService.SetEnabled then dragService:SetEnabled(false) end
+		if dragService ~= nil then dragService:SetEnabled(false) end
 		local hotbarFrame = skin.HotbarFrame
 		local scrolling = skin.ScrollingFrame
 		if hotbarFrame then hotbarFrame.SelectionGroup = true end
@@ -240,7 +249,7 @@ function Input.Mount(
 		selectedRef = nil
 		pcall(function() IllusionIAS.enableContext("StowayInventory", false) end)
 		pcall(function() IllusionIAS.enableContext("StowayHotbar", true) end)
-		if skin.HotbarFrame then skin.HotbarFrame.SelectionGroup = false end
+		if skin.HotbarFrame ~= nil then skin.HotbarFrame.SelectionGroup = false end
 		if skin.ScrollingFrame then skin.ScrollingFrame.SelectionGroup = false end
 		GuiService.SelectedObject = nil
 		GuiService.GuiNavigationEnabled = false
@@ -252,8 +261,8 @@ function Input.Mount(
 		local isGamepad = pref == Enum.PreferredInput.Gamepad
 		local isTouch = pref == Enum.PreferredInput.Touch
 
-		-- Drag enable: off on gamepad (master InteractionManager)
-		if dragService and dragService.SetEnabled then
+		-- Drag off on gamepad; tap + binds stay.
+		if dragService ~= nil then
 			dragService:SetEnabled(not isGamepad)
 		end
 
@@ -357,25 +366,26 @@ function Input.Mount(
 					if not cur or not uuid then return end
 					if cur.Type == "Hotbar" then
 						if not isBackpackEnabled(store) then return end
-						local storage = Fusion.peek(store.Storage) :: any
+						local storage: { string } = peekValue(store.Storage)
 						local dest = #storage + 1
-						ClientController.Move(cur :: any, { Type = "Storage", Slot = dest } :: any)
+						local fromRef: { Type: string, Slot: number } = cur
+						ClientController.Move(fromRef :: any, { Type = "Storage", Slot = dest } :: any)
 					else
-						local hotbar = Fusion.peek(store.Hotbar) :: any
+						local hotbar: { [number]: string? } = peekValue(store.Hotbar)
 						local maxSlots2 = getMaxSlots(store)
 						local dest: number? = nil
 						for s = 1, maxSlots2 do if hotbar[s] == nil then dest = s; break end end
-						if dest then ClientController.Swap(cur :: any, { Type = "Hotbar", Slot = dest } :: any) end
+						if dest ~= nil then ClientController.Swap(cur :: any, { Type = "Hotbar", Slot = dest } :: any) end
 					end
 					selectedRef = nil
 				end)
 				mk("StowayCancel", inv.Cancel, function()
-					if selectedRef then selectedRef = nil; return end
+					if selectedRef ~= nil then selectedRef = nil; return end
 					-- if no source, keep mode but clear selection
 					GuiService.SelectedObject = nil
 				end)
 			end
-			-- initial mode Hotbar (master Combat)
+			-- Start in Hotbar mode.
 			consoleMode = "Hotbar"
 			IllusionIAS.enableContext("StowayHotbar", true)
 			IllusionIAS.enableContext("StowayInventory", false)
@@ -455,7 +465,7 @@ function Input.Mount(
 		applySelectionObjects()
 	end)
 	table.insert(scope, function()
-		if prefConn and (prefConn :: any).Disconnect then (prefConn :: any):Disconnect() end
+		if prefConn ~= nil then (prefConn :: any):Disconnect() end
 	end)
 
 	-- also apply cursor after views built (defer one frame)

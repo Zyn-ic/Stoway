@@ -18,6 +18,11 @@ local Query = require(script.Parent.Parent.Parent.CoreStore.Query)
 local ClientStore = require(script.Parent.Parent.Parent.Controller.ClientStore)
 local SlotView = require(script.Parent.Parent.Parent.Slot.SlotView)
 
+local function useTyped(useFn: Fusion.Use, target: any): any
+	return (useFn :: any)(target)
+end
+
+
 local StorageView = {}
 
 -----------------------------
@@ -73,6 +78,12 @@ function StorageView.Create(
 	store: typeof(ClientStore),
 	dragService: any?
 )
+	local function computed<T>(fn: (Fusion.Use) -> T): Fusion.Computed<T>
+		return (scope :: any):Computed(fn) :: Fusion.Computed<T>
+	end
+	local function groupComputed<T>(s: Fusion.Scope<typeof(Fusion)>, fn: (Fusion.Use) -> T): Fusion.Computed<T>
+		return (s :: any):Computed(fn) :: Fusion.Computed<T>
+	end
 	if not skin.BackpackFrame then
 		warn("[StandardHotbarStorage] StorageView: skin has no Backpack frame")
 		return
@@ -129,25 +140,26 @@ function StorageView.Create(
 	end
 
 	scope:Hydrate(backpackFrame) {
-		Visible = scope:Computed(function(use: Fusion.Use)
-			local settings = use(store.Settings)
+		Visible = computed(function(use: Fusion.Use): boolean
+			local settings: CoreTypes.Settings? = useTyped(use, store.Settings)
 			return settings ~= nil and settings.BackpackEnabled
 		end),
-		Size = scope:Computed(function(use: Fusion.Use)
-			return UDim2.new(originalBackpackWidth.Scale, originalBackpackWidth.Offset, 1, -use(bottomReserve))
+		Size = computed(function(use: Fusion.Use): UDim2
+			local reserve: number = useTyped(use, bottomReserve)
+			return UDim2.new(originalBackpackWidth.Scale, originalBackpackWidth.Offset, 1, -reserve)
 		end),
 	}
 
 	if skin.WeightLabel then
 		local weightLabel = skin.WeightLabel
 		scope:Hydrate(weightLabel) {
-			Text = scope:Computed(function(use: Fusion.Use)
-				local get = use :: any
-				local settings = get(store.Settings) :: CoreTypes.Settings?
-				return Query.formatWeight(get(store.Weight) :: number, if settings then settings.Limit else 0)
+			Text = computed(function(use: Fusion.Use): string
+				local settings: CoreTypes.Settings? = useTyped(use, store.Settings)
+				local weight: number = useTyped(use, store.Weight)
+				return Query.formatWeight(weight, if settings then settings.Limit else 0)
 			end),
-			Visible = scope:Computed(function(use: Fusion.Use)
-				local settings = use(store.Settings) :: CoreTypes.Settings?
+			Visible = computed(function(use: Fusion.Use): boolean
+				local settings: CoreTypes.Settings? = useTyped(use, store.Settings)
 				return settings ~= nil and settings.Limit > 0
 			end),
 		}
@@ -172,59 +184,59 @@ function StorageView.Create(
 	local slotTemplate = skin.SlotTemplate
 
 	-- Square cells sized like the hotbar.
-	local cellSize = scope:Computed(function(use: Fusion.Use)
-		local size = computeSlotSize(use(viewportWidthValue))
+	local cellSize = computed(function(use: Fusion.Use): UDim2
+		local vw: number = useTyped(use, viewportWidthValue)
+		local size = computeSlotSize(vw)
 		return UDim2.fromOffset(size, size)
 	end)
 
-	local groupedSlots = scope:Computed(function(use: Fusion.Use)
-		local get = use :: any
-		local settings = get(store.Settings) :: CoreTypes.Settings?
+	local groupedSlots = computed(function(use: Fusion.Use): CoreTypes.GroupedStorage
+		local settings: CoreTypes.Settings? = useTyped(use, store.Settings)
 		local groupByCategory = settings ~= nil and settings.GroupByCategory == true
-		return Query.groupStorageByType(
-			get(store.Storage) :: { string },
-			get(store.Items) :: { [string]: CoreTypes.Item },
-			groupByCategory
-		)
+		local storage: { string } = useTyped(use, store.Storage)
+		local items: { [string]: CoreTypes.Item } = useTyped(use, store.Items)
+		return Query.groupStorageByType(storage, items, groupByCategory)
 	end)
 
 	local collapsedGroups = scope:Value({} :: { [string]: boolean })
 
-	local groupOrder = scope:Computed(function(use: Fusion.Use)
-		local get = use :: any
-		local settings = get(store.Settings) :: CoreTypes.Settings?
-		return Query.orderedGroupKeys(use(groupedSlots), if settings then settings.Categories else nil)
+	local groupOrder = computed(function(use: Fusion.Use): { string }
+		local settings: CoreTypes.Settings? = useTyped(use, store.Settings)
+		local groups: CoreTypes.GroupedStorage = useTyped(use, groupedSlots)
+		return Query.orderedGroupKeys(groups, if settings then settings.Categories else nil)
 	end)
 
-	local groupFor = scope:ForPairs(groupOrder, function(_use, groupScope: Fusion.Scope<typeof(Fusion)>, orderIndex: number, itemType: string)
+	local groupFor = (scope :: any):ForPairs(groupOrder :: any, function(_use, groupScope: Fusion.Scope<typeof(Fusion)>, orderIndex: number, itemType: string)
 		local isUngrouped = itemType == Query.UNGROUPED_KEY
 
-		local categoryInfo = groupScope:Computed(function(use: Fusion.Use)
-			local settings = use(store.Settings) :: CoreTypes.Settings?
+		local categoryInfo = groupComputed(groupScope, function(use: Fusion.Use): CoreTypes.CategoryDef?
+			local settings: CoreTypes.Settings? = useTyped(use, store.Settings)
 			return if settings then settings.Categories[itemType] else nil
 		end)
 
-		local displayName = groupScope:Computed(function(use: Fusion.Use)
-			local category = use(categoryInfo)
+		local displayName = groupComputed(groupScope, function(use: Fusion.Use): string
+			local category: CoreTypes.CategoryDef? = useTyped(use, categoryInfo)
 			return if category and category.DisplayName then category.DisplayName else itemType
 		end)
 
-		local headerColor = groupScope:Computed(function(use: Fusion.Use)
-			local category = use(categoryInfo)
+		local headerColor = groupComputed(groupScope, function(use: Fusion.Use): Color3
+			local category: CoreTypes.CategoryDef? = useTyped(use, categoryInfo)
 			return if category and category.Color then category.Color else FALLBACK_HEADER_COLOR
 		end)
 
-		local records = groupScope:Computed(function(use: Fusion.Use)
-			local get = use :: any
-			local raw = (use(groupedSlots) :: CoreTypes.GroupedStorage)[itemType] or {}
-			local items = get(store.Items) :: { [string]: CoreTypes.Item }
-			local filtered = Query.filterRecordsBySearch(raw, items, get(searchText) :: string)
-			local settings = get(store.Settings) :: CoreTypes.Settings?
+		local records = groupComputed(groupScope, function(use: Fusion.Use): { CoreTypes.ItemRecord }
+				local groups: CoreTypes.GroupedStorage = useTyped(use, groupedSlots)
+				local raw = groups[itemType] or {}
+			local items: { [string]: CoreTypes.Item } = useTyped(use, store.Items)
+			local search: string = useTyped(use, searchText)
+			local filtered = Query.filterRecordsBySearch(raw, items, search)
+			local settings: CoreTypes.Settings? = useTyped(use, store.Settings)
 			return Query.sortRecords(filtered, items, if settings then settings.SortOrder else "None")
 		end)
 
-		local isCollapsed = groupScope:Computed(function(use: Fusion.Use)
-			return not isUngrouped and (use(collapsedGroups) :: { [string]: boolean })[itemType] == true
+		local isCollapsed = groupComputed(groupScope, function(use: Fusion.Use): boolean
+			local collapsed: { [string]: boolean } = useTyped(use, collapsedGroups)
+			return not isUngrouped and collapsed[itemType] == true
 		end)
 
 		-- Container hidden during search when no matches.
@@ -234,10 +246,10 @@ function StorageView.Create(
 			Size = UDim2.fromScale(1, 0),
 			AutomaticSize = Enum.AutomaticSize.Y,
 			BackgroundTransparency = 1,
-			Visible = groupScope:Computed(function(use: Fusion.Use)
-				local get = use :: any
-				local isSearching = (get(searchText) :: string) ~= ""
-				if isSearching and #(get(records) :: { CoreTypes.ItemRecord }) == 0 then
+			Visible = groupComputed(groupScope, function(use: Fusion.Use): boolean
+				local search: string = useTyped(use, searchText)
+				local recs: { CoreTypes.ItemRecord } = useTyped(use, records)
+				if search ~= "" and #recs == 0 then
 					return false
 				end
 				return true
@@ -266,17 +278,19 @@ function StorageView.Create(
 				Font = Enum.Font.GothamBold,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				AutoButtonColor = false,
-				Text = groupScope:Computed(function(use: Fusion.Use)
-					local get = use :: any
-					local arrow = if (get(isCollapsed) :: boolean) then "▶" else "▼"
-					return `{arrow} {get(displayName) :: string} ({#(get(records) :: { CoreTypes.ItemRecord })})`
+				Text = groupComputed(groupScope, function(use: Fusion.Use): string
+						local collapsed: boolean = useTyped(use, isCollapsed)
+						local arrow = if collapsed then "▶" else "▼"
+						local name: string = useTyped(use, displayName)
+						local recs: { CoreTypes.ItemRecord } = useTyped(use, records)
+					return `{arrow} {name} ({#recs})`
 				end),
 				Parent = container,
 			} :: TextButton
 
 			-- Toggle collapses grid, header stays visible.
 			(header :: TextButton).Activated:Connect(function()
-				local nextCollapsed = table.clone(Fusion.peek(collapsedGroups))
+				local nextCollapsed = (table.clone :: any)((Fusion.peek :: any)(collapsedGroups))
 				nextCollapsed[itemType] = not (nextCollapsed[itemType] == true)
 				collapsedGroups:set(nextCollapsed)
 			end)
@@ -288,8 +302,9 @@ function StorageView.Create(
 			Size = UDim2.fromScale(1, 0),
 			AutomaticSize = Enum.AutomaticSize.Y,
 			BackgroundTransparency = 1,
-			Visible = groupScope:Computed(function(use: Fusion.Use)
-				return not use(isCollapsed)
+			Visible = groupComputed(groupScope, function(use: Fusion.Use): boolean
+				local collapsed: boolean = useTyped(use, isCollapsed)
+				return not collapsed
 			end),
 			Parent = container,
 		}
@@ -303,7 +318,7 @@ function StorageView.Create(
 			Parent = slotGrid,
 		}
 
-		local storageFor = groupScope:ForPairs(records, function(_use, slotScope: Fusion.Scope<typeof(Fusion)>, listIndex: number, record: CoreTypes.ItemRecord)
+		local storageFor = (groupScope :: any):ForPairs(records :: any, function(_use, slotScope: Fusion.Scope<typeof(Fusion)>, listIndex: number, record: CoreTypes.ItemRecord)
 			local slotFrame = SlotView.Create(slotScope, {
 				SlotType = "Storage",
 				SlotIndex = record.index,
@@ -313,15 +328,15 @@ function StorageView.Create(
 				DragService = dragService,
 			})
 			do
-				local cursor = (skin :: any).SelectionCursorTemplate :: GuiObject?
+				local cursor = skin.SelectionCursorTemplate
 				local btn = slotFrame:FindFirstChild("slotbutton") :: GuiButton?
-				if cursor and btn then (btn :: any).SelectionImageObject = cursor end
+				if cursor ~= nil and btn ~= nil then btn.SelectionImageObject = cursor end
 			end
 			-- LayoutOrder via Hydrate+Computed so reorder is task.defer coalesced
 			-- with the SlotView image/stack/rarity updates (atomic with hotbar swaps).
 			-- listIndex is the ForPairs key (1..n) – wrap in Computed to make it a
 			-- state so applyInstanceProps defers it.
-			local orderState = slotScope:Computed(function()
+			local orderState = groupComputed(slotScope, function()
 				return listIndex
 			end)
 			slotScope:Hydrate(slotFrame) {
@@ -329,22 +344,22 @@ function StorageView.Create(
 				Size = cellSize,
 			}
 
-			if dragService then
+			if dragService ~= nil then
 				local slotRef: CoreTypes.SlotRef = { Type = "Storage", Slot = record.index }
 				local handle = slotFrame:FindFirstChild("slotbutton") :: GuiButton?
-				if handle then dragService:RegisterDraggable(slotScope, handle, slotRef) end
+				if handle ~= nil then dragService:RegisterDraggable(slotScope, handle, slotRef) end
 				dragService:RegisterDropTarget(slotScope, slotFrame, slotRef)
 			end
 
 			return listIndex, record
 		end)
-		Fusion.peek(storageFor)
-		groupScope:Observer(storageFor)
+		;(Fusion.peek :: any)(storageFor)
+		;(groupScope :: any):Observer(storageFor)
 
 		return orderIndex, itemType
 	end)
-	Fusion.peek(groupFor)
-	scope:Observer(groupFor)
+	;(Fusion.peek :: any)(groupFor)
+	;(scope :: any):Observer(groupFor)
 end
 
 -----------------------------

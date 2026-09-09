@@ -8,10 +8,9 @@
 	missing index (e.g. [13] nil, [14] present, MaxHotbarSlots 14)
 	means that slot simply gets no PC nor Console bind.
 
-	Mirrors origin/master src/shared/Binds.luau shape, minus DropActions
-	Increase/Decrease (MouseButton1Click covers it). PC and Console are
-	separate arrays; Input mounts only the side matching PreferredInput
-	(or both for Shared contexts like Backpack).
+	No DropActions Increase/Decrease — tap-to-equip covers it. PC and
+	Console are separate arrays; Input mounts only the side matching
+	PreferredInput (or both for Shared contexts like Backpack).
 ]]
 
 local Binds = {}
@@ -27,7 +26,6 @@ export type BindConfig = {
 	Console: { BindEntry }?,
 }
 
--- Helper mirroring master Binds.ApplyToAction(action, cfg, inputType?)
 -- Applies PC, Console, or both into an IllusionIAS BindingObject.
 function Binds.ApplyToAction(action: any, bindConfig: BindConfig?, inputType: ("PC" | "Console")?)
 	if not action or not bindConfig then return end
@@ -40,16 +38,18 @@ function Binds.ApplyToAction(action: any, bindConfig: BindConfig?, inputType: ("
 			action:AddBind(b.Main, m1, m2)
 		end
 	end
-	if inputType then
-		apply(bindConfig[inputType])
+	if inputType == "PC" then
+		apply(bindConfig.PC)
+	elseif inputType == "Console" then
+		apply(bindConfig.Console)
 	else
 		apply(bindConfig.PC)
 		apply(bindConfig.Console)
 	end
 end
 
--- Hotbar 1..10 default (identical to master). Custom skins/layouts can add
--- [11]..[N] entries; Input loops 1..MaxHotbarSlots and skips nils.
+-- Hotbar 1..10 defaults. Custom skins/layouts can add [11]..[N] entries;
+-- Input loops 1..MaxHotbarSlots and skips nils.
 Binds.HotbarSlots = {
 	[1] = {
 		Display = "1",
@@ -101,7 +101,7 @@ Binds.HotbarSlots = {
 		PC = { { Main = Enum.KeyCode.Zero } },
 		Console = { { Main = Enum.KeyCode.DPadDown, Modifiers = { Enum.KeyCode.ButtonR1 } } },
 	},
-} :: { [number]: BindConfig }
+} :: { [number]: BindConfig? }
 
 Binds.Global = {
 	Backpack = {
