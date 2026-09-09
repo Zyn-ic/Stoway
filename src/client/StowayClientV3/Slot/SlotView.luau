@@ -82,13 +82,71 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 		return Query.isEquipped(use(store.EquippedItemUUID), use(slotUUID))
 	end)
 
+	local hasImage = scope:Computed(function(use: Fusion.Use): boolean
+		local item = use(currentItem)
+		return item ~= nil and item.Metadata ~= nil and item.Metadata.Image ~= nil and item.Metadata.Image ~= ""
+	end)
+
+	local fallbackText = scope:Computed(function(use: Fusion.Use): string
+		local item = use(currentItem)
+		if not item then return "" end
+		local id = item.Id or "?"
+		if #id > 12 then return string.sub(id, 1, 10) .. ".." end
+		return id
+	end)
+
 	if slotbutton then
+		local fallbackLabel = scope:New("TextLabel") {
+			Name = "fallbacklabel",
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromScale(0.85, 0.72),
+			ZIndex = 2,
+			Font = Enum.Font.GothamBold,
+			TextScaled = true,
+			TextWrapped = true,
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			TextColor3 = Color3.new(1, 1, 1),
+			TextStrokeTransparency = 0.2,
+			TextStrokeColor3 = Color3.new(0, 0, 0),
+			Parent = slotbutton,
+		}
+		scope:New("UITextSizeConstraint") {
+			MaxTextSize = 18,
+			MinTextSize = 7,
+			Parent = fallbackLabel,
+		}
+		scope:New("UIPadding") {
+			PaddingTop = UDim.new(0, 2),
+			PaddingBottom = UDim.new(0, 8),
+			PaddingLeft = UDim.new(0, 4),
+			PaddingRight = UDim.new(0, 4),
+			Parent = fallbackLabel,
+		}
+
 		scope:Hydrate(slotbutton) {
 			Image = scope:Computed(function(use: Fusion.Use): string
 				local item = use(currentItem)
 				return if item and item.Metadata then item.Metadata.Image or "" else ""
 			end),
+			ImageTransparency = scope:Computed(function(use: Fusion.Use): number
+				return if use(hasImage) then 0 else 1
+			end),
 			Visible = hasItem,
+		}
+
+		scope:Hydrate(fallbackLabel) {
+			Text = fallbackText,
+			Visible = scope:Computed(function(use: Fusion.Use): boolean
+				return use(hasItem) and not use(hasImage)
+			end),
+			TextColor3 = scope:Computed(function(use: Fusion.Use): Color3
+				local item = use(currentItem)
+				-- Use rarity tint for fallback text so color-blind still has Id, but hue helps
+				return Colors.getRarityColor(item and item.Metadata and item.Metadata.Rarity)
+			end),
 		}
 
 		-- Click to equip / unequip. Tracked by Fusion scope so ForPairs cleanup
