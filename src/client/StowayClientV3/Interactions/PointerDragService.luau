@@ -65,6 +65,7 @@ type SelfData = {
 	_checkConn: RBXScriptConnection?,
 	_releaseConn: RBXScriptConnection?,
 	_moveConn: RBXScriptConnection?,
+	_lastDragEnd: number,
 }
 
 -----------------------------
@@ -119,6 +120,7 @@ function PointerDragService.new(
 	self._checkConn = nil :: RBXScriptConnection?
 	self._releaseConn = nil :: RBXScriptConnection?
 	self._moveConn = nil :: RBXScriptConnection?
+	self._lastDragEnd = 0
 
 	local releaseConn = UserInputService.InputEnded:Connect(function(input: InputObject)
 		if not self._enabled then return end
@@ -177,6 +179,15 @@ end
 function PointerDragService.SetEnabled(self: Service, enabled: boolean)
 	self._enabled = enabled
 	if not enabled and self._dragging then self:_cancelPress(); self:_endDrag() end
+end
+
+function PointerDragService.IsDragging(self: Service): boolean
+	return self._dragging
+end
+
+function PointerDragService.WasRecentlyDragging(self: Service, windowSec: number?): boolean
+	local w = windowSec or 0.22
+	return (os.clock() - self._lastDragEnd) < w
 end
 
 function PointerDragService.Destroy(self: Service)
@@ -280,6 +291,7 @@ end
 function PointerDragService._endDrag(self: Service, input: InputObject?)
 	if not self._dragging then self:_cancelPress(); return end
 	self._dragging = false
+	self._lastDragEnd = os.clock()
 	if self._moveConn then self._moveConn:Disconnect(); self._moveConn = nil end
 	if self._checkConn then self._checkConn:Disconnect(); self._checkConn = nil end
 

@@ -35,6 +35,7 @@ export type SlotProps = {
 	PackOrder: Fusion.Computed<number>?,
 	Keybind: Fusion.Computed<string>?,
 	Visibility: Fusion.Computed<boolean>?,
+	DragService: any?,
 }
 
 -----------------------------
@@ -149,11 +150,17 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 			end),
 		}
 
-		-- Click to equip / unequip. Tracked by Fusion scope so ForPairs cleanup
-		-- disconnects it (fixes master issue #2: connection leak per slot).
+		-- Tap/Activated to equip (covers Mouse, Touch, and Gamepad ButtonA via
+		-- GuiService.SelectedObject + Activated). Guard against firing right
+		-- after a drag so master double-fire doesn't duplicate.
+		local dragService: any = (props :: any).DragService
 		table.insert(
 			scope,
-			slotbutton.MouseButton1Click:Connect(function()
+			slotbutton.Activated:Connect(function()
+				if dragService then
+					if dragService.IsDragging and dragService:IsDragging() then return end
+					if dragService.WasRecentlyDragging and dragService:WasRecentlyDragging(0.25) then return end
+				end
 				local uuid = Fusion.peek(slotUUID)
 				if not uuid then return end
 				if not Fusion.peek(hasItem) then return end

@@ -310,7 +310,13 @@ function StorageView.Create(
 				Parent = slotGrid,
 				Template = slotTemplate,
 				Store = store,
+				DragService = dragService,
 			})
+			do
+				local cursor = (skin :: any).SelectionCursorTemplate :: GuiObject?
+				local btn = slotFrame:FindFirstChild("slotbutton") :: GuiButton?
+				if cursor and btn then (btn :: any).SelectionImageObject = cursor end
+			end
 			-- LayoutOrder via Hydrate+Computed so reorder is task.defer coalesced
 			-- with the SlotView image/stack/rarity updates (atomic with hotbar swaps).
 			-- listIndex is the ForPairs key (1..n) – wrap in Computed to make it a

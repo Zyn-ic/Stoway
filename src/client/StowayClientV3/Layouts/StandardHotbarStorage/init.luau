@@ -18,6 +18,7 @@ local PointerDragService = require(script.Parent.Parent.Interactions.PointerDrag
 
 local HotbarView = require(script.HotbarView)
 local StorageView = require(script.StorageView)
+local LayoutInput = require(script.Input)
 
 local StandardHotbarStorage = {}
 
@@ -145,6 +146,8 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 
 	HotbarView.Create(scope, skin, store, dragService)
 	StorageView.Create(scope, skin, store, dragService)
+	-- Modular input: layout-owned IAS binds + PreferredInput bus + console modes
+	LayoutInput.Mount(scope, skin, store, dragService)
 end
 
 -----------------------------

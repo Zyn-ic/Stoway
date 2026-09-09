@@ -19,6 +19,7 @@ local State = require(script.Parent.Parent.Parent.CoreStore.State)
 local Query = require(script.Parent.Parent.Parent.CoreStore.Query)
 local ClientStore = require(script.Parent.Parent.Parent.Controller.ClientStore)
 local SlotView = require(script.Parent.Parent.Parent.Slot.SlotView)
+local Binds = require(script.Parent.Binds)
 
 local HotbarView = {}
 
@@ -175,9 +176,13 @@ function HotbarView.Create(
 		end)
 
 		local keybind = slotScope:Computed(function(use: Fusion.Use)
+			-- Sparse: if Binds entry missing, hide label (slot still visible via Visible but no bind)
+			if Binds.HotbarSlots[slotIndex] == nil then return "" end
 			local display = use(packOrder)
 			return if display == 10 then "0" else tostring(display)
 		end)
+
+		local showKeybind = Binds.HotbarSlots[slotIndex] ~= nil
 
 		local visibility = slotScope:Computed(function(use: Fusion.Use)
 			local get = use :: any
@@ -195,14 +200,22 @@ function HotbarView.Create(
 			Parent = hotbarFrame,
 			Template = slotTemplate,
 			Store = store,
-			ShowKeybind = true,
+			ShowKeybind = showKeybind,
 			PackOrder = packOrder,
 			Keybind = keybind,
 			Visibility = visibility,
+			DragService = dragService,
 		})
 		slotScope:Hydrate(slotFrame) {
 			Size = slotSizeUDim,
 		}
+
+		-- Override default selection cursor for gamepad with skin's custom Frame
+		do
+			local cursor = (skin :: any).SelectionCursorTemplate :: GuiObject?
+			local btn = slotFrame:FindFirstChild("slotbutton") :: GuiButton?
+			if cursor and btn then (btn :: any).SelectionImageObject = cursor end
+		end
 
 		if dragService then
 			local slotRef: CoreTypes.SlotRef = { Type = "Hotbar", Slot = slotIndex }

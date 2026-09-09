@@ -31,6 +31,7 @@ StowayClient.Controller = ClientController
 function StowayClient.Init()
 	-- Replace the default backpack UI.
 	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
 
 	local player = Players.LocalPlayer
 	local playerGui = player:WaitForChild("PlayerGui") :: PlayerGui

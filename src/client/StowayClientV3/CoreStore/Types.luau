@@ -54,6 +54,7 @@ export type SkinHandle = {
 	BackpackStuff: ImageButton?,
 	SlotTemplate: Frame?,
 	DraggingGui: ScreenGui?,
+	SelectionCursorTemplate: GuiObject?,
 }
 
 -----------------------------

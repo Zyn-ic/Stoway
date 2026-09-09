@@ -45,6 +45,7 @@ function DefaultModern.Load(scope: Fusion.Scope<typeof(Fusion)>, playerGui: Play
 
 	local backpack = gui:FindFirstChild("Backpack") :: Frame?
 	local slotFolder = root:FindFirstChild("Slot")
+	local selectionCursor = slotFolder and (slotFolder:FindFirstChild("SelectionCursor") :: GuiObject?)
 
 	-- Ensure a dedicated DraggingGui for spring ghost – create if prefab lacks it
 	local existingDragging = gui:FindFirstChild("DraggingGui") :: ScreenGui?
@@ -74,6 +75,7 @@ function DefaultModern.Load(scope: Fusion.Scope<typeof(Fusion)>, playerGui: Play
 		BackpackStuff = gui:FindFirstChild("BackpackStuff") :: ImageButton?,
 		SlotTemplate = slotFolder and (slotFolder:FindFirstChild("template") :: Frame?),
 		DraggingGui = draggingGui,
+		SelectionCursorTemplate = selectionCursor,
 	}
 end
 

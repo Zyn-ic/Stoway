@@ -26,7 +26,7 @@ local DEFAULT_CATEGORIES: { [string]: Types.CategoryDef } = {
 }
 
 local DEFAULT_SETTINGS: Types.Settings = {
-	HotbarType = "Static",
+	HotbarType = "Dynamic",
 	MaxHotbarSlots = 10,
 	Limit = 15,
 	CanStack = true,
