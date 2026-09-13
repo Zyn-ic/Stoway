@@ -47,11 +47,15 @@ export type SlotProps = {
 	Template: Frame,
 	Store: typeof(ClientStore),
 	ShowKeybind: boolean?,
+	HasBind: boolean?,
+	HideChrome: { string }?,
 	PackOrder: Fusion.Computed<number>?,
 	Keybind: Fusion.Computed<string>?,
 	Visibility: Fusion.Computed<boolean>?,
 	DragService: DragLike?,
 }
+
+local UNBOUND_KEYBIND_COLOR = Color3.fromRGB(255, 85, 85)
 
 -----------------------------
 -- PUBLIC FUNCTIONS --
@@ -64,6 +68,17 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 	table.insert(scope, slotFrame)
 
 	local store = props.Store
+
+	-- Skin-declared chrome visibility: hide listed direct children (deco
+	-- overlays) per slot type. Ghost inherits via clone, so ghost/live stay
+	-- consistent. Absent list = everything visible (legacy behavior).
+	local hideChrome: { string }? = props.HideChrome
+	if hideChrome then
+		for _, name in hideChrome do
+			local node = slotFrame:FindFirstChild(name)
+			if node and node:IsA("GuiObject") then node.Visible = false end
+		end
+	end
 
 	local slotbutton = slotFrame:FindFirstChild("slotbutton") :: ImageButton?
 	local stackcount = slotFrame:FindFirstChild("stackcount") :: TextLabel?
@@ -197,11 +212,15 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 	end
 
 	if rarityframe then
+		-- Tint both channels: ImageColor3 drives image-art frames, BackgroundColor3
+		-- drives native bars (imageless templates tint via background).
+		local rarityColor: Fusion.Computed<Color3> = scope:Computed(function(use: Fusion.Use): Color3
+			local item: CoreTypes.Item? = useTyped(use, currentItem)
+			return Colors.getRarityColor(item and item.Metadata and item.Metadata.Rarity)
+		end)
 		scope:Hydrate(rarityframe) {
-			ImageColor3 = scope:Computed(function(use: Fusion.Use): Color3
-				local item: CoreTypes.Item? = useTyped(use, currentItem)
-				return Colors.getRarityColor(item and item.Metadata and item.Metadata.Rarity)
-			end),
+			ImageColor3 = rarityColor,
+			BackgroundColor3 = rarityColor,
 			Visible = hasItem,
 		}
 	end
@@ -243,6 +262,7 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 		scope:Hydrate(slotnumber) {
 			Text = props.Keybind or "",
 			Visible = props.ShowKeybind == true,
+			TextColor3 = if props.HasBind == false then UNBOUND_KEYBIND_COLOR else slotnumber.TextColor3,
 		}
 	end
 

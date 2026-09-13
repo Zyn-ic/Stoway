@@ -91,10 +91,12 @@ Binds.HotbarSlots = {
 		PC = { { Main = Enum.KeyCode.Eight } },
 		Console = { { Main = Enum.KeyCode.ButtonA, Modifiers = { Enum.KeyCode.ButtonL1 } } },
 	},
+	-- SPARSE TEST: [9] has Display but no keys. Slot 9 must render + drag +
+	-- tap, show a red "!" badge, and fire no PC/Console bind.
 	[9] = {
 		Display = "9",
-		PC = { { Main = Enum.KeyCode.Nine } },
-		Console = { { Main = Enum.KeyCode.DPadUp, Modifiers = { Enum.KeyCode.ButtonR1 } } },
+		-- PC = { { Main = Enum.KeyCode.Nine } },
+		-- Console = { { Main = Enum.KeyCode.DPadUp, Modifiers = { Enum.KeyCode.ButtonR1 } } },
 	},
 	[10] = {
 		Display = "0",

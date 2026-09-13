@@ -97,12 +97,18 @@ function HotbarView.Create(
 	local hotbarFrame = skin.HotbarFrame
 	local slotTemplate = skin.SlotTemplate
 
+	-- Skin-declared art bleed (px per side): deco that paints past cell bounds
+	-- is given room in gap + padding math instead of swallowing the rhythm.
+	local bleed: number = skin.SlotBleedPx or 0
+	local effGap = SLOT_GAP + bleed * 2
+	local effPad = INNER_PADDING + bleed
+
 	-- Use LayoutOrder for deterministic slot ordering and fixed pixel gaps.
 	local hotbarListLayout = hotbarFrame:FindFirstChildOfClass("UIListLayout")
 	if hotbarListLayout then
 		scope:Hydrate(hotbarListLayout) {
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, SLOT_GAP),
+			Padding = UDim.new(0, effGap),
 		}
 	end
 
@@ -146,8 +152,8 @@ function HotbarView.Create(
 		Size = scope:Computed(function(use: Fusion.Use): UDim2
 			local size: number = useTyped(use, slotSize)
 			local slots: number = useTyped(use, maxSlots)
-			local width = INNER_PADDING * 2 + slots * size + math.max(0, slots - 1) * SLOT_GAP
-			local height = INNER_PADDING * 2 + size
+			local width = effPad * 2 + slots * size + math.max(0, slots - 1) * effGap
+			local height = effPad * 2 + size
 			return UDim2.fromOffset(width, height)
 		end),
 		Position = scope:Computed(function(use: Fusion.Use): UDim2
@@ -181,14 +187,17 @@ function HotbarView.Create(
 			return Query.packedHotbarOrder(hotbar, items, slotIndex, dyn)
 		end)
 
+		-- Unbound when the entry is missing OR carries no usable keys
+		-- (e.g. Display-only). Unbound slots keep rendering + drag + tap.
+		local bindCfg = Binds.HotbarSlots[slotIndex]
+		local hasBind = bindCfg ~= nil and (bindCfg.PC ~= nil or bindCfg.Console ~= nil)
+
 		local keybind = slotScope:Computed(function(use: Fusion.Use): string
-			-- Sparse: if Binds entry missing, hide label (slot still visible via Visible but no bind)
-			if Binds.HotbarSlots[slotIndex] == nil then return "" end
+			if not hasBind then return "!" end
+			if bindCfg ~= nil and bindCfg.Display ~= nil then return bindCfg.Display end
 			local display: number = useTyped(use, packOrder)
 			return if display == 10 then "0" else tostring(display)
 		end)
-
-		local showKeybind = Binds.HotbarSlots[slotIndex] ~= nil
 
 		local visibility = slotScope:Computed(function(use: Fusion.Use): boolean
 			local hotbar: { [number]: string? } = useTyped(use, store.Hotbar)
@@ -203,7 +212,9 @@ function HotbarView.Create(
 			Parent = hotbarFrame,
 			Template = slotTemplate,
 			Store = store,
-			ShowKeybind = showKeybind,
+			ShowKeybind = true,
+			HasBind = hasBind,
+			HideChrome = skin.HideInHotbar,
 			PackOrder = packOrder,
 			Keybind = keybind,
 			Visibility = visibility,

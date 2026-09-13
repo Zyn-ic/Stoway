@@ -55,6 +55,10 @@ export type SkinHandle = {
 	SlotTemplate: Frame?,
 	DraggingGui: ScreenGui?,
 	SelectionCursorTemplate: GuiObject?,
+	GhostHidden: { string }?,
+	HideInStorage: { string }?,
+	HideInHotbar: { string }?,
+	SlotBleedPx: number?,
 }
 
 -----------------------------

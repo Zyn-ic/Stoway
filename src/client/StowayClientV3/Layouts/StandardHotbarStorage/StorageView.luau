@@ -183,6 +183,37 @@ function StorageView.Create(
 	local scrollingFrame = skin.ScrollingFrame
 	local slotTemplate = skin.SlotTemplate
 
+	-- Skin-declared art bleed (px per side): added to grid cell padding so
+	-- overhang deco clears headers and neighboring cells.
+	local bleed: number = skin.SlotBleedPx or 0
+
+	-- Normalize the skin's scroll layout (generic): group containers expect
+	-- vertical stacking. Reuse a skin list when present, create one when
+	-- absent, and drop grid layouts that would crush groups into cells.
+	-- Operates on the live clone only; the skin prefab is untouched.
+	local scrollList = scrollingFrame:FindFirstChildOfClass("UIListLayout")
+	if scrollList then
+		scope:Hydrate(scrollList) {
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			FillDirection = Enum.FillDirection.Vertical,
+		}
+	else
+		scope:New("UIListLayout") {
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			FillDirection = Enum.FillDirection.Vertical,
+			HorizontalAlignment = Enum.HorizontalAlignment.Left,
+			VerticalAlignment = Enum.VerticalAlignment.Top,
+			Padding = UDim.new(0, 4),
+			Parent = scrollingFrame,
+		}
+	end
+	for _, child in scrollingFrame:GetChildren() do
+		if child:IsA("UIGridLayout") then
+			warn("[StandardHotbarStorage] StorageView: removing skin UIGridLayout in ScrollingFrame (groups need vertical stacking)")
+			child:Destroy()
+		end
+	end
+
 	-- Square cells sized like the hotbar.
 	local cellSize = computed(function(use: Fusion.Use): UDim2
 		local vw: number = useTyped(use, viewportWidthValue)
@@ -312,7 +343,7 @@ function StorageView.Create(
 		groupScope:New("UIGridLayout") {
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			CellSize = cellSize,
-			CellPadding = UDim2.fromOffset(CELL_PADDING, CELL_PADDING),
+			CellPadding = UDim2.fromOffset(CELL_PADDING + bleed * 2, CELL_PADDING + bleed * 2),
 			HorizontalAlignment = Enum.HorizontalAlignment.Left,
 			VerticalAlignment = Enum.VerticalAlignment.Top,
 			Parent = slotGrid,
@@ -325,6 +356,7 @@ function StorageView.Create(
 				Parent = slotGrid,
 				Template = slotTemplate,
 				Store = store,
+				HideChrome = skin.HideInStorage,
 				DragService = dragService,
 			})
 			do

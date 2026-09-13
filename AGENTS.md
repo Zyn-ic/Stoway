@@ -24,7 +24,7 @@ Stoway is a Roblox inventory framework. The core is a pure Luau inventory engine
 
 **Vendored Fusion:** `ReplicatedStorage/Packages/fusion/` (Fusion 0.3 `isRelease=true`, copied from Studio `Workspace.Fusion` snapshot; `UsedAs` + `Graph`/`evaluate`/`change` + `lazy For` + `State/For/init.lua` with `Disassembly`/`ForTypes`; do NOT wally install again or the root `Packages/` folder will reappear. `wally.toml` still pins `acecateer/fusion@0.3.1` for reference only).
 
-**Skin prefabs (Studio-only, NOT in the repo):** `ReplicatedStorage/Stoway/GUI/<SkinName>/StowayGui/` — `Stoway` ScreenGui (Hotbar/Backpack frames, BackpackStuff), `Slot/template` slot prefab (slotbutton, stackcount, slotnumber, selecticon, rarityframe). The GUI lives in the .rbxl only; a `rojo build` output has no GUI and the client warns + skips views.
+**Skin prefabs (Studio-only, NOT in the repo):** `ReplicatedStorage/Stoway/GUI/<SkinName>/` (flat — exactly one ScreenGui directly under the skin folder, plus `Slot/`) — ScreenGui holds Hotbar/Backpack frames + BackpackStuff, `Slot/template` slot prefab (slotbutton, stackcount, slotnumber, selecticon, rarityframe). One shared `GUI/DraggingGui` for the drag ghost. Optional `Slot`-folder attributes: `GhostHidden` / `HideInStorage` / `HideInHotbar` (comma names), `SlotBleedPx` (number). The GUI lives in the .rbxl only; a `rojo build` output has no GUI and the client warns + skips views.
 
 ---
 

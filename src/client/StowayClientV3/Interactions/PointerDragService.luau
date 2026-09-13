@@ -48,6 +48,7 @@ type SelfData = {
 	_slotTemplate: Frame?,
 	_backpackFrame: Frame?,
 	_hotbarFrame: Frame?,
+	_ghostHidden: { string }?,
 	_enabled: boolean,
 	_dropMap: { [GuiObject]: SlotRef },
 	_dropFrames: { GuiObject },
@@ -94,7 +95,8 @@ function PointerDragService.new(
 	onCommit: (from: SlotRef, to: SlotRef?, context: DragContext) -> (),
 	slotTemplate: Frame?,
 	backpackFrame: Frame?,
-	hotbarFrame: Frame?
+	hotbarFrame: Frame?,
+	ghostHidden: { string }?
 ): Service
 	local self = setmetatable({}, PointerDragService) :: Service
 	self._layoutScope = layoutScope
@@ -103,6 +105,7 @@ function PointerDragService.new(
 	self._slotTemplate = slotTemplate
 	self._backpackFrame = backpackFrame
 	self._hotbarFrame = hotbarFrame
+	self._ghostHidden = ghostHidden
 	self._enabled = true
 	self._dropMap = {} :: { [GuiObject]: SlotRef }
 	self._dropFrames = {} :: { GuiObject }
@@ -226,18 +229,28 @@ function PointerDragService._beginDrag(self: Service, curPos: Vector2)
 	end
 	ghost.Name = "DragGhost"
 
-	-- Strip interaction + layout noise so the ghost is purely visual
+	-- Strip interaction + layout noise so the ghost is purely visual.
+	-- Lift descendants above the ghost root: DraggingGui uses ZIndexBehavior
+	-- Global, so the root's ZIndex 100 background would otherwise bury its
+	-- own children (template-agnostic, preserves relative order).
 	for _, desc in ghost:GetDescendants() do
 		if desc:IsA("GuiButton") then
 			desc.Active = false
 			desc.Selectable = false
 			desc.AutoButtonColor = false
 		end
+		if desc:IsA("GuiObject") then
+			desc.ZIndex = desc.ZIndex + 100
+		end
 	end
-	local sn = ghost:FindFirstChild("slotnumber")
-	if sn and sn:IsA("GuiObject") then sn.Visible = false end
-	local kb = ghost:FindFirstChild("keybindbackground")
-	if kb and kb:IsA("GuiObject") then kb.Visible = false end
+	-- Skin-aware strip: hide keybind badges and non-contract chrome (slotdeco,
+	-- borders). Defaults preserve legacy behavior when the skin declares no
+	-- list. Clone-only; the live slot is untouched.
+	local hidden: { string } = self._ghostHidden or { "slotnumber", "keybindbackground" }
+	for _, name in hidden do
+		local node = ghost:FindFirstChild(name)
+		if node and node:IsA("GuiObject") then node.Visible = false end
+	end
 	ghost.AnchorPoint = Vector2.new(0, 0)
 	ghost.LayoutOrder = 0
 	ghost.Visible = true
@@ -249,6 +262,7 @@ function PointerDragService._beginDrag(self: Service, curPos: Vector2)
 	ghost.ZIndex = 100
 	ghost.Parent = self._draggingGui
 	self._ghost = ghost
+
 
 	local posValue: Fusion.Value<UDim2> = self._layoutScope:Value(UDim2.fromOffset(curPos.X, curPos.Y))
 	local springPos: Fusion.Spring<UDim2> = self._layoutScope:Spring(posValue, 70, 1)

@@ -149,7 +149,8 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 		end,
 		skin.SlotTemplate,
 		skin.BackpackFrame,
-		skin.HotbarFrame
+		skin.HotbarFrame,
+		skin.GhostHidden
 	)
 
 	HotbarView.Create(scope, skin, store, dragService)

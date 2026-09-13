@@ -90,7 +90,13 @@ end
 
 local function doEquipSlot(store: typeof(ClientStore), visibleIndex: number)
 	local uuid = resolveHotbarUUID(store, visibleIndex)
-	if not uuid then return end
+	if not uuid then
+		-- Empty slot bind deselects whatever is equipped.
+		if peekValue(store.EquippedItemUUID) ~= nil then
+			ClientController.Unequip()
+		end
+		return
+	end
 	local equipped: string? = peekValue(store.EquippedItemUUID)
 	if equipped == uuid then
 		ClientController.Unequip()

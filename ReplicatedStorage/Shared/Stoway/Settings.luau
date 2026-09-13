@@ -26,7 +26,7 @@ local DEFAULT_CATEGORIES: { [string]: Types.CategoryDef } = {
 }
 
 local DEFAULT_SETTINGS: Types.Settings = {
-	HotbarType = "Dynamic",
+	HotbarType = "Static",
 	MaxHotbarSlots = 10,
 	Limit = 15,
 	CanStack = true,
@@ -38,7 +38,7 @@ local DEFAULT_SETTINGS: Types.Settings = {
 	StackRequiredFields = { "Rarity", "Type" },
 	StackBlacklist = { Legendary = true, Mythic = true, Special = true },
 	DefaultDroppable = true,
-	UiSkin = "Default",
+	UiSkin = "Modern",
 	Categories = DEFAULT_CATEGORIES,
 	-- Demo toggle (see Types.luau) — on by default so the grouped/collapsible
 	-- storage view is what you see out of the box; flip to false to render
