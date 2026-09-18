@@ -70,17 +70,25 @@ stability-locked once external subscribers exist.
 
 ## Handler Discipline
 
-- Fires are synchronous. Handlers stay fast; defer heavy work with
-  `task.defer`. A slow hover handler blocks the drag thread.
-- Every skin-function invocation is `pcall`-wrapped. A broken sound hook must
-  never break inventory.
+- Bus fires are synchronous. External handlers stay fast; defer heavy work
+  with `task.defer`.
+- Skin-direct calls go through `ClientEvents.CallHook`, which `task.spawn`s
+  every invocation before `pcall`-wrapping it. Spawn is mandatory: stock
+  `OnSlotHover` yields (two `task.wait`s in its tween) and a synchronous
+  call would stall the input/drag thread. A throwing hook warns once with
+  its name and never breaks inventory.
 - Connections parent to the layout scope. `LayoutManager:Teardown` cleans
   them — same discipline as the input/pointer leak sweeps.
 - Passed frames/buttons are borrowed, not owned. Subscribers must never
   destroy, reparent, or permanently restyle them (`OnSelect`'s highlight
   stroke must be removed by `OnDeselect`).
-- Skin functions may assume only what the skin contract guarantees (e.g. a
-  hovered `btn` carrying a `UIStroke` must be part of that skin's prefab).
+- Skin functions may assume only what the skin contract guarantees:
+  a hovered `slotbutton` carries a `UIStroke` child (stock `OnSlotHover`
+  tweens `Thickness` 0→5→0); `OnSelect` parents a `SelectionHighlight`
+  `UIStroke` to the cell, `OnDeselect` destroys it.
+- Operation events fire on `res.ok` only — subscribers never see phantom
+  events. `OnSwap` reports the DESTINATION slot. Move/Split/SwapStack
+  successes intentionally fire nothing (no signal/hook exists for them).
 
 ## Transport Separation
 

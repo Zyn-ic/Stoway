@@ -230,6 +230,7 @@ function HotbarView.Create(
 			Visibility = visibility,
 			DragService = dragService,
 			GlowSpread = skin.GlowSpread,
+			Hooks = skin.Hooks,
 		})
 		slotScope:Hydrate(slotFrame) {
 			Size = slotSizeUDim,

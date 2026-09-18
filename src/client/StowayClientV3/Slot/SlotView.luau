@@ -19,6 +19,7 @@ local CoreTypes = require(script.Parent.Parent.CoreStore.Types)
 local Query = require(script.Parent.Parent.CoreStore.Query)
 local ClientStore = require(script.Parent.Parent.Controller.ClientStore)
 local ClientController = require(script.Parent.Parent.Controller.ClientController)
+local ClientEvents = require(script.Parent.Parent.Controller.ClientEvents)
 
 local SlotView = {}
 
@@ -55,6 +56,7 @@ export type SlotProps = {
 	Visibility: Fusion.Computed<boolean>?,
 	DragService: DragLike?,
 	GlowSpread: UDim2?,
+	Hooks: { [string]: any }?,
 }
 
 local UNBOUND_KEYBIND_COLOR = Color3.fromRGB(255, 85, 85)
@@ -211,12 +213,24 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 				if not uuid then return end
 				local has: boolean = peekValue(hasItem)
 				if not has then return end
+				ClientEvents.SlotClicked:Fire(props.SlotType, props.SlotIndex, uuid)
+				ClientEvents.CallHook(props.Hooks, "OnSlotClick", props.SlotType, props.SlotIndex, uuid)
 				local equipped: string? = peekValue(store.EquippedItemUUID)
 				if equipped == uuid then
 					ClientController.Unequip()
 				else
 					ClientController.Equip(uuid)
 				end
+			end)
+		)
+
+		-- Hover hook: fires on hover begin. Skin function is spawned
+		-- (stock OnSlotHover yields on its tween), never blocking input.
+		table.insert(
+			scope,
+			slotbutton.MouseEnter:Connect(function()
+				ClientEvents.SlotHovered:Fire(props.SlotType, props.SlotIndex)
+				ClientEvents.CallHook(props.Hooks, "OnSlotHover", slotbutton, props.SlotType, props.SlotIndex)
 			end)
 		)
 
@@ -378,8 +392,12 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 		scope:Observer(isEquipped):onChange(function()
 			if peekValue(isEquipped) then
 				equipProgress:set(1)
+				ClientEvents.Selected:Fire(props.SlotType, props.SlotIndex)
+				ClientEvents.CallHook(props.Hooks, "OnSelect", slotFrame, props.SlotType, props.SlotIndex)
 			else
 				equipProgress:set(0)
+				ClientEvents.Deselected:Fire(props.SlotType, props.SlotIndex)
+				ClientEvents.CallHook(props.Hooks, "OnDeselect", slotFrame, props.SlotType, props.SlotIndex)
 			end
 		end)
 	end

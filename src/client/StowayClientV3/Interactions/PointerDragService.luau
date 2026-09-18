@@ -26,6 +26,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Fusion = require(ReplicatedStorage.Packages.fusion)
 local CoreTypes = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
+local ClientEvents = require(script.Parent.Parent.Controller.ClientEvents)
 
 local PointerDragService = {}
 PointerDragService.__index = PointerDragService
@@ -49,6 +50,7 @@ type SelfData = {
 	_backpackFrame: Frame?,
 	_hotbarFrame: Frame?,
 	_ghostHidden: { string }?,
+	_hooks: { [string]: any }?,
 	_enabled: boolean,
 	_dropMap: { [GuiObject]: SlotRef },
 	_dropFrames: { GuiObject },
@@ -96,7 +98,8 @@ function PointerDragService.new(
 	slotTemplate: Frame?,
 	backpackFrame: Frame?,
 	hotbarFrame: Frame?,
-	ghostHidden: { string }?
+	ghostHidden: { string }?,
+	hooks: { [string]: any }?
 ): Service
 	local self = setmetatable({}, PointerDragService) :: Service
 	self._layoutScope = layoutScope
@@ -106,6 +109,7 @@ function PointerDragService.new(
 	self._backpackFrame = backpackFrame
 	self._hotbarFrame = hotbarFrame
 	self._ghostHidden = ghostHidden
+	self._hooks = hooks
 	self._enabled = true
 	self._dropMap = {} :: { [GuiObject]: SlotRef }
 	self._dropFrames = {} :: { GuiObject }
@@ -212,6 +216,13 @@ end
 function PointerDragService._beginDrag(self: Service, curPos: Vector2)
 	if self._dragging then return end
 	self._dragging = true
+
+	-- Threshold crossed, ghost about to be created.
+	local pressRef = self._pressSlotRef
+	if pressRef then
+		ClientEvents.DragStarted:Fire(pressRef.Type, pressRef.Slot)
+		ClientEvents.CallHook(self._hooks, "OnDragStart", pressRef.Type, pressRef.Slot)
+	end
 
 	-- Perfect replica: clone the LIVE hydrated slotFrame (has item image,
 	-- rarity color, stack badge, selecticon baked in by SlotView), fall back
@@ -365,6 +376,11 @@ function PointerDragService._endDrag(self: Service, input: InputObject?)
 	local from = self._pressSlotRef
 	self._pressSlotRef = nil
 	self._pressFrame = nil
+	-- Release, before commit: the drag happened regardless of hit/miss.
+	if from then
+		ClientEvents.DragEnded:Fire(from.Type, from.Slot)
+		ClientEvents.CallHook(self._hooks, "OnDragEnd", from.Type, from.Slot)
+	end
 	if from then
 		if targetRef then
 			if from.Type ~= targetRef.Type or from.Slot ~= targetRef.Slot then

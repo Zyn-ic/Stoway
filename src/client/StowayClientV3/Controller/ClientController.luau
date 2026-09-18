@@ -19,12 +19,15 @@ local CoreStore = require(ReplicatedStorage.Shared.Stoway.CoreStore)
 local ClientStore = require(script.Parent.ClientStore)
 local CoreTypes = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
 local Signals = require(script.Parent.Parent.Signals)
+local ClientEvents = require(script.Parent.ClientEvents)
 
 local ClientController = {}
 
 local _state: CoreTypes.InventoryState? = nil
 local _connections: { SignalPlus.Connection } = {}
 local _signals: typeof(Signals)? = nil
+-- Skin hook table (Layer 2), set per mount by the layout. Nil = no hooks.
+local _hooks: { [string]: any }? = nil
 
 -----------------------------
 -- PRIVATE FUNCTIONS --
@@ -84,6 +87,15 @@ local function sync()
 	end
 end
 
+-- Pre-op slot resolution for (slotType, index) payloads. Remove destroys
+-- the LocationByUUID entry, so callers capture BEFORE mutating. Returns
+-- the SlotRef itself so call sites pass ref.Type/ref.Slot (property
+-- access narrows cleanly on both solvers).
+local function lookupSlot(uuid: string): CoreTypes.SlotRef?
+	if not _state or _state.LocationByUUID == nil then return nil end
+	return _state.LocationByUUID[uuid]
+end
+
 local function equipAndClearNew(uuid: string)
 	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
 	local res = CoreStore.equip(_state, uuid)
@@ -91,6 +103,86 @@ local function equipAndClearNew(uuid: string)
 		-- Glow off: delete the IsNew flag. Presence renders, absence hides.
 		CoreStore.updateMetadata(_state, uuid, { IsNew = CoreStore.METADATA_DELETE })
 		sync()
+		-- Equip never moves the item: post-op lookup is valid.
+		local ref = lookupSlot(uuid)
+		if ref ~= nil then
+			ClientEvents.Equipped:Fire(ref.Type, ref.Slot)
+			ClientEvents.CallHook(_hooks, "OnEquip", ref.Type, ref.Slot)
+		end
+	end
+	return res
+end
+
+-- Shared op bodies: signal handlers AND direct APIs route through these
+-- so each success fires exactly one bus event + one skin hook (res.ok only).
+local function swapOp(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
+	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
+	hydrateIfNeeded(_state)
+	local res = CoreStore.swap(_state, from, to)
+	if res.ok then
+		sync()
+		ClientEvents.Swapped:Fire(from.Type, from.Slot, to.Type, to.Slot)
+		ClientEvents.CallHook(_hooks, "OnSwap", to.Type, to.Slot)
+	end
+	return res
+end
+
+local function removeOp(uuid: string, amount: number?)
+	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
+	hydrateIfNeeded(_state)
+	local ref = lookupSlot(uuid)
+	local res = CoreStore.remove(_state, uuid, amount)
+	if res.ok then
+		sync()
+		if ref ~= nil then
+			ClientEvents.ItemRemoved:Fire(ref.Type, ref.Slot)
+			ClientEvents.CallHook(_hooks, "OnItemRemove", ref.Type, ref.Slot)
+		end
+	end
+	return res
+end
+
+local function addOp(itemInput: CoreTypes.ItemInput, opts: CoreTypes.AddOptions?)
+	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
+	hydrateIfNeeded(_state)
+	local res = CoreStore.add(_state, itemInput, opts)
+	if res.ok then
+		sync()
+		local value = (res :: any).value
+		local uuid: string? = nil
+		if value ~= nil then
+			if value.addedItems ~= nil and #value.addedItems > 0 then
+				uuid = value.addedItems[1]
+			elseif value.updatedItems ~= nil and #value.updatedItems > 0 then
+				uuid = value.updatedItems[1]
+			end
+		end
+		if uuid ~= nil then
+			local ref = lookupSlot(uuid)
+			if ref ~= nil then
+				ClientEvents.ItemAdded:Fire(ref.Type, ref.Slot)
+				ClientEvents.CallHook(_hooks, "OnItemAdd", ref.Type, ref.Slot)
+			end
+		end
+	end
+	return res
+end
+
+local function unequipOp()
+	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
+	hydrateIfNeeded(_state)
+	local equipped: string? = _state.EquippedItemUUID
+	local ref: CoreTypes.SlotRef? = nil
+	if equipped then
+		ref = lookupSlot(equipped)
+	end
+	local res = CoreStore.unequip(_state)
+	if res.ok then
+		sync()
+		if ref ~= nil then
+			ClientEvents.Unequipped:Fire(ref.Type, ref.Slot)
+			ClientEvents.CallHook(_hooks, "OnUnequip", ref.Type, ref.Slot)
+		end
 	end
 	return res
 end
@@ -102,7 +194,7 @@ local function bindSignals(signals: typeof(Signals))
 	table.insert(_connections, signals.Swap:Connect(function(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
 		if not _state then return end
 		hydrateIfNeeded(_state)
-		local ok, res = pcall(CoreStore.swap, _state, from, to)
+		local ok, res = pcall(swapOp, from, to)
 		if ok and res and res.ok then
 			sync()
 		elseif ok and res and not res.ok then
@@ -129,14 +221,14 @@ local function bindSignals(signals: typeof(Signals))
 	table.insert(_connections, signals.Remove:Connect(function(uuid: string, amount: number?)
 		if not _state then return end
 		hydrateIfNeeded(_state)
-		local ok, res = pcall(CoreStore.remove, _state, uuid, amount)
+		local ok, res = pcall(removeOp, uuid, amount)
 		if ok and res and res.ok then sync() elseif not ok then warn("[ClientController] Remove error", res) end
 	end))
 
 	table.insert(_connections, signals.Add:Connect(function(itemInput: CoreTypes.ItemInput, opts: CoreTypes.AddOptions?)
 		if not _state then return end
 		hydrateIfNeeded(_state)
-		local ok, res = pcall(CoreStore.add, _state, itemInput, opts)
+		local ok, res = pcall(addOp, itemInput, opts)
 		if ok and res and res.ok then sync() elseif not ok then warn("[ClientController] Add error", res) end
 	end))
 
@@ -163,7 +255,7 @@ local function bindSignals(signals: typeof(Signals))
 	table.insert(_connections, signals.Unequip:Connect(function()
 		if not _state then return end
 		hydrateIfNeeded(_state)
-		local ok, res = pcall(CoreStore.unequip, _state)
+		local ok, res = pcall(unequipOp)
 		if ok and res and res.ok then sync() elseif not ok then warn("[ClientController] Unequip error", res) end
 	end))
 
@@ -202,6 +294,7 @@ function ClientController.Destroy()
 	table.clear(_connections)
 	_state = nil
 	_signals = nil
+	_hooks = nil
 end
 
 function ClientController.GetState(): CoreTypes.InventoryState?
@@ -212,13 +305,13 @@ function ClientController.Sync()
 	sync()
 end
 
+function ClientController.SetHooks(hooks: { [string]: any }?)
+	_hooks = hooks
+end
+
 -- Direct core API for Interactions (drag, input). No Signals, just add onto core.
 function ClientController.Swap(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
-	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
-	hydrateIfNeeded(_state)
-	local res = CoreStore.swap(_state, from, to)
-	if res.ok then sync() end
-	return res
+	return swapOp(from, to)
 end
 
 function ClientController.Move(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
@@ -230,11 +323,7 @@ function ClientController.Move(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
 end
 
 function ClientController.Remove(uuid: string, amount: number?)
-	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
-	hydrateIfNeeded(_state)
-	local res = CoreStore.remove(_state, uuid, amount)
-	if res.ok then sync() end
-	return res
+	return removeOp(uuid, amount)
 end
 
 function ClientController.Equip(uuid: string)
@@ -244,11 +333,7 @@ function ClientController.Equip(uuid: string)
 end
 
 function ClientController.Unequip()
-	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
-	hydrateIfNeeded(_state)
-	local res = CoreStore.unequip(_state)
-	if res.ok then sync() end
-	return res
+	return unequipOp()
 end
 
 -----------------------------

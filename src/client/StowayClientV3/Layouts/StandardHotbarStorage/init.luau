@@ -150,8 +150,15 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 		skin.SlotTemplate,
 		skin.BackpackFrame,
 		skin.HotbarFrame,
-		skin.GhostHidden
+		skin.GhostHidden,
+		skin.Hooks
 	)
+
+	-- Controller wrapper events (swap/remove/add/equip/unequip) fire the
+	-- generic bus + skin hooks on res.ok. Set per mount; next Mount
+	-- overwrites, Teardown leaves the last skin's table (harmless:
+	-- all hook calls are pcall'd against live-or-destroyed instances).
+	ClientController.SetHooks(skin.Hooks)
 
 	HotbarView.Create(scope, skin, store, dragService)
 	StorageView.Create(scope, skin, store, dragService)

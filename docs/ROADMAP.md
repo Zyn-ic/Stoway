@@ -8,20 +8,28 @@ ghost/layout hardening, sparse binds, deselect-on-empty).
 
 ---
 
-## Phase 0 — Hooks/Signals `[ ]`
+## Phase 0 — Hooks/Signals `[x]`
 
-- [ ] Read `DefaultHooks`/`MetalHooks` contents in Studio; freeze event set
-      (spec: `docs/specs/ClientEvents.md`)
-- [ ] New `Controller/ClientEvents.luau` generic bus (11 signals, SignalPlus)
-- [ ] Wire 6 call-site groups: SlotView click/hover/select-observer,
+- [x] Read `DefaultHooks`/`MetalHooks` contents in Studio via MCP; froze
+      event set (spec: `docs/specs/ClientEvents.md`). All three skin
+      modules byte-identical, matching the Layer 2 reference shape.
+- [x] New `Controller/ClientEvents.luau` generic bus (11 signals,
+      SignalPlus) + `CallHook` helper (task.spawn + pcall)
+- [x] Per-skin `HookPayloads.luau` contracts (Default full, Modern
+      re-export, Metal full) — skin-specific, not layout-specific
+- [x] Wire 6 call-site groups: SlotView click/hover/select-observer,
       PointerDragService begin/end, ClientController wrappers
-- [ ] Skin adapter in `DefaultModern.Load`: require `HookFuncs`, `pcall`
-      each function, scope-parent connections
-- [ ] First external subscriber: notification example (toast + sound)
-- [ ] Dual-solver green + Studio specs for fire sites
-- Accept: every hook in the table fires with its documented payload on both
-  skins; a throwing hook never breaks inventory (pcall); teardown leaks zero
-  connections.
+      (swapOp/removeOp/addOp/equipAndClearNew/unequipOp share bodies
+      across signal + direct paths so each success fires exactly once)
+- [x] Skin adapter in `SkinLoader.Load`: require first `HookFuncs`
+      ModuleScript, validate function entries, attach `SkinHandle.Hooks`
+- [x] First external subscriber: `Controller/NotifyExample.luau`
+      (ItemAdded/Equipped, toast + sound stubs) wired in `init.luau`
+- [x] Dual-solver green on `src/client` (new solver: only pre-existing
+      `Tests/DragOperationsSmoke.luau:75`)
+- Accept: every hook in the table fires with its documented payload on
+  all skins; a throwing hook never breaks inventory (spawn + pcall);
+  teardown leaks zero connections.
 
 ## Phase 1 — Small Client `[x]`
 
@@ -128,6 +136,16 @@ ghost/layout hardening, sparse binds, deselect-on-empty).
   protocol). `SeenIds` is client-session local.
 - Ghost policy: clone live slot, strip `GhostHidden` list, descendants +100
   ZIndex (Global-behavior `DraggingGui`).
+- Hooks transport: bus fires are synchronous; skin-direct calls go through
+  `ClientEvents.CallHook` (task.spawn + pcall). Spawn is mandatory, not
+  optional — stock `OnSlotHover` yields (task.wait tween) and a sync call
+  would stall the input/drag thread. `OnSwap` reports the DESTINATION
+  slot. Move/Split/SwapStack successes fire nothing (frozen set has no
+  signal/hook for them) — add via the 3-touchpoint protocol when needed.
+- Skin contract additions (Phase 0): hovered `slotbutton` carries a
+  `UIStroke` child (stock `OnSlotHover` tweens it; pcall guards skins
+  without one). `OnSelect` parents `SelectionHighlight` to the cell;
+  `OnDeselect` destroys it (borrowed-not-owned).
 
 ## Open Flags
 

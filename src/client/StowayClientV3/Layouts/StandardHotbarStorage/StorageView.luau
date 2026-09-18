@@ -22,6 +22,10 @@ local function useTyped(useFn: Fusion.Use, target: any): any
 	return (useFn :: any)(target)
 end
 
+local function peekValue(target: any): any
+	return (Fusion.peek :: any)(target)
+end
+
 
 local StorageView = {}
 
@@ -326,7 +330,8 @@ function StorageView.Create(
 
 			-- Toggle collapses grid, header stays visible.
 			(header :: TextButton).Activated:Connect(function()
-				local nextCollapsed = table.clone(Fusion.peek(collapsedGroups))
+				local current: { [string]: boolean } = peekValue(collapsedGroups)
+				local nextCollapsed: { [string]: boolean } = table.clone(current)
 				nextCollapsed[itemType] = not (nextCollapsed[itemType] == true)
 				collapsedGroups:set(nextCollapsed)
 			end)
@@ -395,6 +400,7 @@ function StorageView.Create(
 				HideChrome = skin.HideInStorage,
 				DragService = dragService,
 				GlowSpread = skin.GlowSpread,
+				Hooks = skin.Hooks,
 			})
 			do
 				local cursor = skin.SelectionCursorTemplate

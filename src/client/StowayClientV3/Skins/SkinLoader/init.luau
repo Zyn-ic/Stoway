@@ -71,6 +71,36 @@ function SkinLoader.Load(scope: Fusion.Scope<typeof(Fusion)>, playerGui: PlayerG
 		return nil
 	end
 
+	-- Skin hook adapter (Layer 2): require the HookFuncs ModuleScript
+	-- from the skin folder when present. Absent/failed = nil hooks and
+	-- everything still works (absent = legacy, same rule as slot attrs).
+	-- Validated against the 11-name contract; unknown entries warn.
+	local hookFuncs: { [string]: any }? = nil
+	local hookFolder = skinFolder:FindFirstChild("HookFuncs")
+	if hookFolder then
+		local hookModule: ModuleScript? = nil
+		for _, child in hookFolder:GetChildren() do
+			if child:IsA("ModuleScript") then
+				hookModule = child
+				break
+			end
+		end
+		if hookModule then
+			local ok, required = pcall(require, hookModule)
+			if ok and typeof(required) == "table" then
+				hookFuncs = required :: { [string]: any }
+				for name, fn in hookFuncs :: { [string]: any } do
+					if typeof(fn) ~= "function" then
+						warn(`[SkinLoader] hook '{name}' in '{skinAssetName}' is not a function, ignoring`)
+						;(hookFuncs :: { [string]: any })[name] = nil
+					end
+				end
+			else
+				warn(`[SkinLoader] HookFuncs in '{skinAssetName}' failed to require: {tostring(required)}`)
+			end
+		end
+	end
+
 	local gui = guiTemplate:Clone() :: ScreenGui
 	gui.Parent = playerGui
 	table.insert(scope, gui)
@@ -118,6 +148,7 @@ function SkinLoader.Load(scope: Fusion.Scope<typeof(Fusion)>, playerGui: PlayerG
 		HideInStorage = hideInStorage,
 		HideInHotbar = hideInHotbar,
 		SlotBleedPx = slotBleedPx,
+		Hooks = hookFuncs,
 	}
 end
 

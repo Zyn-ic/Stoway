@@ -15,6 +15,8 @@ local StarterGui = game:GetService("StarterGui")
 
 local ClientStore = require("@self/Controller/ClientStore")
 local ClientController = require("@self/Controller/ClientController")
+local ClientEvents = require("@self/Controller/ClientEvents")
+local NotifyExample = require("@self/Controller/NotifyExample")
 local LayoutManager = require("@self/Controller/LayoutManager")
 local MockData = require("@self/Mock/MockData")
 local Signals = require("@self/Signals")
@@ -23,6 +25,7 @@ local StowayClient = {}
 StowayClient.Signals = Signals
 StowayClient.Store = ClientStore
 StowayClient.Controller = ClientController
+StowayClient.Events = ClientEvents
 
 -----------------------------
 -- PUBLIC FUNCTIONS --
@@ -51,6 +54,15 @@ function StowayClient.Init()
 	-- clone→sets ClientStore atoms so Hydrate updates coalesce into one frame.
 	ClientController.Init(Signals, snapshot)
 
+	-- First external subscriber on the generic UI event bus (toast/sound
+	-- stubs until real assets exist). Connections live for the session.
+	local notifyConns = NotifyExample.Connect()
+	table.insert(ClientStore.RootScope, function()
+		for _, conn in notifyConns do
+			conn:Disconnect()
+		end
+	end)
+
 	print(`[StowayClientV3] core initialized (mock data, StandardHotbarStorage / {uiSkin}) — Signals bound`)
 end
 
@@ -64,6 +76,10 @@ end
 
 function StowayClient.GetController()
 	return ClientController
+end
+
+function StowayClient.GetEvents()
+	return ClientEvents
 end
 
 -----------------------------
