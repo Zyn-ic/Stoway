@@ -31,6 +31,9 @@ Signals.Add = SignalPlus() :: SignalPlus.Signal<CoreTypes.ItemInput, CoreTypes.A
 Signals.Split = SignalPlus() :: SignalPlus.Signal<string, number, CoreTypes.SlotRef?>
 Signals.Equip = SignalPlus() :: SignalPlus.Signal<string>
 Signals.Unequip = SignalPlus() :: SignalPlus.Signal<>
+-- Test hook: stamps IsNew onto an item so the glow can be demoed on any
+-- slot. Local-only, mock phase.
+Signals.MarkNew = SignalPlus() :: SignalPlus.Signal<string>
 
 -----------------------------
 -- MAIN --

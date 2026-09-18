@@ -21,8 +21,17 @@ local Layouts = {
 	StandardHotbarStorage = require(script.Parent.Parent.Layouts.StandardHotbarStorage),
 }
 
+-- 1:1 contract: each UiSkin key mounts ONLY its own
+-- ReplicatedStorage.Stoway.GUI.<Key> asset (enforced by Teardown +
+-- scope-parented clones in SkinLoader). Switching keys can never
+-- show another skin's GUI.
+-- Keys resolve through the per-skin modules (not SkinLoader directly)
+-- so a skin can stamp its own look data onto the handle (e.g. Modern's
+-- HeaderColors). Default/Metal re-export the generic loader as-is.
 local Skins = {
-	DefaultModern = require(script.Parent.Parent.Skins.DefaultModern),
+	Default = require(script.Parent.Parent.Skins.Default),
+	Modern = require(script.Parent.Parent.Skins.Modern),
+	Metal = require(script.Parent.Parent.Skins.Metal),
 }
 
 local currentLayoutScope: Fusion.Scope<typeof(Fusion)>? = nil
@@ -59,8 +68,9 @@ function LayoutManager.SetLayout(
 	currentLayoutKey = hotbarTypeKey
 	currentSkinKey = skinKey
 
-	local settings = store.GetSettings()
-	local skinAssetName = (settings and settings.UiSkin) or "Default"
+	-- The UiSkin key IS the asset folder. No separate settings lookup:
+	-- a key can only resolve its own GUI folder, never another skin's.
+	local skinAssetName = skinKey
 
 	local skin = skinLoader.Load(layoutScope, playerGui, skinAssetName)
 	if not skin then

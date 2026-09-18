@@ -4,7 +4,7 @@
 --@date: 2026-08-19
 --[[@description:
 	Client entry point. Seeds ClientStore from mock data and mounts the
-	StandardHotbarStorage layout with the DefaultModern skin.
+	StandardHotbarStorage layout with the settings UiSkin.
 ]]
 -----------------------------
 -- VARIABLES --
@@ -37,16 +37,21 @@ function StowayClient.Init()
 	local playerGui = player:WaitForChild("PlayerGui") :: PlayerGui
 
 	-- Seed local state from mock data (pure client test: no server round trip).
+	-- Glow demo trio (SteelDagger + FireBow + HealthPotion) carry
+	-- Metadata.IsNew in the seed itself; equipping any deletes the key.
 	local snapshot = MockData.build()
 	ClientStore.Init(snapshot)
 
-	LayoutManager.SetLayout(ClientStore.RootScope, playerGui, ClientStore, "StandardHotbarStorage", "DefaultModern")
+	-- Single source of truth: Settings.UiSkin selects both the loader key
+	-- and the GUI asset folder (1:1 contract in LayoutManager).
+	local uiSkin: string = (snapshot.Settings :: any).UiSkin or "Default"
+	LayoutManager.SetLayout(ClientStore.RootScope, playerGui, ClientStore, "StandardHotbarStorage", uiSkin)
 
 	-- SignalPlus bus: UI mutations go through ClientController, which
 	-- clone→sets ClientStore atoms so Hydrate updates coalesce into one frame.
 	ClientController.Init(Signals, snapshot)
 
-	print("[StowayClientV3] core initialized (mock data, StandardHotbarStorage / DefaultModern) — Signals bound")
+	print(`[StowayClientV3] core initialized (mock data, StandardHotbarStorage / {uiSkin}) — Signals bound`)
 end
 
 function StowayClient.GetSignals()

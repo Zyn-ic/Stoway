@@ -3,8 +3,11 @@
 --@author: yyumchi
 --@date: 2026-08-19
 --[[@description:
-	Loads the DefaultModern skin. Clones the skin folder's single ScreenGui
-	and returns handles to its frames for the layout.
+	Generic skin loader. Clones the named skin folder's single ScreenGui
+	and returns handles to its frames for the layout. Per-skin modules
+	(Default, Modern, Metal) re-export this; the UiSkin key IS the
+	ReplicatedStorage.Stoway.GUI asset folder, so a key can only ever
+	mount its own GUI.
 ]]
 -----------------------------
 -- VARIABLES --
@@ -15,7 +18,7 @@ local Fusion = require(ReplicatedStorage.Packages.fusion)
 
 local CoreTypes = require(script.Parent.Parent.CoreStore.Types)
 
-local DefaultModern = {}
+local SkinLoader = {}
 
 -- Parse a comma-separated Studio attribute into a name list. Non-strings
 -- and empties resolve to nil (caller falls back to built-in defaults).
@@ -40,13 +43,13 @@ end
 -----------------------------
 
 -- Loads the skin GUI onto the given scope.
-function DefaultModern.Load(scope: Fusion.Scope<typeof(Fusion)>, playerGui: PlayerGui, skinAssetName: string): CoreTypes.SkinHandle?
+function SkinLoader.Load(scope: Fusion.Scope<typeof(Fusion)>, playerGui: PlayerGui, skinAssetName: string): CoreTypes.SkinHandle?
 	local guiRoot = ReplicatedStorage:FindFirstChild("Stoway")
 	local guiFolder = guiRoot and guiRoot:FindFirstChild("GUI")
 	local skinFolder = guiFolder and guiFolder:FindFirstChild(skinAssetName)
 
 	if not skinFolder then
-		warn(`[DefaultModern] skin asset '{skinAssetName}' not found at ReplicatedStorage.Stoway.GUI`)
+		warn(`[SkinLoader] skin asset '{skinAssetName}' not found at ReplicatedStorage.Stoway.GUI`)
 		return nil
 	end
 
@@ -60,11 +63,11 @@ function DefaultModern.Load(scope: Fusion.Scope<typeof(Fusion)>, playerGui: Play
 		end
 	end
 	if not guiTemplate then
-		warn(`[DefaultModern] skin asset '{skinAssetName}' must contain exactly one ScreenGui (found {guiCount})`)
+		warn(`[SkinLoader] skin asset '{skinAssetName}' must contain exactly one ScreenGui (found {guiCount})`)
 		return nil
 	end
 	if guiCount ~= 1 then
-		warn(`[DefaultModern] skin asset '{skinAssetName}' must contain exactly one ScreenGui (found {guiCount})`)
+		warn(`[SkinLoader] skin asset '{skinAssetName}' must contain exactly one ScreenGui (found {guiCount})`)
 		return nil
 	end
 
@@ -122,4 +125,4 @@ end
 -- MAIN --
 -----------------------------
 
-return DefaultModern
+return SkinLoader

@@ -38,7 +38,7 @@ local DEFAULT_SETTINGS: Types.Settings = {
 	StackRequiredFields = { "Rarity", "Type" },
 	StackBlacklist = { Legendary = true, Mythic = true, Special = true },
 	DefaultDroppable = true,
-	UiSkin = "Modern",
+	UiSkin = "Default",
 	Categories = DEFAULT_CATEGORIES,
 	-- Demo toggle (see Types.luau) — on by default so the grouped/collapsible
 	-- storage view is what you see out of the box; flip to false to render

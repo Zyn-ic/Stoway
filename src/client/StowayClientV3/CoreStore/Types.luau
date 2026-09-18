@@ -59,6 +59,15 @@ export type SkinHandle = {
 	HideInStorage: { string }?,
 	HideInHotbar: { string }?,
 	SlotBleedPx: number?,
+	-- Per-skin look data (optional): category key -> header background.
+	-- A skin module sets this; views fall back to category colors.
+	HeaderColors: { [string]: Color3 }?,
+	-- Per-skin layout data (optional): desktop hotbar X scale. Absent =
+	-- the shared default; mobile taper is never overridden.
+	DesktopHotbarXScale: number?,
+	-- Per-skin glow tuning: UIShadow spread. Absent = shared default
+	-- (0.05 scale on both axes). Metal uses a wider 0.5 spread.
+	GlowSpread: UDim2?,
 }
 
 -----------------------------

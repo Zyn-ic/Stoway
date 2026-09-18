@@ -19,7 +19,7 @@ local MockData = {}
 -- PRIVATE FUNCTIONS --
 -----------------------------
 
-local function item(uuid: string, id: string, amount: number, rarity: string, itemType: string): SharedTypes.Item
+local function item(uuid: string, id: string, amount: number, rarity: string, itemType: string, isNew: boolean?): SharedTypes.Item
 	return {
 		UUID = uuid,
 		Id = id,
@@ -28,6 +28,7 @@ local function item(uuid: string, id: string, amount: number, rarity: string, it
 			Description = `{id} - {rarity} {itemType}`,
 			Image = "",
 			IsGamepass = false,
+			IsNew = isNew,
 			Rarity = rarity,
 			Droppable = true,
 			Type = itemType,
@@ -44,9 +45,9 @@ end
 function MockData.build(): any
 	local items: { [string]: SharedTypes.Item } = {
 		["iron-sword-1"] = item("iron-sword-1", "IronSword", 1, "Rare", "Weapon"),
-		["steel-dagger-1"] = item("steel-dagger-1", "SteelDagger", 1, "Common", "Weapon"),
-		["fire-bow-1"] = item("fire-bow-1", "FireBow", 1, "Legendary", "Weapon"),
-		["health-potion-1"] = item("health-potion-1", "HealthPotion", 3, "Common", "Consumable"),
+		["steel-dagger-1"] = item("steel-dagger-1", "SteelDagger", 1, "Common", "Weapon", true),
+		["fire-bow-1"] = item("fire-bow-1", "FireBow", 1, "Legendary", "Weapon", true),
+		["health-potion-1"] = item("health-potion-1", "HealthPotion", 3, "Common", "Consumable", true),
 		["health-potion-2"] = item("health-potion-2", "HealthPotion", 320, "Common", "Consumable"),
 		["health-potion-3"] = item("health-potion-3", "HealthPotion", 520, "Mythic", "Consumable"),
 		["mana-potion-1"] = item("mana-potion-1", "ManaPotion", 2, "Uncommon", "Consumable"),

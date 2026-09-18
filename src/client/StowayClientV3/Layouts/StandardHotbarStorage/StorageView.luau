@@ -251,6 +251,11 @@ function StorageView.Create(
 		end)
 
 		local headerColor = groupComputed(groupScope, function(use: Fusion.Use): Color3
+			-- Per-skin look first (e.g. Modern's dark metal headers),
+			-- then category color, then fallback. Skins without
+			-- HeaderColors render exactly as before.
+			local skinOverride = skin.HeaderColors and skin.HeaderColors[itemType]
+			if skinOverride then return skinOverride end
 			local category: CoreTypes.CategoryDef? = useTyped(use, categoryInfo)
 			return if category and category.Color then category.Color else FALLBACK_HEADER_COLOR
 		end)
@@ -303,7 +308,7 @@ function StorageView.Create(
 				LayoutOrder = 0,
 				Size = UDim2.new(1, 0, 0, HEADER_HEIGHT),
 				BackgroundColor3 = headerColor,
-				BackgroundTransparency = 0.15,
+				BackgroundTransparency = 0.35,
 				TextColor3 = Color3.new(1, 1, 1),
 				TextSize = 14,
 				Font = Enum.Font.GothamBold,
@@ -321,10 +326,27 @@ function StorageView.Create(
 
 			-- Toggle collapses grid, header stays visible.
 			(header :: TextButton).Activated:Connect(function()
-				local nextCollapsed = (table.clone :: any)((Fusion.peek :: any)(collapsedGroups))
+				local nextCollapsed = table.clone(Fusion.peek(collapsedGroups))
 				nextCollapsed[itemType] = not (nextCollapsed[itemType] == true)
 				collapsedGroups:set(nextCollapsed)
 			end)
+
+			-- RivetLite: match slot chrome (rounded, edged, inset label).
+			groupScope:New("UICorner") {
+				CornerRadius = UDim.new(0, 6),
+				Parent = header,
+			}
+			groupScope:New("UIStroke") {
+				Color = Color3.fromRGB(58, 58, 68),
+				Thickness = 1,
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+				Parent = header,
+			}
+			groupScope:New("UIPadding") {
+				PaddingLeft = UDim.new(0, 8),
+				PaddingRight = UDim.new(0, 8),
+				Parent = header,
+			}
 		end
 
 		local slotGrid = groupScope:New("Frame") {
@@ -339,6 +361,20 @@ function StorageView.Create(
 			end),
 			Parent = container,
 		}
+
+		-- Container inset for overhang bleed: prevents art clipping at
+		-- ScrollingFrame edge (ClipsDescendants) and art-on-header/neighbor
+		-- collisions on row edges. HotbarView handles this via effPad;
+		-- storage grids need the same inset via padding. Zero bleed = no-op.
+		if bleed > 0 then
+			groupScope:New("UIPadding") {
+				PaddingTop = UDim.new(0, bleed),
+				PaddingBottom = UDim.new(0, bleed),
+				PaddingLeft = UDim.new(0, bleed),
+				PaddingRight = UDim.new(0, bleed),
+				Parent = slotGrid,
+			}
+		end
 
 		groupScope:New("UIGridLayout") {
 			SortOrder = Enum.SortOrder.LayoutOrder,
@@ -358,6 +394,7 @@ function StorageView.Create(
 				Store = store,
 				HideChrome = skin.HideInStorage,
 				DragService = dragService,
+				GlowSpread = skin.GlowSpread,
 			})
 			do
 				local cursor = skin.SelectionCursorTemplate
@@ -385,13 +422,13 @@ function StorageView.Create(
 
 			return listIndex, record
 		end)
-		;(Fusion.peek :: any)(storageFor)
-		;(groupScope :: any):Observer(storageFor)
+		Fusion.peek(storageFor)
+		groupScope:Observer(storageFor)
 
 		return orderIndex, itemType
 	end)
-	;(Fusion.peek :: any)(groupFor)
-	;(scope :: any):Observer(groupFor)
+	Fusion.peek(groupFor)
+	scope:Observer(groupFor)
 end
 
 -----------------------------

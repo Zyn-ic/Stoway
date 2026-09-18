@@ -23,9 +23,9 @@ local PreferredInput = {}
 local _current: any = UserInputService.PreferredInput
 local _defaultConn: RBXScriptConnection? = nil
 local _customConn: any = nil
-local _customSignal: any = nil
+local _customSignal: SignalPlus.Signal<any>? = nil
 
-PreferredInput.Changed = (SignalPlus :: any)() :: any
+PreferredInput.Changed = SignalPlus() :: SignalPlus.Signal<any>
 
 function PreferredInput.Get(): any
 	return _current
@@ -55,14 +55,15 @@ end
 
 -- Inject a game-wide signal. That signal must Fire(Enum.PreferredInput)
 -- or a string mapped via ToPreferredInput. Passing nil restores default UIS.
-function PreferredInput.SetSource(customSignal: any?)
+function PreferredInput.SetSource(customSignal: SignalPlus.Signal<EnumItem | string>?)
 	if _customConn ~= nil then
-		(_customConn :: any):Disconnect()
+		_customConn:Disconnect()
 		_customConn = nil
 	end
+
 	_customSignal = customSignal
-	if customSignal ~= nil and (customSignal :: any).Connect ~= nil then
-		_customConn = (customSignal :: any):Connect(function(val: any)
+	if customSignal ~= nil and customSignal.Connect ~= nil then
+		_customConn = customSignal:Connect(function(val)
 			local mapped: any = nil
 			if typeof(val) == "EnumItem" then
 				mapped = val
@@ -80,7 +81,7 @@ end
 
 function PreferredInput.Destroy()
 	if _defaultConn ~= nil then _defaultConn:Disconnect(); _defaultConn = nil end
-	if _customConn ~= nil then (_customConn :: any):Disconnect(); _customConn = nil end
+	if _customConn ~= nil then _customConn:Disconnect(); _customConn = nil end
 	_customSignal = nil
 end
 

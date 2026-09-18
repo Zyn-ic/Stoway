@@ -84,6 +84,17 @@ local function sync()
 	end
 end
 
+local function equipAndClearNew(uuid: string)
+	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
+	local res = CoreStore.equip(_state, uuid)
+	if res.ok then
+		-- Glow off: delete the IsNew flag. Presence renders, absence hides.
+		CoreStore.updateMetadata(_state, uuid, { IsNew = CoreStore.METADATA_DELETE })
+		sync()
+	end
+	return res
+end
+
 local function bindSignals(signals: typeof(Signals))
 	table.clear(_connections)
 	_signals = signals
@@ -139,8 +150,14 @@ local function bindSignals(signals: typeof(Signals))
 	table.insert(_connections, signals.Equip:Connect(function(uuid: string)
 		if not _state then return end
 		hydrateIfNeeded(_state)
-		local ok, res = pcall(CoreStore.equip, _state, uuid)
-		if ok and res and res.ok then sync() elseif not ok then warn("[ClientController] Equip error", res) end
+		local ok, res = pcall(equipAndClearNew, uuid)
+		if ok and res and res.ok then
+			-- equipAndClearNew already synced
+		elseif ok and res and not res.ok then
+			warn("[ClientController] Equip rejected", res.error and res.error.message or tostring(res))
+		elseif not ok then
+			warn("[ClientController] Equip error", res)
+		end
 	end))
 
 	table.insert(_connections, signals.Unequip:Connect(function()
@@ -148,6 +165,13 @@ local function bindSignals(signals: typeof(Signals))
 		hydrateIfNeeded(_state)
 		local ok, res = pcall(CoreStore.unequip, _state)
 		if ok and res and res.ok then sync() elseif not ok then warn("[ClientController] Unequip error", res) end
+	end))
+
+	table.insert(_connections, signals.MarkNew:Connect(function(uuid: string)
+		if not _state then return end
+		hydrateIfNeeded(_state)
+		local ok, res = pcall(CoreStore.updateMetadata, _state, uuid, { IsNew = true })
+		if ok and res and res.ok then sync() elseif not ok then warn("[ClientController] MarkNew error", res) end
 	end))
 end
 
@@ -216,9 +240,7 @@ end
 function ClientController.Equip(uuid: string)
 	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
 	hydrateIfNeeded(_state)
-	local res = CoreStore.equip(_state, uuid)
-	if res.ok then sync() end
-	return res
+	return equipAndClearNew(uuid)
 end
 
 function ClientController.Unequip()

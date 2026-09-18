@@ -11,6 +11,7 @@
 -----------------------------
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 local Fusion = require(ReplicatedStorage.Packages.fusion)
 local Colors = require(ReplicatedStorage.Shared.Stoway.Colors)
 
@@ -53,6 +54,7 @@ export type SlotProps = {
 	Keybind: Fusion.Computed<string>?,
 	Visibility: Fusion.Computed<boolean>?,
 	DragService: DragLike?,
+	GlowSpread: UDim2?,
 }
 
 local UNBOUND_KEYBIND_COLOR = Color3.fromRGB(255, 85, 85)
@@ -117,6 +119,14 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 		local uuid: string? = useTyped(use, slotUUID)
 		local equipped: string? = useTyped(use, store.EquippedItemUUID)
 		return Query.isEquipped(equipped, uuid)
+	end)
+
+	-- New-item glow: rendered iff the occupying item carries the IsNew
+	-- metadata flag. Equip deletes the key via updateMetadata, which takes
+	-- the glow off. Pure presence check, no side state.
+	local isNew = scope:Computed(function(use: Fusion.Use): boolean
+		local item: CoreTypes.Item? = useTyped(use, currentItem)
+		return item ~= nil and item.Metadata ~= nil and item.Metadata.IsNew == true
 	end)
 
 	local hasImage = scope:Computed(function(use: Fusion.Use): boolean
@@ -209,6 +219,75 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 				end
 			end)
 		)
+
+		-- New-item glow: soft white halo behind the cell via UIShadow.
+		-- Pulse is a slow breathe (0.51 <-> 0.66). On equip the IsNew
+		-- flag is deleted; we tween Transparency to 1 once instead of
+		-- snapping off. Parent is the CELL so the button draws above
+		-- the shadow — opaque Default button occludes cleanly (behind
+		-- glow), transparent Modern/Metal no longer light up.
+		local newGlow = scope:New("UIShadow") {
+			Name = "NewGlow",
+			Color = Color3.new(1, 1, 1),
+			Transparency = 0.58,
+			BlurRadius = UDim.new(0.3, 0),
+			Spread = props.GlowSpread or UDim2.new(0.05, 0, 0.05, 0),
+			Offset = UDim2.new(0, 0, 0, 0),
+			Parent = slotFrame,
+		} :: UIShadow
+		-- Oscillator must NOT be a Fusion cycle (ancestor write from
+		-- descendant observer). Breathe uses TweenService Completed
+		-- callbacks; one-shot fade on unequip is a simple tween.
+		-- Fusion stays for the selecticon pop (acyclic: isEquipped -> tween).
+		newGlow.Enabled = peekValue(isNew)
+		local pulsing = false
+		local currentTween: Tween? = nil
+		local function pulse(to: number)
+			if not peekValue(isNew) then
+				pulsing = false
+				return
+			end
+			pulsing = true
+			local tween = TweenService:Create(
+				newGlow,
+				TweenInfo.new(1.0, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+				{ Transparency = to }
+			)
+			table.insert(scope, tween)
+			table.insert(
+				scope,
+				tween.Completed:Connect(function()
+					pulse(if to < 0.58 then 0.66 else 0.51)
+				end)
+			)
+			tween:Play()
+			currentTween = tween
+		end
+		if peekValue(isNew) then pulse(0.66) end
+		scope:Observer(isNew):onChange(function()
+			if peekValue(isNew) then
+				newGlow.Enabled = true
+				newGlow.Transparency = 0.58
+				if not pulsing then pulse(0.66) end
+			else
+				if currentTween then currentTween:Cancel() end
+				pulsing = false
+				newGlow.Enabled = true
+				local fade = TweenService:Create(
+					newGlow,
+					TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+					{ Transparency = 1 }
+				)
+				table.insert(scope, fade)
+				table.insert(
+					scope,
+					fade.Completed:Connect(function()
+						if not peekValue(isNew) then newGlow.Enabled = false end
+					end)
+				)
+				fade:Play()
+			end
+		end)
 	end
 
 	if rarityframe then
@@ -267,9 +346,42 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 	end
 
 	if selecticon then
+		-- Visual feedback via Fusion tween: tiny delay then Back pop on equip,
+		-- instant off on unequip. isEquipped stays source of truth.
+		local origSize: UDim2 = selecticon.Size
+		local origTransparency: number = 0
+		if selecticon:IsA("ImageLabel") then
+			origTransparency = (selecticon :: ImageLabel).ImageTransparency
+		end
+		local smallSize = UDim2.new(origSize.X.Scale * 0.85, origSize.X.Offset, origSize.Y.Scale * 0.85, origSize.Y.Offset)
+		local equipProgress: Fusion.Value<number> = (scope :: any):Value(0)
+		local tweened: Fusion.Value<number> = (scope :: any):Tween(
+			equipProgress,
+			TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.06)
+		)
+		local popSize: Fusion.Computed<UDim2> = scope:Computed(function(use: Fusion.Use): UDim2
+			local t: number = useTyped(use, tweened)
+			local sx: number = smallSize.X.Scale + (origSize.X.Scale - smallSize.X.Scale) * t
+			local sy: number = smallSize.Y.Scale + (origSize.Y.Scale - smallSize.Y.Scale) * t
+			return UDim2.new(sx, origSize.X.Offset, sy, origSize.Y.Offset)
+		end)
+		local popTransparency: Fusion.Computed<number> = scope:Computed(function(use: Fusion.Use): number
+			local t: number = useTyped(use, tweened)
+			return 1 + (origTransparency - 1) * t
+		end)
 		scope:Hydrate(selecticon) {
 			Visible = isEquipped,
+			Size = popSize,
+			ImageTransparency = popTransparency,
 		}
+		if peekValue(isEquipped) then equipProgress:set(1) end
+		scope:Observer(isEquipped):onChange(function()
+			if peekValue(isEquipped) then
+				equipProgress:set(1)
+			else
+				equipProgress:set(0)
+			end
+		end)
 	end
 
 	if props.PackOrder then

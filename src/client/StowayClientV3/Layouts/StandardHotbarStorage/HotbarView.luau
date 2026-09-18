@@ -70,10 +70,11 @@ local function computeBottomMarginPx(viewportWidth: number): number
 	return MOBILE_BOTTOM_MARGIN_PX + (DESKTOP_BOTTOM_MARGIN_PX - MOBILE_BOTTOM_MARGIN_PX) * t
 end
 
-local function computeHotbarXScale(viewportWidth: number): number
+local function computeHotbarXScale(viewportWidth: number, desktopOverride: number?): number
 	local t = (viewportWidth - HOTBAR_X_TAPER_START_WIDTH) / (HOTBAR_X_TAPER_END_WIDTH - HOTBAR_X_TAPER_START_WIDTH)
 	t = math.clamp(t, 0, 1)
-	return MOBILE_HOTBAR_X_SCALE + (DESKTOP_HOTBAR_X_SCALE - MOBILE_HOTBAR_X_SCALE) * t
+	local desktop = desktopOverride or DESKTOP_HOTBAR_X_SCALE
+	return MOBILE_HOTBAR_X_SCALE + (desktop - MOBILE_HOTBAR_X_SCALE) * t
 end
 
 -----------------------------
@@ -99,9 +100,13 @@ function HotbarView.Create(
 
 	-- Skin-declared art bleed (px per side): deco that paints past cell bounds
 	-- is given room in gap + padding math instead of swallowing the rhythm.
+	-- Hotbar caps bleed at 8 so Storage can breathe (cap 16) without the
+	-- bar blowing out — storage needs wall-to-wall clearance, hotbar
+	-- tolerates a tighter overhang.
 	local bleed: number = skin.SlotBleedPx or 0
-	local effGap = SLOT_GAP + bleed * 2
-	local effPad = INNER_PADDING + bleed
+	local hotbarBleed = math.min(bleed, 8)
+	local effGap = SLOT_GAP + hotbarBleed * 2
+	local effPad = INNER_PADDING + hotbarBleed
 
 	-- Use LayoutOrder for deterministic slot ordering and fixed pixel gaps.
 	local hotbarListLayout = hotbarFrame:FindFirstChildOfClass("UIListLayout")
@@ -112,14 +117,17 @@ function HotbarView.Create(
 		}
 	end
 
-	-- Fixed inset for the hotbar container.
+	-- Fixed inset for the hotbar container. Outer pad scales with
+	-- bleed so the first/last slot overhang doesn't clip at the
+	-- container edge (hotbar has no ScrollingFrame clipping but the
+	-- spill still needs room). Gaps use bleed*2 so neighbors clear.
 	local hotbarPadding = hotbarFrame:FindFirstChildOfClass("UIPadding")
 	if hotbarPadding then
 		scope:Hydrate(hotbarPadding) {
-			PaddingTop = UDim.new(0, INNER_PADDING),
-			PaddingBottom = UDim.new(0, INNER_PADDING),
-			PaddingLeft = UDim.new(0, INNER_PADDING),
-			PaddingRight = UDim.new(0, INNER_PADDING),
+			PaddingTop = UDim.new(0, effPad),
+			PaddingBottom = UDim.new(0, effPad),
+			PaddingLeft = UDim.new(0, effPad),
+			PaddingRight = UDim.new(0, effPad),
 		}
 	end
 
@@ -159,7 +167,9 @@ function HotbarView.Create(
 		Position = scope:Computed(function(use: Fusion.Use): UDim2
 			local vw: number = useTyped(use, viewportWidth)
 			local marginPx = computeBottomMarginPx(vw)
-			local xScale = computeHotbarXScale(vw)
+			-- Per-skin desktop bias (e.g. Modern sits slightly left);
+			-- absent = shared default. Taper math unchanged.
+			local xScale = computeHotbarXScale(vw, skin.DesktopHotbarXScale)
 			return UDim2.new(xScale, originalPosition.X.Offset, 1, -marginPx)
 		end),
 	}
@@ -219,6 +229,7 @@ function HotbarView.Create(
 			Keybind = keybind,
 			Visibility = visibility,
 			DragService = dragService,
+			GlowSpread = skin.GlowSpread,
 		})
 		slotScope:Hydrate(slotFrame) {
 			Size = slotSizeUDim,
