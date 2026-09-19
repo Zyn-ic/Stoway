@@ -16,6 +16,7 @@ local StarterGui = game:GetService("StarterGui")
 local ClientStore = require("@self/Controller/ClientStore")
 local ClientController = require("@self/Controller/ClientController")
 local ClientEvents = require("@self/Controller/ClientEvents")
+local NetworkClient = require("@self/Controller/NetworkClient")
 local LayoutManager = require("@self/Controller/LayoutManager")
 local MockData = require("@self/Mock/MockData")
 local Signals = require("@self/Signals")
@@ -52,6 +53,17 @@ function StowayClient.Init()
 	-- SignalPlus bus: UI mutations go through ClientController, which
 	-- clone→sets ClientStore atoms so Hydrate updates coalesce into one frame.
 	ClientController.Init(Signals, snapshot)
+
+	-- Server pushes (chat commands today, request router tomorrow) apply
+	-- through the server-apply paths. Subscriptions only; safe with no
+	-- server behind them.
+	NetworkClient.Connect({
+		Added = ClientController.ApplyServerAdded,
+		Updated = ClientController.ApplyServerUpdated,
+		Removed = ClientController.ApplyServerRemoved,
+		Equipped = ClientController.ApplyServerEquipped,
+		Unequipped = ClientController.ApplyServerUnequipped,
+	})
 
 	print(`[StowayClientV3] core initialized (mock data, StandardHotbarStorage / {uiSkin}) — Signals bound`)
 end

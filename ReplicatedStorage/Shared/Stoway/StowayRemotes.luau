@@ -35,6 +35,16 @@ local ItemInput = {
 	Metadata = data.optional(MetadataSchema),
 }
 
+-- Full item for server-originated adds: the client inserts verbatim at
+-- the given slot (never re-creates — the server UUID is authoritative).
+local ItemData = {
+	UUID = data.StringLong,
+	Id = data.optional(data.StringLong),
+	Amount = data.optional(data.NumberU32),
+	Metadata = data.optional(MetadataSchema),
+}
+local AddedPayload = { uuid = data.String, slotType = data.optional(data.String), slot = data.optional(data.NumberU8), item = ItemData }
+
 local AddOptions = {
 	Placement = data.optional(data.String),
 	Slot = data.optional(data.NumberU8),
@@ -58,7 +68,7 @@ local ClientPayloads = {
 
 return {
 	METADATA_DELETE = "__STOWAY_DELETE__",
-	InventoryAdded = QuickNet:register("InventoryAdded", SlotChange),
+	InventoryAdded = QuickNet:register("InventoryAdded", AddedPayload),
 	InventoryUpdated = QuickNet:register("InventoryUpdated", Updated),
 	InventoryRemoved = QuickNet:register("InventoryRemoved", SlotChange),
 	InventoryEquipped = QuickNet:register("InventoryEquipped", EquippedPayload),

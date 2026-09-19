@@ -153,19 +153,30 @@ local function addOp(itemInput: CoreTypes.ItemInput, opts: CoreTypes.AddOptions?
 	if res.ok then
 		sync()
 		local value = (res :: any).value
-		local uuid: string? = nil
 		if value ~= nil then
-			if value.addedItems ~= nil and #value.addedItems > 0 then
-				uuid = value.addedItems[1]
-			elseif value.updatedItems ~= nil and #value.updatedItems > 0 then
-				uuid = value.updatedItems[1]
-			end
-		end
-		if uuid ~= nil then
-			local ref = lookupSlot(uuid)
-			if ref ~= nil then
-				ClientEvents.ItemAdded:Fire(ref.Type, ref.Slot)
-				ClientEvents.CallHook(_hooks, "OnItemAdd", ref.Type, ref.Slot)
+			-- addedItems are AddedSlot tables {uuid, slotType, slot}:
+			-- fire the server-reported destination directly.
+			local firstAdded = value.addedItems ~= nil and value.addedItems[1] or nil
+			if firstAdded ~= nil then
+				ClientEvents.ItemAdded:Fire(firstAdded.slotType, firstAdded.slot)
+				ClientEvents.CallHook(_hooks, "OnItemAdd", firstAdded.slotType, firstAdded.slot)
+			else
+				-- updatedItems is a {[uuid]: newAmount} dict (pure stack):
+				-- resolve the touched slot for the payload.
+				local stackedUUID: string? = nil
+				if value.updatedItems ~= nil then
+					for uuid in value.updatedItems do
+						stackedUUID = uuid
+						break
+					end
+				end
+				if stackedUUID ~= nil then
+					local ref = lookupSlot(stackedUUID)
+					if ref ~= nil then
+						ClientEvents.ItemAdded:Fire(ref.Type, ref.Slot)
+						ClientEvents.CallHook(_hooks, "OnItemAdd", ref.Type, ref.Slot)
+					end
+				end
 			end
 		end
 		NetworkClient.SendAddItem(itemInput, opts)
@@ -191,6 +202,145 @@ local function unequipOp()
 		NetworkClient.SendUnequip()
 	end
 	return res
+end
+
+-- Index one item into the O(1) lookup tables. Mirrors hydrateIfNeeded's
+-- bucket rules (Rarity + Type, stringified).
+local function indexItem(uuid: string, item: CoreTypes.Item)
+	if not _state then return end
+	local idBucket = _state.ItemsByID[item.Id]
+	if not idBucket then
+		idBucket = {}
+		_state.ItemsByID[item.Id] = idBucket
+	end
+	table.insert(idBucket, uuid)
+	if item.Metadata then
+		for _, field in { "Rarity", "Type" } do
+			local v = (item.Metadata :: any)[field]
+			if v ~= nil then
+				local sv = tostring(v)
+				local ft = _state.MetadataIndex[field]
+				if not ft then
+					ft = {}
+					_state.MetadataIndex[field] = ft
+				end
+				local b = ft[sv]
+				if not b then
+					b = {}
+					ft[sv] = b
+				end
+				table.insert(b, uuid)
+			end
+		end
+	end
+end
+
+-- SERVER-APPLY PATHS. These mirror server-originated pushes (chat
+-- commands today, request router tomorrow) into local state. They call
+-- CoreStore directly and NEVER FireServer — the server already applied
+-- them; echoing back would loop the moment listeners exist.
+function ClientController.ApplyServerAdded(uuid: string, item: CoreTypes.Item, slotType: string?, slot: number?)
+	if not _state then return end
+	hydrateIfNeeded(_state)
+	if _state.Items[uuid] ~= nil then
+		warn(`[ClientController] server add for known uuid {uuid}, skipping`)
+		return
+	end
+	if slotType ~= "Hotbar" and slotType ~= "Storage" then
+		warn(`[ClientController] server add with bad slotType {tostring(slotType)}, skipping`)
+		return
+	end
+	if typeof(slot) ~= "number" then
+		warn(`[ClientController] server add with bad slot {tostring(slot)}, skipping`)
+		return
+	end
+	if slotType == "Hotbar" then
+		if _state.Hotbar[slot] ~= nil then
+			warn(`[ClientController] server add to occupied hotbar {tostring(slot)}, skipping`)
+			return
+		end
+		_state.Hotbar[slot] = uuid
+	else
+		local atSlot = math.clamp(slot, 1, #_state.Storage + 1)
+		table.insert(_state.Storage, atSlot, uuid)
+		slot = atSlot
+	end
+	_state.Items[uuid] = item
+	_state.LocationByUUID[uuid] = { Type = slotType, Slot = slot }
+	indexItem(uuid, item)
+	_state.Weight += if typeof(item.Amount) == "number" then item.Amount else 0
+	sync()
+	ClientEvents.ItemAdded:Fire(slotType, slot)
+	ClientEvents.CallHook(_hooks, "OnItemAdd", slotType, slot)
+end
+
+function ClientController.ApplyServerRemoved(uuid: string, amount: number?)
+	if not _state then return end
+	hydrateIfNeeded(_state)
+	if _state.Items[uuid] == nil then
+		warn(`[ClientController] server remove for unknown uuid {uuid}, skipping`)
+		return
+	end
+	local ref = lookupSlot(uuid)
+	local res = CoreStore.remove(_state, uuid, amount)
+	if res.ok then
+		sync()
+		if ref ~= nil then
+			ClientEvents.ItemRemoved:Fire(ref.Type, ref.Slot)
+			ClientEvents.CallHook(_hooks, "OnItemRemove", ref.Type, ref.Slot)
+		end
+	end
+end
+
+function ClientController.ApplyServerUpdated(uuid: string, newAmount: number)
+	if not _state then return end
+	hydrateIfNeeded(_state)
+	local item = _state.Items[uuid]
+	if item == nil then
+		warn(`[ClientController] server update for unknown uuid {uuid}, skipping`)
+		return
+	end
+	if typeof(newAmount) ~= "number" then return end
+	_state.Weight += newAmount - item.Amount
+	item.Amount = newAmount
+	sync()
+end
+
+function ClientController.ApplyServerEquipped(uuid: string)
+	if not _state then return end
+	hydrateIfNeeded(_state)
+	if _state.Items[uuid] == nil then
+		warn(`[ClientController] server equip for unknown uuid {uuid}, skipping`)
+		return
+	end
+	local res = CoreStore.equip(_state, uuid)
+	if res.ok then
+		CoreStore.updateMetadata(_state, uuid, { IsNew = CoreStore.METADATA_DELETE })
+		sync()
+		local ref = lookupSlot(uuid)
+		if ref ~= nil then
+			ClientEvents.Equipped:Fire(ref.Type, ref.Slot)
+			ClientEvents.CallHook(_hooks, "OnEquip", ref.Type, ref.Slot)
+		end
+	end
+end
+
+function ClientController.ApplyServerUnequipped()
+	if not _state then return end
+	hydrateIfNeeded(_state)
+	local equipped: string? = _state.EquippedItemUUID
+	local ref: CoreTypes.SlotRef? = nil
+	if equipped then
+		ref = lookupSlot(equipped)
+	end
+	local res = CoreStore.unequip(_state)
+	if res.ok then
+		sync()
+		if ref ~= nil then
+			ClientEvents.Unequipped:Fire(ref.Type, ref.Slot)
+			ClientEvents.CallHook(_hooks, "OnUnequip", ref.Type, ref.Slot)
+		end
+	end
 end
 
 local function bindSignals(signals: typeof(Signals))

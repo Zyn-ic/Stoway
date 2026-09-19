@@ -3,13 +3,15 @@
 --@author: yyumchi
 --@date: 2026-09-19
 --[[@description:
-	Send-only client network layer (Phase 2, client-branch edition).
-	One FireServer per Stoway operation, using the registered request
-	events in Shared StowayRemotes. No listeners, no snapshot, no
-	revert — with no server behind them, sends are silent no-ops and
-	local state stands. The server branch listens on this same
-	StowayRemotes module, so the wire stays in sync by construction.
-	Called from ClientController's shared op bodies after res.ok.
+	Client network layer (Phase 2, client-branch edition). Sends are one
+	FireServer per Stoway operation using the registered request events
+	in Shared StowayRemotes (silent no-ops with no server behind them).
+	Listens are the five server pushes the Communications adapter fires
+	(Added/Updated/Removed/Equipped/Unequipped), applied through
+	ClientController's server-apply paths — never echoed back. Revert is
+	log-only: its payload carries no actionable slot data (server-branch
+	redesign). Called from ClientController's shared op bodies after
+	res.ok; Connect() runs once at boot.
 ]]
 -----------------------------
 -- VARIABLES --
@@ -21,6 +23,28 @@ local Remotes = require(ReplicatedStorage.Shared.Stoway.StowayRemotes)
 local CoreTypes = require(script.Parent.Parent.CoreStore.Types)
 
 local NetworkClient = {}
+
+-- Server-apply handlers, injected by init.luau (passing
+-- ClientController.ApplyServer*). Injected — never required — so the
+-- dependency stays one-directional (Controller -> NetworkClient) and
+-- no require cycle exists.
+-- Injection seam: fields are any because the two solvers disagree on
+-- function subtyping here (concrete () returns vs generic pcall use).
+-- The table is built once in init.luau from ClientController's apply
+-- functions; pcall at every call site contains any failure.
+export type ApplyHandlers = {
+	Added: any,
+	Updated: any,
+	Removed: any,
+	Equipped: any,
+	Unequipped: any,
+}
+
+local _applies: ApplyHandlers? = nil
+
+type Connection = { Disconnect: (any) -> () }
+
+local _conns: { Connection } = {}
 
 -----------------------------
 -- PRIVATE FUNCTIONS --
@@ -94,6 +118,58 @@ end
 
 function NetworkClient.SendSort()
 	fire("Sort")
+end
+
+-- Server pushes -> injected apply handlers (pcall-guarded; a malformed
+-- push warns, never breaks local inventory).
+function NetworkClient.Connect(applies: ApplyHandlers)
+	NetworkClient.Disconnect()
+	_applies = applies
+	table.insert(_conns, Remotes.InventoryAdded.OnClientEvent:Connect(function(payload: any)
+		if not _applies then return end
+		local ok, err = pcall(_applies.Added, payload.uuid, payload.item, payload.slotType, payload.slot)
+		if not ok then
+			warn(`[NetworkClient] ApplyServerAdded failed: {tostring(err)}`)
+		end
+	end))
+	table.insert(_conns, Remotes.InventoryUpdated.OnClientEvent:Connect(function(payload: any)
+		if not _applies then return end
+		local ok, err = pcall(_applies.Updated, payload.uuid, payload.newAmount)
+		if not ok then
+			warn(`[NetworkClient] ApplyServerUpdated failed: {tostring(err)}`)
+		end
+	end))
+	table.insert(_conns, Remotes.InventoryRemoved.OnClientEvent:Connect(function(payload: any)
+		if not _applies then return end
+		local ok, err = pcall(_applies.Removed, payload.uuid)
+		if not ok then
+			warn(`[NetworkClient] ApplyServerRemoved failed: {tostring(err)}`)
+		end
+	end))
+	table.insert(_conns, Remotes.InventoryEquipped.OnClientEvent:Connect(function(payload: any)
+		if not _applies then return end
+		local ok, err = pcall(_applies.Equipped, payload.uuid)
+		if not ok then
+			warn(`[NetworkClient] ApplyServerEquipped failed: {tostring(err)}`)
+		end
+	end))
+	table.insert(_conns, Remotes.InventoryUnequipped.OnClientEvent:Connect(function(_payload: any)
+		if not _applies then return end
+		local ok, err = pcall(_applies.Unequipped)
+		if not ok then
+			warn(`[NetworkClient] ApplyServerUnequipped failed: {tostring(err)}`)
+		end
+	end))
+	table.insert(_conns, Remotes.InventoryRevert.OnClientEvent:Connect(function(payload: any)
+		warn(`[NetworkClient] server revert (log-only): {tostring(payload.fromSlot)}`)
+	end))
+end
+
+function NetworkClient.Disconnect()
+	for _, conn in _conns do
+		conn:Disconnect()
+	end
+	table.clear(_conns)
 end
 
 -----------------------------

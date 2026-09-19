@@ -22,6 +22,7 @@ local Communications = {}
 
 type StowayApi = {
 	registerAdapter: (Protocol.Adapter) -> (),
+	get: (Player) -> _Types.InventoryState?,
 }
 
 local _Stoway: StowayApi? = nil
@@ -58,12 +59,25 @@ local function adapter(player: Player, signal: Protocol.Signal)
 		local result = (signal.result :: any).value
 		local addedItems = result.addedItems
 		if addedItems then
+			local state = if _Stoway then _Stoway.get(player) else nil
 			for _, added in addedItems do
-				Remotes.InventoryAdded:FireClient(player, {
-					uuid = added.uuid,
-					slotType = added.slotType,
-					slot = added.slot,
-				})
+				-- Full item: the client inserts verbatim (server UUID wins).
+				local item = state and state.Items[added.uuid]
+				if not item then
+					warn(`[Communications] added item {added.uuid} missing from state, skipping push`)
+				else
+					Remotes.InventoryAdded:FireClient(player, {
+						uuid = added.uuid,
+						slotType = added.slotType,
+						slot = added.slot,
+						item = {
+							UUID = item.UUID,
+							Id = item.Id,
+							Amount = item.Amount,
+							Metadata = item.Metadata,
+						},
+					})
+				end
 			end
 		end
 
