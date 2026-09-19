@@ -169,4 +169,14 @@ export type DropResult = Result.Result<{
 	tool: Tool,
 }>
 
+-- Server FullSync push payload: full inventory without indexes (the
+-- client rebuilds them) and without Settings (client keeps defaults).
+export type FullSyncPayload = {
+	Items: { [string]: Item },
+	Hotbar: { [number]: string },
+	Storage: { [number]: string },
+	EquippedItemUUID: string?,
+	Weight: number?,
+}
+
 return Types

@@ -23,12 +23,60 @@ local Communications = {}
 type StowayApi = {
 	registerAdapter: (Protocol.Adapter) -> (),
 	get: (Player) -> _Types.InventoryState?,
+	AddItem: (Player, _Types.ItemInput, _Types.AddOptions?, boolean?) -> _Types.AddResult,
+	AddToBackpack: (Player, _Types.ItemInput, _Types.AddOptions?, boolean?) -> _Types.AddResult,
+	AddToHotbar: (Player, _Types.ItemInput, number?, boolean?) -> _Types.AddResult,
+	RemoveItem: (Player, string, number?, boolean?) -> _Types.RemoveResult,
+	SwapSlots: (Player, _Types.SlotRef, _Types.SlotRef, boolean?) -> _Types.SwapResult,
+	SwapStack: (Player, _Types.SlotRef, _Types.SlotRef, boolean?) -> _Types.SwapResult,
+	Move: (Player, _Types.SlotRef, _Types.SlotRef, boolean?) -> _Types.MoveResult,
+	Split: (Player, string, number, _Types.SlotRef?, boolean?) -> _Types.SplitResult,
+	EquipSlot: (Player, string, boolean?) -> _Types.EquipResult,
+	UnequipSlot: (Player, boolean?) -> _Types.UnequipResult,
+	UpdateMetadata: (Player, string, { [string]: any }, boolean?) -> _Types.MetadataUpdateResult,
+	Sort: (Player, boolean?) -> _Types.SortResult,
+	Drop: (Player, string, number?, boolean?) -> _Types.DropResult,
 }
+
+-- Wire payloads are plain tables; the router trusts shapes and lets
+-- CoreStore validation decide. Only table-ness is checked up front.
+type Payload = { [string]: any }
 
 local _Stoway: StowayApi? = nil
 
 -- PRIVATE FUNCTIONS --
 -----------------------------
+
+-- Full-state push, shared by the adapter, join, sync requests, and
+-- failure corrections. Projects to the wire shape (drops engine extras).
+local function pushFullSync(player: Player)
+	local state = if _Stoway then _Stoway.get(player) else nil
+	if not state then return end
+	local items: { [string]: any } = {}
+	for uuid, it in state.Items do
+		items[uuid] = {
+			UUID = it.UUID,
+			Id = it.Id,
+			Amount = it.Amount,
+			Metadata = it.Metadata,
+		}
+	end
+	local hotbar: { [number]: string } = {}
+	for slot, uuid in state.Hotbar do
+		if uuid then hotbar[slot] = uuid end
+	end
+	local storage: { [number]: string } = {}
+	for idx, uuid in state.Storage do
+		storage[idx] = uuid
+	end
+	Remotes.InventoryFullSync:FireClient(player, {
+		Items = items,
+		Hotbar = hotbar,
+		Storage = storage,
+		EquippedItemUUID = state.EquippedItemUUID,
+		Weight = state.Weight,
+	})
+end
 
 local function adapter(player: Player, signal: Protocol.Signal)
 	-- The tagged union's operation discriminant guards each branch, so the
@@ -135,35 +183,42 @@ local function adapter(player: Player, signal: Protocol.Signal)
 		-- guaranteed here (failures returned early above). Client replaces
 		-- wholesale and rebuilds indexes; IsNew glow flags do not survive
 		-- (server never sets them).
-		local state = if _Stoway then _Stoway.get(player) else nil
-		if state then
-			-- Project to the wire shape (drops engine-only extras).
-			local items: { [string]: any } = {}
-			for uuid, it in state.Items do
-				items[uuid] = {
-					UUID = it.UUID,
-					Id = it.Id,
-					Amount = it.Amount,
-					Metadata = it.Metadata,
-				}
-			end
-			local hotbar: { [number]: string } = {}
-			for slot, uuid in state.Hotbar do
-				if uuid then hotbar[slot] = uuid end
-			end
-			local storage: { [number]: string } = {}
-			for idx, uuid in state.Storage do
-				storage[idx] = uuid
-			end
-			Remotes.InventoryFullSync:FireClient(player, {
-				Items = items,
-				Hotbar = hotbar,
-				Storage = storage,
-				EquippedItemUUID = state.EquippedItemUUID,
-				Weight = state.Weight,
-			})
-		end
+		pushFullSync(player)
 	end
+end
+
+-- Client-originated requests run silent (replicate=false): the client
+-- already rendered optimistically. Failures correct via FullSync.
+local function handle(player: Player, payload: Payload, run: (Player, Payload) -> boolean)
+	if not _Stoway then
+		warn("[Communications] request before Init, ignoring")
+		return
+	end
+	if typeof(payload) ~= "table" then return end
+	local ok, res = pcall(run, player, payload)
+	if not ok then
+		warn(`[Communications] route errored: {tostring(res)}`)
+		pushFullSync(player)
+		return
+	end
+	if res == false then
+		pushFullSync(player)
+	end
+end
+
+-- Full-sync requests carry a fat per-player cooldown: full state is
+-- expensive, and routers correct failures with FullSync on their own.
+local SYNC_COOLDOWN = 15
+local _lastSyncRequest: { [Player]: number } = {}
+
+local function requestSync(player: Player)
+	local now = os.clock()
+	local last = _lastSyncRequest[player]
+	if last and now - last < SYNC_COOLDOWN then
+		return
+	end
+	_lastSyncRequest[player] = now
+	pushFullSync(player)
 end
 
 -----------------------------
@@ -176,8 +231,72 @@ function Communications.Init(stowayModule: StowayApi)
 	stowayModule.registerAdapter(adapter)
 end
 
-function Communications.Start()
+function Communications.SendFullSync(player: Player)
+	pushFullSync(player)
+end
 
+function Communications.Start()
+	local stoway = _Stoway
+	if not stoway then
+		warn("[Communications] Start before Init, listeners skipped")
+		return
+	end
+	-- One any: the 13 events are differently-typed QuickNet objects and
+	-- the table needs a uniform element type. Everything else stays typed.
+	type Listener = { event: any, run: (Player, Payload) -> boolean }
+	local listeners: { Listener } = {
+		{ event = Remotes.AddItem, run = function(p: Player, d: Payload): boolean
+			return stoway.AddItem(p, d.input, d.options, false).ok
+		end },
+		{ event = Remotes.AddToBackpack, run = function(p: Player, d: Payload): boolean
+			return stoway.AddToBackpack(p, d.input, d.options, false).ok
+		end },
+		{ event = Remotes.AddToHotbar, run = function(p: Player, d: Payload): boolean
+			return stoway.AddToHotbar(p, d.input, d.preferredSlot, false).ok
+		end },
+		{ event = Remotes.RemoveItem, run = function(p: Player, d: Payload): boolean
+			return stoway.RemoveItem(p, d.uuid, d.amount, false).ok
+		end },
+		{ event = Remotes.SwapSlots, run = function(p: Player, d: Payload): boolean
+			return stoway.SwapSlots(p, d.from, d.to, false).ok
+		end },
+		{ event = Remotes.SwapStack, run = function(p: Player, d: Payload): boolean
+			return stoway.SwapStack(p, d.from, d.to, false).ok
+		end },
+		{ event = Remotes.Move, run = function(p: Player, d: Payload): boolean
+			return stoway.Move(p, d.from, d.to, false).ok
+		end },
+		{ event = Remotes.Split, run = function(p: Player, d: Payload): boolean
+			return stoway.Split(p, d.uuid, d.amount, d.dest, false).ok
+		end },
+		{ event = Remotes.EquipSlot, run = function(p: Player, d: Payload): boolean
+			return stoway.EquipSlot(p, d.uuid, false).ok
+		end },
+		{ event = Remotes.UnequipSlot, run = function(p: Player, d: Payload): boolean
+			return stoway.UnequipSlot(p, false).ok
+		end },
+		{ event = Remotes.UpdateMetadata, run = function(p: Player, d: Payload): boolean
+			return stoway.UpdateMetadata(p, d.uuid, d.updates, false).ok
+		end },
+		{ event = Remotes.Sort, run = function(p: Player, d: Payload): boolean
+			return stoway.Sort(p, false).ok
+		end },
+		{ event = Remotes.Drop, run = function(p: Player, d: Payload): boolean
+			return stoway.Drop(p, d.uuid, d.amount, true).ok
+		end },
+	}
+	for _, l in listeners do
+		l.event.OnServerEvent:Connect(function(player: Player, payload: Payload)
+			handle(player, payload, l.run)
+		end)
+	end
+	-- No-schema events deliver the player alone, no payload arg.
+	Remotes.RequestInventorySync.OnServerEvent:Connect(function(player: Player)
+		requestSync(player)
+	end)
+	game:GetService("Players").PlayerRemoving:Connect(function(player: Player)
+		_lastSyncRequest[player] = nil
+	end)
 end
 
 -----------------------------

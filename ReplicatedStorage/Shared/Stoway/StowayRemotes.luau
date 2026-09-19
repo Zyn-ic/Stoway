@@ -97,6 +97,7 @@ local ClientPayloads = {
 	-- Single-key named tables are illegal (parse as uniform dicts): pad
 	-- to two fields with an always-nil optional. Callers send {uuid}.
 	EquipSlot = { uuid = data.StringLong, _pad = data.optional(data.Boolean) },
+	Drop = { uuid = data.StringLong, amount = data.optional(data.NumberU32) },
 	UpdateMetadata = { uuid = data.StringLong, updates = MetadataSchema },
 }
 
@@ -126,4 +127,6 @@ return {
 	UnequipSlot = QuickNet:register("UnequipSlot"),
 	UpdateMetadata = QuickNet:register("UpdateMetadata", ClientPayloads.UpdateMetadata),
 	Sort = QuickNet:register("Sort"),
+	Drop = QuickNet:register("Drop", ClientPayloads.Drop),
+	RequestInventorySync = QuickNet:register("RequestInventorySync"),
 }

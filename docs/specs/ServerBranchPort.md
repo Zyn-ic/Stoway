@@ -70,6 +70,25 @@ Status: `[ ]` to port · `[x]` ported.
 - **Port:** copy schema + registration + adapter branch. Client side
   needs no port — already here.
 
+## Entry 5 — Full loop: snapshot boot, request router, drop, pickup `[ ]`
+
+- **Files:** `src/server/Services/StowayServerV3_0_0/Communications.luau`
+  (router table + `SendFullSync` + 15s sync cooldown),
+  `src/server/Services/StowayServerV3_0_0/init.luau` (join push,
+  late-join catch-up, Drop tag/strip),
+  `src/server/Server.server.luau` (`Communications.Start()` call),
+  `src/server/StowayPickup.server.luau` (new),
+  `src/client/StowayClientV3/init.luau` (snapshot boot, no mock),
+  `.../NetworkClient.luau` (direct sends, single `R: any` seam binding),
+  `.../ClientController.luau` (`RequestDrop`), layout `init` +
+  `Input` (drop gestures → `RequestDrop`).
+- **Why:** client boots from server snapshot; requests route silent
+  (optimistic) with FullSync correction; drops spawn tagged world
+  Tools; pickup script converts them back. Verified live end to end.
+- **Port:** everything except client-only files. Note the wire rules:
+  single-table payloads, no-schema events fire bare, schemas are
+  single-use (Entry 1), single-key dicts illegal (pad them).
+
 ## Entry 3 — Start() late-join catch-up `[ ]`
 
 - **File:** `src/server/Services/StowayServerV3_0_0/init.luau`

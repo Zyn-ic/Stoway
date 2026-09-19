@@ -129,7 +129,8 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 			end
 
 			if not context.overBackpack and not context.overHotbar then
-				-- Outside both -> Remove (full delete). Client-side only until QuickNet.
+				-- Outside both -> proper Drop: request only, the server
+				-- validates, spawns the world Tool, and pushes Removed.
 				local uuid: string? = nil
 				if from.Type == "Hotbar" then
 					local hotbar: { [number]: string? } = peekValue(store.Hotbar)
@@ -139,10 +140,7 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 					uuid = storage[from.Slot]
 				end
 				if uuid then
-					local res = ClientController.Remove(uuid)
-					if not res.ok then
-						warn("[StandardHotbarStorage] Remove rejected", res.error and res.error.message or tostring(res))
-					end
+					ClientController.RequestDrop(uuid)
 				end
 				return
 			end

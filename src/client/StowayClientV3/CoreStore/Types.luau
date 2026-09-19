@@ -38,6 +38,8 @@ export type InventoryState = SharedTypes.InventoryState
 -- Snapshot for pure queries.
 export type ClientSnapshot = SharedTypes.InventoryState
 
+export type FullSyncPayload = CoreStoreTypes.FullSyncPayload
+
 export type ItemRecord = {
 	index: number,
 	uuid: string,

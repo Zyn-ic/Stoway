@@ -16,10 +16,15 @@ local Stoway = {}
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local Workspace = game:GetService("Workspace")
+local CollectionService = game:GetService("CollectionService")
+
+-- Tag marking Stoway world drops. The pickup script watches for it.
+local STOWAY_DROP_TAG = "Stoway"
 
 local Types = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
 
 local Protocol = require(script.Protocol)
+local Communications = require(script.Communications)
 
 local Result = require(ReplicatedStorage.Shared.Stoway.Result)
 
@@ -146,6 +151,20 @@ local function getDropCFrame(player: Player): CFrame?
 	return hrp.CFrame * CFrame.new(0, 0, -5)
 end
 
+-- Makes a world tool pickup-proof against default touch behavior: the
+-- pickup script (ProximityPrompt) is the only way back in. Kills any
+-- TouchInterest and disables touch on the handle.
+local function stripTouch(tool: Tool)
+	local handle = tool:FindFirstChild("Handle") :: BasePart?
+	if not handle then
+		handle = tool:FindFirstChildWhichIsA("BasePart", true) :: BasePart?
+	end
+	if not handle then return end
+	local touch = handle:FindFirstChild("TouchInterest")
+	if touch then touch:Destroy() end
+	handle.CanTouch = false
+end
+
 local function dispatch(player: Player, signal: Protocol.Signal)
 	for _, adapter in _adapters do
 		adapter(player, signal)
@@ -190,6 +209,7 @@ function Stoway.Start()
 	PlayerServiceSignals.BindToPlrAdded:Connect(function(player: Player)
         warn(player.Name .. " stoway has been created")
         Stoway.createPlayer(player)
+        Communications.SendFullSync(player)
     end)
 
     PlayerServiceSignals.BindToPlrRemoving:Connect(function(player: Player)
@@ -204,6 +224,7 @@ function Stoway.Start()
         if _store[player] == nil then
             warn(player.Name .. " stoway has been created (late join catch-up)")
             Stoway.createPlayer(player)
+            Communications.SendFullSync(player)
         end
     end
 end
@@ -489,7 +510,10 @@ function Stoway.Drop(player: Player, uuid: string, amount: number?, replicate: b
 			worldTool = cloned
 		end
 
-		-- Position 5 studs in front of where the player is looking, then place in Workspace
+		-- Tag for the pickup script, strip default touch pickup, then
+		-- position 5 studs in front of where the player is looking.
+		CollectionService:AddTag(worldTool, STOWAY_DROP_TAG)
+		stripTouch(worldTool)
 		if dropCFrame then
 			worldTool:PivotTo(dropCFrame)
 		end

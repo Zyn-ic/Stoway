@@ -15,7 +15,7 @@
 	    Console binds ignored on PC.
 	  - Gamepad: drag disabled, tap stays, two console modes:
 	    Mode1 Hotbar  -> console combos R1+X etc (equip)
-	    Mode2 Inventory -> Y Swap, X Drop(Remove), R1+L1 QuickMove,
+	    Mode2 Inventory -> Y Swap, X Drop (server Drop request), R1+L1 QuickMove,
 	                      B Cancel, DPadLeft backpack toggle,
 	                      L3 long-press 0.5s toggles modes,
 	                      GuiService.SelectedObject + custom
@@ -358,13 +358,13 @@ function Input.Mount(
 					end
 					selectedRef = nil
 				end)
-				mk("StowayDrop", inv.Drop, function()
-					local sel = GuiService.SelectedObject :: GuiObject?
-					local cur = parseSelected(sel)
-					local uuid = getSelectedUUID(store, cur)
-					if uuid then ClientController.Remove(uuid) end
-					selectedRef = nil
-				end)
+			mk("StowayDrop", inv.Drop, function()
+				local sel = GuiService.SelectedObject :: GuiObject?
+				local cur = parseSelected(sel)
+				local uuid = getSelectedUUID(store, cur)
+				if uuid then ClientController.RequestDrop(uuid) end
+				selectedRef = nil
+			end)
 				mk("StowayQuickMove", inv.QuickMove, function()
 					local sel = GuiService.SelectedObject :: GuiObject?
 					local cur = parseSelected(sel)

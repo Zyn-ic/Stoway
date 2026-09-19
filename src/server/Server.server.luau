@@ -40,6 +40,7 @@ end
 
 Stoway.Init(CoreStore)
 Communications.Init(Stoway)
+Communications.Start()
 Stoway.Start()
 
 PlayerServiceSignals.BindToPlrAdded:Connect(registerChatCommands)

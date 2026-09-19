@@ -63,7 +63,15 @@ ghost/layout hardening, sparse binds, deselect-on-empty).
 - Accept: glow shows exactly until first equip; Modern backpack renders
   all skins' contracts unchanged.
 
-## Phase 2 — Connection `[ ]` (client-branch edition: speak, don't connect)
+## Phase 2 — Connection `[x]` (full loop live)
+
+- [x] Snapshot auto-push on join + request backup (15s cooldown);
+  client boots from snapshot, mock retired from boot path
+- [x] Table-driven request router (13 ops, silent optimistic,
+  FullSync correction, proper Drop with world Tool)
+- [x] Pickup script (Stoway tag, prompt, 15s Debris, no touch pickup)
+- [x] Proven live: chat add → UI, click equip both sides, drag drop
+  → Tool → E pickup → UI, zero errors, dual-solver green
 
 - [x] Register 12 client→server QuickNet events in `StowayRemotes`
       (existing `ClientPayloads` + new `SwapStack` schema); server branch

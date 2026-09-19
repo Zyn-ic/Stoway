@@ -328,7 +328,7 @@ end
 -- Wholesale replace from a FullSync push. Indexes are rebuilt from the
 -- slot tables; Settings stay local (not covered); IsNew flags do not
 -- survive (server never sets them). Silent: no per-item events.
-function ClientController.ApplyServerFullSync(payload: { [string]: any })
+function ClientController.ApplyServerFullSync(payload: CoreTypes.FullSyncPayload)
 	if not _state then return end
 	local items = payload.Items
 	local hotbar = payload.Hotbar
@@ -528,6 +528,14 @@ end
 
 function ClientController.Remove(uuid: string, amount: number?)
 	return removeOp(uuid, amount)
+end
+
+-- Proper drop: send-only, no local apply. The server validates
+-- (Droppable), spawns the world Tool, and pushes Removed — which is
+-- what actually takes the item out of the UI. Pessimistic by design:
+-- a rejected drop changes nothing locally.
+function ClientController.RequestDrop(uuid: string, amount: number?)
+	NetworkClient.SendDrop(uuid, amount)
 end
 
 function ClientController.Equip(uuid: string)
