@@ -47,6 +47,7 @@ local ClientPayloads = {
 	AddToHotbar = { ItemInput, data.optional(data.NumberU8) },
 	RemoveItem = { data.StringLong, data.optional(data.NumberU32) },
 	SwapSlots = { SlotRef, SlotRef },
+	SwapStack = { SlotRef, SlotRef },
 	Move = { SlotRef, SlotRef },
 	Split = { data.StringLong, data.NumberU32, data.optional(SlotRef) },
 	EquipSlot = { data.StringLong },
@@ -63,4 +64,19 @@ return {
 	InventoryEquipped = QuickNet:register("InventoryEquipped", EquippedPayload),
 	InventoryUnequipped = QuickNet:register("InventoryUnequipped", EquippedPayload),
 	InventoryRevert = QuickNet:register("InventoryRevert", RevertPayload),
+	-- Client -> server requests. Registered under operation names; the
+	-- server branch listens on this same module, so names stay in sync
+	-- by construction. FireServer with no listener is a silent no-op.
+	AddItem = QuickNet:register("AddItem", ClientPayloads.AddItem),
+	AddToBackpack = QuickNet:register("AddToBackpack", ClientPayloads.AddToBackpack),
+	AddToHotbar = QuickNet:register("AddToHotbar", ClientPayloads.AddToHotbar),
+	RemoveItem = QuickNet:register("RemoveItem", ClientPayloads.RemoveItem),
+	SwapSlots = QuickNet:register("SwapSlots", ClientPayloads.SwapSlots),
+	SwapStack = QuickNet:register("SwapStack", ClientPayloads.SwapStack),
+	Move = QuickNet:register("Move", ClientPayloads.Move),
+	Split = QuickNet:register("Split", ClientPayloads.Split),
+	EquipSlot = QuickNet:register("EquipSlot", ClientPayloads.EquipSlot),
+	UnequipSlot = QuickNet:register("UnequipSlot", ClientPayloads.UnequipSlot),
+	UpdateMetadata = QuickNet:register("UpdateMetadata", ClientPayloads.UpdateMetadata),
+	Sort = QuickNet:register("Sort", ClientPayloads.Sort),
 }

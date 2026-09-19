@@ -63,16 +63,22 @@ ghost/layout hardening, sparse binds, deselect-on-empty).
 - Accept: glow shows exactly until first equip; Modern backpack renders
   all skins' contracts unchanged.
 
-## Phase 2 — Connection `[ ]`
+## Phase 2 — Connection `[ ]` (client-branch edition: speak, don't connect)
 
-- [ ] Slim snapshot on join (items + Hotbar/Storage + equipped + settings;
-      indexes stay server-side), new `InventorySnapshot` remote, replaces
-      `MockData` seed
-- [ ] Server request router for all 12 ops; retire `Signals.luau` mock bus;
-      optimistic apply + `InventoryRevert` rollback preserved
-- [ ] Playtest matrix: Default + Metal, both solvers, rollback-under-lag
-- Accept: cold join rebuilds identical UI from snapshot; failed ops roll
-  back visibly; mock bus fully deleted.
+- [x] Register 12 client→server QuickNet events in `StowayRemotes`
+      (existing `ClientPayloads` + new `SwapStack` schema); server branch
+      listens on this same module
+- [x] New `Controller/NetworkClient.luau` (send-only `FireServer`
+      wrappers, pcall-guarded); hooked into `ClientController` shared op
+      bodies + Move/Split/SwapStack paths after `res.ok`. No listeners,
+      no snapshot, no revert — sends are silent no-ops solo
+- [x] `Signals.luau` demoted to test-only transport (kept, not retired);
+      `MockData` seed kept (no snapshot to replace it)
+- [x] `docs/specs/ServerBranchPort.md` ledger tracks every shared-ground
+      change for replay onto the server branch
+- [ ] Playtest matrix: Default + Metal, both solvers (blocked: serve wedged)
+- Accept: every local success emits its wire request; solo behavior
+  byte-identical; server branch can listen with zero client changes.
 
 ## Phase 3 — World `[ ]`
 

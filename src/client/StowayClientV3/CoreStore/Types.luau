@@ -10,6 +10,7 @@
 -----------------------------
 
 local SharedTypes = require("@game/ReplicatedStorage/Shared/Stoway/Types")
+local CoreStoreTypes = require("@game/ReplicatedStorage/Shared/Stoway/CoreStore/Types")
 
 local Types = {}
 
@@ -23,6 +24,8 @@ export type SlotType = SharedTypes.SlotType
 export type PlacementMode = SharedTypes.PlacementMode
 export type SlotRef = SharedTypes.SlotRef
 export type Item = SharedTypes.Item
+export type ItemInput = CoreStoreTypes.ItemInput
+export type AddOptions = SharedTypes.AddOptions
 export type ItemMetadata = SharedTypes.ItemMetadata
 export type CategoryDef = SharedTypes.CategoryDef
 export type Settings = SharedTypes.Settings

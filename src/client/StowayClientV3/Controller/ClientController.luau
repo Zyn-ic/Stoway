@@ -20,6 +20,7 @@ local ClientStore = require(script.Parent.ClientStore)
 local CoreTypes = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
 local Signals = require(script.Parent.Parent.Signals)
 local ClientEvents = require(script.Parent.ClientEvents)
+local NetworkClient = require(script.Parent.NetworkClient)
 
 local ClientController = {}
 
@@ -109,6 +110,7 @@ local function equipAndClearNew(uuid: string)
 			ClientEvents.Equipped:Fire(ref.Type, ref.Slot)
 			ClientEvents.CallHook(_hooks, "OnEquip", ref.Type, ref.Slot)
 		end
+		NetworkClient.SendEquip(uuid)
 	end
 	return res
 end
@@ -123,6 +125,7 @@ local function swapOp(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
 		sync()
 		ClientEvents.Swapped:Fire(from.Type, from.Slot, to.Type, to.Slot)
 		ClientEvents.CallHook(_hooks, "OnSwap", to.Type, to.Slot)
+		NetworkClient.SendSwap(from, to)
 	end
 	return res
 end
@@ -138,6 +141,7 @@ local function removeOp(uuid: string, amount: number?)
 			ClientEvents.ItemRemoved:Fire(ref.Type, ref.Slot)
 			ClientEvents.CallHook(_hooks, "OnItemRemove", ref.Type, ref.Slot)
 		end
+		NetworkClient.SendRemoveItem(uuid, amount)
 	end
 	return res
 end
@@ -164,6 +168,7 @@ local function addOp(itemInput: CoreTypes.ItemInput, opts: CoreTypes.AddOptions?
 				ClientEvents.CallHook(_hooks, "OnItemAdd", ref.Type, ref.Slot)
 			end
 		end
+		NetworkClient.SendAddItem(itemInput, opts)
 	end
 	return res
 end
@@ -183,6 +188,7 @@ local function unequipOp()
 			ClientEvents.Unequipped:Fire(ref.Type, ref.Slot)
 			ClientEvents.CallHook(_hooks, "OnUnequip", ref.Type, ref.Slot)
 		end
+		NetworkClient.SendUnequip()
 	end
 	return res
 end
@@ -208,14 +214,20 @@ local function bindSignals(signals: typeof(Signals))
 		if not _state then return end
 		hydrateIfNeeded(_state)
 		local ok, res = pcall(CoreStore.swapStack, _state, from, to)
-		if ok and res and res.ok then sync() elseif not ok then warn("[ClientController] SwapStack error", res) end
+		if ok and res and res.ok then
+			sync()
+			NetworkClient.SendSwapStack(from, to)
+		elseif not ok then warn("[ClientController] SwapStack error", res) end
 	end))
 
 	table.insert(_connections, signals.Move:Connect(function(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
 		if not _state then return end
 		hydrateIfNeeded(_state)
 		local ok, res = pcall(CoreStore.move, _state, from, to)
-		if ok and res and res.ok then sync() elseif not ok then warn("[ClientController] Move error", res) end
+		if ok and res and res.ok then
+			sync()
+			NetworkClient.SendMove(from, to)
+		elseif not ok then warn("[ClientController] Move error", res) end
 	end))
 
 	table.insert(_connections, signals.Remove:Connect(function(uuid: string, amount: number?)
@@ -236,7 +248,10 @@ local function bindSignals(signals: typeof(Signals))
 		if not _state then return end
 		hydrateIfNeeded(_state)
 		local ok, res = pcall(CoreStore.split, _state, uuid, amount, dest)
-		if ok and res and res.ok then sync() elseif not ok then warn("[ClientController] Split error", res) end
+		if ok and res and res.ok then
+			sync()
+			NetworkClient.SendSplit(uuid, amount, dest)
+		elseif not ok then warn("[ClientController] Split error", res) end
 	end))
 
 	table.insert(_connections, signals.Equip:Connect(function(uuid: string)
@@ -318,7 +333,10 @@ function ClientController.Move(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
 	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
 	hydrateIfNeeded(_state)
 	local res = CoreStore.move(_state, from, to)
-	if res.ok then sync() end
+	if res.ok then
+		sync()
+		NetworkClient.SendMove(from, to)
+	end
 	return res
 end
 
