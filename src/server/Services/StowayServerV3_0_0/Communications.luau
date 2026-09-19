@@ -189,13 +189,17 @@ end
 
 -- Client-originated requests run silent (replicate=false): the client
 -- already rendered optimistically. Failures correct via FullSync.
-local function handle(player: Player, payload: Payload, run: (Player, Payload) -> boolean)
+local function handle(player: Player, payload: Payload?, run: (Player, Payload) -> boolean)
 	if not _Stoway then
 		warn("[Communications] request before Init, ignoring")
 		return
 	end
-	if typeof(payload) ~= "table" then return end
-	local ok, res = pcall(run, player, payload)
+	-- No-schema events (Unequip/Sort) deliver the player alone: nil
+	-- payload is legal and means "no arguments". Anything else must be
+	-- a table or it never came from our wire.
+	if payload ~= nil and typeof(payload) ~= "table" then return end
+	local args: Payload = payload or {}
+	local ok, res = pcall(run, player, args)
 	if not ok then
 		warn(`[Communications] route errored: {tostring(res)}`)
 		pushFullSync(player)
