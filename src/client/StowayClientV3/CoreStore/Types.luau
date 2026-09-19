@@ -70,8 +70,9 @@ export type SkinHandle = {
 	GlowSpread: UDim2?,
 	-- Skin hook table (Layer 2): the required HookFuncs module from the
 	-- Studio skin folder, or nil when the skin declares none. Boundary-
-	-- typed as a string map; each skin's HookPayloads.luau is the precise
-	-- contract. Call sites invoke via ClientEvents.CallHook (spawn+pcall).
+	-- typed as a string map; the Studio module itself (self-contained
+	-- --!strict) is the precise contract. Call sites invoke via
+	-- ClientEvents.CallHook (spawn+pcall).
 	Hooks: { [string]: any }?,
 }
 

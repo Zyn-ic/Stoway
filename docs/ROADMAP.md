@@ -15,8 +15,10 @@ ghost/layout hardening, sparse binds, deselect-on-empty).
       modules byte-identical, matching the Layer 2 reference shape.
 - [x] New `Controller/ClientEvents.luau` generic bus (11 signals,
       SignalPlus) + `CallHook` helper (task.spawn + pcall)
-- [x] Per-skin `HookPayloads.luau` contracts (Default full, Modern
-      re-export, Metal full) — skin-specific, not layout-specific
+- [x] Contract lives in the Studio `HookFuncs` modules (self-contained
+      `--!strict`, local `SlotType`, no requires); repo `HookPayloads`
+      files deleted — untyped call sites made them docs-only, and docs
+      belong where the editing happens
 - [x] Wire 6 call-site groups: SlotView click/hover/select-observer,
       PointerDragService begin/end, ClientController wrappers
       (swapOp/removeOp/addOp/equipAndClearNew/unequipOp share bodies
@@ -98,8 +100,8 @@ ghost/layout hardening, sparse binds, deselect-on-empty).
   tones: crimson/emerald/amber/royal/violet per category); `StorageView`
   falls back to category colors when absent, so Default/Metal render
   exactly as before. Keys route through the per-skin modules (not
-  SkinLoader directly) so stamps actually run. Same shape planned for
-  `HookPayloads` (per-skin hook args, generic bus untouched).
+  SkinLoader directly) so stamps actually run. Same shape confirmed for
+  hooks (per-skin Studio modules, generic bus untouched).
 - Same pattern for layout data: `Skins/Modern` stamps
   `DesktopHotbarXScale = 0.52` (shared default 0.57); `HotbarView`
   consumes it as the taper endpoint with fallback. Mobile taper
@@ -132,7 +134,7 @@ ghost/layout hardening, sparse binds, deselect-on-empty).
 - Flat skin tree: one ScreenGui per skin folder, shared `GUI/DraggingGui`.
   No spare ScreenGuis inside skin folders (loader fail-fasts).
 - Hooks split: generic bus (stable minimal payloads, open subscription) +
-  skin-direct calls (per-skin `HookPayloads` types, 3-touchpoint change
+  skin-direct calls (per-skin Studio modules, 2-touchpoint change
   protocol). `SeenIds` is client-session local.
 - Ghost policy: clone live slot, strip `GhostHidden` list, descendants +100
   ZIndex (Global-behavior `DraggingGui`).

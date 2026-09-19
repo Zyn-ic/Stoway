@@ -16,8 +16,8 @@ no generic typed thing for skin differences.
   forever. External systems connect here.
 - **Layer 2 — skin-direct calls**: skin `HookFuncs` functions are invoked
   directly at call sites with skin-specific args (`btn`, `frame`, scope parts),
-  typed in that skin's own `HookPayloads` table. Passing a button on one skin
-  and nothing on another is expected and type-checked per skin.
+  annotated in the Studio module itself. Passing a button on one skin
+  and nothing on another is expected.
 
 ## Layer 1 — Generic Bus Catalog
 
@@ -40,31 +40,35 @@ or scopes — subscribers resolve visuals themselves.
 
 ## Layer 2 — Skin-Direct Calls
 
-Skin functions keep their bespoke signatures (reference shape):
+Skin functions keep their bespoke signatures. The contract lives IN the
+Studio modules (`ReplicatedStorage.Stoway.GUI.<Skin>.HookFuncs`, one per
+skin, self-contained `--!strict`, no requires — deliberately no backwards
+dependency into PlayerScripts). Reference shape:
 
 ```luau
-OnSlotClick(slotType, index, uuid)
-OnSlotHover(btn: GuiButton, slotType, slotIndex)
-OnDragStart(type, index) / OnDragEnd(type, index)
-OnEquip(type, index) / OnUnequip(type, index)
-OnItemAdd(type, index) / OnItemRemove(type, index)
-OnSwap(type, index)
-OnSelect(frame, slotType, slotIndex) / OnDeselect(frame, slotType, slotIndex)
+OnSlotClick(slotType: SlotType, index: number, uuid: string?)
+OnSlotHover(btn: GuiButton, slotType: SlotType, slotIndex: number)
+OnDragStart(slotType, index) / OnDragEnd(slotType, index)
+OnEquip(slotType, index) / OnUnequip(slotType, index)
+OnItemAdd(slotType, index) / OnItemRemove(slotType, index)
+OnSwap(slotType, index)
+OnSelect(frame: Frame, slotType, slotIndex) / OnDeselect(frame, slotType, slotIndex)
 ```
 
-Each skin owns a `HookPayloads` type table describing exactly what its
-functions receive. `DefaultHooks` and `MetalHooks` may differ freely.
+`DefaultHooks` and `MetalHooks` may differ freely. Call sites invoke
+through untyped handles (`SkinHandle.Hooks` is `{ [string]: any }`), so
+a call-site/hook mismatch is a runtime `pcall` warn, never a type error
+— the Studio annotations only check within the module.
 
 ## Type-Change Protocol
 
-Sending something new (or nothing where something was sent) touches exactly
-three places, in order. Dual-solver `luau-lsp` analyze is the CI that catches
-drift — a mismatched call site fails type-check, never silently:
+Sending something new (or nothing where something was sent) touches
+exactly two places, in order:
 
-1. **Skin `HookPayloads` type** — add/change the parameter type.
-2. **Skin hook function** — add/change the parameter in the signature.
-3. **Fire site(s)** — pass (or stop passing) the variable where the event fires.
+1. **Skin hook function** — add/change the parameter in the signature.
+2. **Fire site(s)** — pass (or stop passing) the variable where the event fires.
 
+Then playtest once: the `pcall` warn names the hook that drifted.
 Generic bus payloads (Layer 1) change only by full-team decision; they are
 stability-locked once external subscribers exist.
 
