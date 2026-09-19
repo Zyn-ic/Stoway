@@ -76,7 +76,9 @@ ghost/layout hardening, sparse binds, deselect-on-empty).
       `MockData` seed kept (no snapshot to replace it)
 - [x] `docs/specs/ServerBranchPort.md` ledger tracks every shared-ground
       change for replay onto the server branch
-- [ ] Playtest matrix: Default + Metal, both solvers (blocked: serve wedged)
+- [x] Push loop proven live: chat `addhot sword 1 5` → server add →
+  push → client apply → `Item Added` + NotifyExample, zero errors
+  (Default skin; Metal + rollback-under-lag still open)
 - Accept: every local success emits its wire request; solo behavior
   byte-identical; server branch can listen with zero client changes.
 
