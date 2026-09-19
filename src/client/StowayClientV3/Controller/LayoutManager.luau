@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Fusion = require(ReplicatedStorage.Packages.fusion)
 
 local ClientStore = require(script.Parent.ClientStore)
+local ClientController = require(script.Parent.ClientController)
 
 local LayoutManager = {}
 
@@ -81,7 +82,9 @@ function LayoutManager.SetLayout(
 	engine.Mount(layoutScope, skin, store)
 end
 
--- Cleans up the current layout scope and its instances.
+-- Cleans up the current layout scope and its instances. Unloads the
+-- skin hooks too: no slot exists to fire them after this, and the next
+-- Mount overwrites the table anyway. Belt and suspenders.
 function LayoutManager.Teardown()
 	if currentLayoutScope then
 		currentLayoutScope:doCleanup()
@@ -89,6 +92,7 @@ function LayoutManager.Teardown()
 		currentLayoutKey = nil
 		currentSkinKey = nil
 	end
+	ClientController.SetHooks(nil)
 end
 
 function LayoutManager.GetCurrentLayout(): (string?, string?)

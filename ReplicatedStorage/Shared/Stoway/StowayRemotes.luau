@@ -29,41 +29,75 @@ local SlotRef = { Type = data.String, Slot = data.NumberU8 }
 -- so numbers stay numbers and strings stay strings through the round-trip.
 local MetadataSchema = { [data.String] = data.any }
 
-local ItemInput = {
-	Id = data.optional(data.StringLong),
-	Amount = data.optional(data.NumberU32),
-	Metadata = data.optional(MetadataSchema),
-}
+-- QUICKNET SINGLE-USE RULE (Parser.luau: processSchema mutates optional
+-- wrappers in place: schema[2] = processed. The first register() of a
+-- shared table succeeds; the second reprocesses the processed wrapper,
+-- descends into dictStatic internals (keys/template/123s) and dies with
+-- "invalid data type". Bare-enum optionals are idempotent and safe to
+-- share; anything nesting a TABLE inside optional() is not. Hence fresh
+-- tables per registration below. Never share these across register().
+local function makeItemInput()
+	return {
+		Id = data.optional(data.StringLong),
+		Amount = data.optional(data.NumberU32),
+		Metadata = data.optional(MetadataSchema),
+	}
+end
 
 -- Full item for server-originated adds: the client inserts verbatim at
 -- the given slot (never re-creates — the server UUID is authoritative).
-local ItemData = {
-	UUID = data.StringLong,
-	Id = data.optional(data.StringLong),
-	Amount = data.optional(data.NumberU32),
-	Metadata = data.optional(MetadataSchema),
-}
-local AddedPayload = { uuid = data.String, slotType = data.optional(data.String), slot = data.optional(data.NumberU8), item = ItemData }
+-- Key is Metadata (not ItemMetadata): dictStatic deserializes back into
+-- these key names, and CoreStore reads item.Metadata.
+local function makeItemData()
+	return {
+		UUID = data.StringLong,
+		Id = data.optional(data.StringLong),
+		Amount = data.optional(data.NumberU32),
+		Metadata = data.optional(MetadataSchema),
+	}
+end
+local AddedPayload = { uuid = data.String, slotType = data.optional(data.String), slot = data.optional(data.NumberU8), item = makeItemData() }
 
-local AddOptions = {
-	Placement = data.optional(data.String),
-	Slot = data.optional(data.NumberU8),
-	SlotRef = data.optional(SlotRef),
+-- Full-state resync for ops with no targeted push (Swap/Move/Split/
+-- Sort/UpdateMetadata). Slot dicts ({[slot] = uuid}) survive hotbar
+-- holes; indexes stay server-side, the client rebuilds them.
+local SlotDict = { [data.NumberU8] = data.String }
+local ItemDict = { [data.String] = makeItemData() }
+local FullSyncPayload = {
+	Items = ItemDict,
+	Hotbar = SlotDict,
+	Storage = SlotDict,
+	EquippedItemUUID = data.optional(data.String),
+	Weight = data.optional(data.NumberU32),
 }
 
+local function makeAddOptions()
+	return {
+		Placement = data.optional(data.String),
+		Slot = data.optional(data.NumberU8),
+		SlotRef = data.optional(SlotRef),
+	}
+end
+
+-- WIRE CONVENTION (QuickNet register/fire): register() takes schemas
+-- vararg and Fire passes varargs positionally, BUT multi-value payloads
+-- must be a SINGLE static-dict table per event — FireServer(a, b) against
+-- schema {A, B} misaligns (proven live: "index nil with 'Slot'"). Every
+-- request below is one named table; FireServer sends exactly one table.
+-- No-arg events (Unequip/Sort) register with NO schema and fire bare.
 local ClientPayloads = {
-	AddItem = { ItemInput, data.optional(AddOptions) },
-	AddToBackpack = { ItemInput, data.optional(AddOptions) },
-	AddToHotbar = { ItemInput, data.optional(data.NumberU8) },
-	RemoveItem = { data.StringLong, data.optional(data.NumberU32) },
-	SwapSlots = { SlotRef, SlotRef },
-	SwapStack = { SlotRef, SlotRef },
-	Move = { SlotRef, SlotRef },
-	Split = { data.StringLong, data.NumberU32, data.optional(SlotRef) },
-	EquipSlot = { data.StringLong },
-	UnequipSlot = {},
-	UpdateMetadata = { data.StringLong, data.any },
-	Sort = {},
+	AddItem = { input = makeItemInput(), options = data.optional(makeAddOptions()) },
+	AddToBackpack = { input = makeItemInput(), options = data.optional(makeAddOptions()) },
+	AddToHotbar = { input = makeItemInput(), preferredSlot = data.optional(data.NumberU8) },
+	RemoveItem = { uuid = data.StringLong, amount = data.optional(data.NumberU32) },
+	SwapSlots = { from = SlotRef, to = SlotRef },
+	SwapStack = { from = SlotRef, to = SlotRef },
+	Move = { from = SlotRef, to = SlotRef },
+	Split = { uuid = data.StringLong, amount = data.NumberU32, dest = data.optional(SlotRef) },
+	-- Single-key named tables are illegal (parse as uniform dicts): pad
+	-- to two fields with an always-nil optional. Callers send {uuid}.
+	EquipSlot = { uuid = data.StringLong, _pad = data.optional(data.Boolean) },
+	UpdateMetadata = { uuid = data.StringLong, updates = MetadataSchema },
 }
 
 return {
@@ -74,6 +108,7 @@ return {
 	InventoryEquipped = QuickNet:register("InventoryEquipped", EquippedPayload),
 	InventoryUnequipped = QuickNet:register("InventoryUnequipped", EquippedPayload),
 	InventoryRevert = QuickNet:register("InventoryRevert", RevertPayload),
+	InventoryFullSync = QuickNet:register("InventoryFullSync", FullSyncPayload),
 	-- Client -> server requests. Registered under operation names; the
 	-- server branch listens on this same module, so names stay in sync
 	-- by construction. FireServer with no listener is a silent no-op.
@@ -86,7 +121,9 @@ return {
 	Move = QuickNet:register("Move", ClientPayloads.Move),
 	Split = QuickNet:register("Split", ClientPayloads.Split),
 	EquipSlot = QuickNet:register("EquipSlot", ClientPayloads.EquipSlot),
-	UnequipSlot = QuickNet:register("UnequipSlot", ClientPayloads.UnequipSlot),
+	-- No-arg events register with NO schema: {} is not a valid schema
+	-- (processSchema rejects it). FireServer() sends zero args.
+	UnequipSlot = QuickNet:register("UnequipSlot"),
 	UpdateMetadata = QuickNet:register("UpdateMetadata", ClientPayloads.UpdateMetadata),
-	Sort = QuickNet:register("Sort", ClientPayloads.Sort),
+	Sort = QuickNet:register("Sort"),
 }

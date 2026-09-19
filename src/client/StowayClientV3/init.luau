@@ -63,6 +63,7 @@ function StowayClient.Init()
 		Removed = ClientController.ApplyServerRemoved,
 		Equipped = ClientController.ApplyServerEquipped,
 		Unequipped = ClientController.ApplyServerUnequipped,
+		FullSync = ClientController.ApplyServerFullSync,
 	})
 
 	print(`[StowayClientV3] core initialized (mock data, StandardHotbarStorage / {uiSkin}) — Signals bound`)

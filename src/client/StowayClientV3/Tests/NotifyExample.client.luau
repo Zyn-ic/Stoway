@@ -5,10 +5,10 @@
 --[[@description:
 	Example external subscriber on the ClientEvents bus. Requires the
 	NotifyExample module and connects it (toast/sound stubs until real
-	assets exist). Separate LocalScript so the example subscription lives
-	outside the client root module.
+	assets exist). Lives in the Tests harness, outside the client root
+	module.
 ]]
 
-local NotifyExample = require(script.Parent.StowayClientV3.Controller.NotifyExample)
+local NotifyExample = require(script.Parent.Parent.Controller.NotifyExample)
 
 NotifyExample.Connect()

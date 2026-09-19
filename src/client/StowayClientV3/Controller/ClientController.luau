@@ -325,6 +325,42 @@ function ClientController.ApplyServerEquipped(uuid: string)
 	end
 end
 
+-- Wholesale replace from a FullSync push. Indexes are rebuilt from the
+-- slot tables; Settings stay local (not covered); IsNew flags do not
+-- survive (server never sets them). Silent: no per-item events.
+function ClientController.ApplyServerFullSync(payload: { [string]: any })
+	if not _state then return end
+	local items = payload.Items
+	local hotbar = payload.Hotbar
+	local storage = payload.Storage
+	if typeof(items) ~= "table" or typeof(hotbar) ~= "table" or typeof(storage) ~= "table" then
+		warn("[ClientController] server fullsync with bad tables, skipping")
+		return
+	end
+	_state.Items = items
+	_state.Hotbar = {}
+	for slot, uuid in hotbar do
+		if typeof(slot) == "number" and typeof(uuid) == "string" then
+			_state.Hotbar[slot] = uuid
+		end
+	end
+	_state.Storage = {}
+	for idx, uuid in storage do
+		if typeof(idx) == "number" and typeof(uuid) == "string" then
+			_state.Storage[idx] = uuid
+		end
+	end
+	_state.EquippedItemUUID = payload.EquippedItemUUID
+	if typeof(payload.Weight) == "number" then
+		_state.Weight = payload.Weight
+	end
+	_state.LocationByUUID = {}
+	_state.ItemsByID = {}
+	_state.MetadataIndex = {}
+	hydrateIfNeeded(_state)
+	sync()
+end
+
 function ClientController.ApplyServerUnequipped()
 	if not _state then return end
 	hydrateIfNeeded(_state)

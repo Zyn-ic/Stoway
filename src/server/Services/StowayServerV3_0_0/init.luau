@@ -196,6 +196,16 @@ function Stoway.Start()
         warn(player.Name .. " stoway is being removed")
         Stoway.removePlayer(player)
     end)
+
+    -- Boot-order race: PlayerService may have fired BindToPlrAdded for
+    -- already-joined players before Start() connected. Catch them up.
+    local Players = game:GetService("Players")
+    for _, player in Players:GetPlayers() do
+        if _store[player] == nil then
+            warn(player.Name .. " stoway has been created (late join catch-up)")
+            Stoway.createPlayer(player)
+        end
+    end
 end
 
 -- Player lifecycle

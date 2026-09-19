@@ -124,6 +124,45 @@ local function adapter(player: Player, signal: Protocol.Signal)
 				slot = nil,
 			})
 		end
+
+	elseif signal.operation == "SwapSlots"
+		or signal.operation == "SwapStack"
+		or signal.operation == "Move"
+		or signal.operation == "Split"
+		or signal.operation == "UpdateMetadata"
+		or signal.operation == "Sort" then
+		-- No targeted push exists for these: send full state. res.ok is
+		-- guaranteed here (failures returned early above). Client replaces
+		-- wholesale and rebuilds indexes; IsNew glow flags do not survive
+		-- (server never sets them).
+		local state = if _Stoway then _Stoway.get(player) else nil
+		if state then
+			-- Project to the wire shape (drops engine-only extras).
+			local items: { [string]: any } = {}
+			for uuid, it in state.Items do
+				items[uuid] = {
+					UUID = it.UUID,
+					Id = it.Id,
+					Amount = it.Amount,
+					Metadata = it.Metadata,
+				}
+			end
+			local hotbar: { [number]: string } = {}
+			for slot, uuid in state.Hotbar do
+				if uuid then hotbar[slot] = uuid end
+			end
+			local storage: { [number]: string } = {}
+			for idx, uuid in state.Storage do
+				storage[idx] = uuid
+			end
+			Remotes.InventoryFullSync:FireClient(player, {
+				Items = items,
+				Hotbar = hotbar,
+				Storage = storage,
+				EquippedItemUUID = state.EquippedItemUUID,
+				Weight = state.Weight,
+			})
+		end
 	end
 end
 

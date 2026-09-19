@@ -38,6 +38,7 @@ export type ApplyHandlers = {
 	Removed: any,
 	Equipped: any,
 	Unequipped: any,
+	FullSync: any,
 }
 
 local _applies: ApplyHandlers? = nil
@@ -50,15 +51,16 @@ local _conns: { Connection } = {}
 -- PRIVATE FUNCTIONS --
 -----------------------------
 
--- Serialization mismatches must never break local inventory.
-local function fire(eventName: string, ...: any)
+-- Serialization mismatches must never break local inventory. Every
+-- request is ONE table (QuickNet register/fire convention: multi-value
+-- payloads are a single static-dict, never positional varargs).
+local function fire(eventName: string, payload: any)
 	local event = (Remotes :: any)[eventName]
 	if event == nil then
 		warn(`[NetworkClient] unknown request event '{eventName}'`)
 		return
 	end
-	local args = table.pack(...)
-	local ok, err = pcall(event.FireServer, event, table.unpack(args, 1, args.n))
+	local ok, err = pcall(event.FireServer, event, payload)
 	if not ok then
 		warn(`[NetworkClient] FireServer '{eventName}' failed: {tostring(err)}`)
 	end
@@ -69,55 +71,55 @@ end
 -----------------------------
 
 function NetworkClient.SendAddItem(itemInput: CoreTypes.ItemInput, opts: CoreTypes.AddOptions?)
-	fire("AddItem", itemInput, opts)
+	fire("AddItem", { input = itemInput, options = opts })
 end
 
 function NetworkClient.SendAddToBackpack(itemInput: CoreTypes.ItemInput, opts: CoreTypes.AddOptions?)
-	fire("AddToBackpack", itemInput, opts)
+	fire("AddToBackpack", { input = itemInput, options = opts })
 end
 
 function NetworkClient.SendAddToHotbar(itemInput: CoreTypes.ItemInput, preferredSlot: number?)
-	fire("AddToHotbar", itemInput, preferredSlot)
+	fire("AddToHotbar", { input = itemInput, preferredSlot = preferredSlot })
 end
 
 function NetworkClient.SendRemoveItem(uuid: string, amount: number?)
-	fire("RemoveItem", uuid, amount)
+	fire("RemoveItem", { uuid = uuid, amount = amount })
 end
 
 function NetworkClient.SendSwap(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
-	fire("SwapSlots", { Type = from.Type, Slot = from.Slot }, { Type = to.Type, Slot = to.Slot })
+	fire("SwapSlots", { from = { Type = from.Type, Slot = from.Slot }, to = { Type = to.Type, Slot = to.Slot } })
 end
 
 function NetworkClient.SendSwapStack(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
-	fire("SwapStack", { Type = from.Type, Slot = from.Slot }, { Type = to.Type, Slot = to.Slot })
+	fire("SwapStack", { from = { Type = from.Type, Slot = from.Slot }, to = { Type = to.Type, Slot = to.Slot } })
 end
 
 function NetworkClient.SendMove(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
-	fire("Move", { Type = from.Type, Slot = from.Slot }, { Type = to.Type, Slot = to.Slot })
+	fire("Move", { from = { Type = from.Type, Slot = from.Slot }, to = { Type = to.Type, Slot = to.Slot } })
 end
 
 function NetworkClient.SendSplit(uuid: string, amount: number, dest: CoreTypes.SlotRef?)
 	if dest then
-		fire("Split", uuid, amount, { Type = dest.Type, Slot = dest.Slot })
+		fire("Split", { uuid = uuid, amount = amount, dest = { Type = dest.Type, Slot = dest.Slot } })
 	else
-		fire("Split", uuid, amount)
+		fire("Split", { uuid = uuid, amount = amount })
 	end
 end
 
 function NetworkClient.SendEquip(uuid: string)
-	fire("EquipSlot", uuid)
+	fire("EquipSlot", { uuid = uuid })
 end
 
 function NetworkClient.SendUnequip()
-	fire("UnequipSlot")
+	fire("UnequipSlot", nil)
 end
 
 function NetworkClient.SendUpdateMetadata(uuid: string, updates: { [string]: any })
-	fire("UpdateMetadata", uuid, updates)
+	fire("UpdateMetadata", { uuid = uuid, updates = updates })
 end
 
 function NetworkClient.SendSort()
-	fire("Sort")
+	fire("Sort", nil)
 end
 
 -- Server pushes -> injected apply handlers (pcall-guarded; a malformed
@@ -125,43 +127,50 @@ end
 function NetworkClient.Connect(applies: ApplyHandlers)
 	NetworkClient.Disconnect()
 	_applies = applies
-	table.insert(_conns, Remotes.InventoryAdded.OnClientEvent:Connect(function(payload: any)
+	table.insert(_conns, Remotes.InventoryAdded.OnClientEvent:Connect(function(payload)
 		if not _applies then return end
 		local ok, err = pcall(_applies.Added, payload.uuid, payload.item, payload.slotType, payload.slot)
 		if not ok then
 			warn(`[NetworkClient] ApplyServerAdded failed: {tostring(err)}`)
 		end
 	end))
-	table.insert(_conns, Remotes.InventoryUpdated.OnClientEvent:Connect(function(payload: any)
+	table.insert(_conns, Remotes.InventoryUpdated.OnClientEvent:Connect(function(payload)
 		if not _applies then return end
 		local ok, err = pcall(_applies.Updated, payload.uuid, payload.newAmount)
 		if not ok then
 			warn(`[NetworkClient] ApplyServerUpdated failed: {tostring(err)}`)
 		end
 	end))
-	table.insert(_conns, Remotes.InventoryRemoved.OnClientEvent:Connect(function(payload: any)
+	table.insert(_conns, Remotes.InventoryRemoved.OnClientEvent:Connect(function(payload)
 		if not _applies then return end
 		local ok, err = pcall(_applies.Removed, payload.uuid)
 		if not ok then
 			warn(`[NetworkClient] ApplyServerRemoved failed: {tostring(err)}`)
 		end
 	end))
-	table.insert(_conns, Remotes.InventoryEquipped.OnClientEvent:Connect(function(payload: any)
+	table.insert(_conns, Remotes.InventoryEquipped.OnClientEvent:Connect(function(payload)
 		if not _applies then return end
 		local ok, err = pcall(_applies.Equipped, payload.uuid)
 		if not ok then
 			warn(`[NetworkClient] ApplyServerEquipped failed: {tostring(err)}`)
 		end
 	end))
-	table.insert(_conns, Remotes.InventoryUnequipped.OnClientEvent:Connect(function(_payload: any)
+	table.insert(_conns, Remotes.InventoryUnequipped.OnClientEvent:Connect(function(_payload)
 		if not _applies then return end
 		local ok, err = pcall(_applies.Unequipped)
 		if not ok then
 			warn(`[NetworkClient] ApplyServerUnequipped failed: {tostring(err)}`)
 		end
 	end))
-	table.insert(_conns, Remotes.InventoryRevert.OnClientEvent:Connect(function(payload: any)
+	table.insert(_conns, Remotes.InventoryRevert.OnClientEvent:Connect(function(payload)
 		warn(`[NetworkClient] server revert (log-only): {tostring(payload.fromSlot)}`)
+	end))
+	table.insert(_conns, Remotes.InventoryFullSync.OnClientEvent:Connect(function(payload)
+		if not _applies then return end
+		local ok, err = pcall(_applies.FullSync, payload)
+		if not ok then
+			warn(`[NetworkClient] ApplyServerFullSync failed: {tostring(err)}`)
+		end
 	end))
 end
 
