@@ -199,19 +199,6 @@ function HotbarView.Create(
 		local bindCfg = Binds.HotbarSlots[slotIndex]
 		local hasKeys = bindCfg ~= nil and (bindCfg.PC ~= nil or bindCfg.Console ~= nil)
 
-		local isUnlocked = slotScope:Computed(function(use: Fusion.Use): boolean
-			if not hasKeys then
-				return false
-			end
-			local items: { [string]: CoreTypes.Item } = use(store.Items)
-			local settings: CoreTypes.Settings? = use(store.Settings)
-			return Query.isHotbarSlotUnlocked(items, settings, slotIndex)
-		end)
-
-		local isLocked = slotScope:Computed(function(use: Fusion.Use): boolean
-			return hasKeys and not use(isUnlocked)
-		end)
-
 		local keybind = slotScope:Computed(function(use: Fusion.Use): string
 			if not hasKeys then return "!" end
 			if bindCfg ~= nil and bindCfg.Display ~= nil then return bindCfg.Display end
@@ -234,7 +221,6 @@ function HotbarView.Create(
 			Store = store,
 			ShowKeybind = true,
 			HasBind = hasKeys,
-			Locked = isLocked,
 			HideChrome = skin.HideInHotbar,
 			PackOrder = packOrder,
 			Keybind = keybind,

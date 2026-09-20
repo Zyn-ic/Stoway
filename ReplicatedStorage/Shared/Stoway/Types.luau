@@ -30,6 +30,9 @@ export type ItemMetadata = {
 	Rarity: string?,
 	Droppable: boolean?,
 	Type: string?,
+	-- EXAMPLE (example/locked-slots): which hotbar slot a token unlocks
+	-- when USED (consumed by the SlotUnlockExample server script).
+	UnlocksHotbarSlot: number?,
 	[string]: MetadataValue?,
 }
 

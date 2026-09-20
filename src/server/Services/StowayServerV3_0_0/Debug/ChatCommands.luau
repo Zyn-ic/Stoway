@@ -15,6 +15,7 @@ local CoreStore = require(ReplicatedStorage.Shared.Stoway.CoreStore)
 local Types = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
 local Remotes = require(ReplicatedStorage.Shared.Stoway.StowayRemotes)
 local SlotLocks = require(ReplicatedStorage.Shared.Stoway.SlotLocks)
+local Communications = require(script.Parent.Parent.Communications)
 
 -----------------------------
 -- VARIABLES --
@@ -488,6 +489,7 @@ local function cmdHelp(player: Player, stoway: StowayApi, args: { string })
 	print("/toggle_sort                    - Toggle auto-sort on/off")
 	print("/locks                           - EXAMPLE locked-slots: per-slot lock verdicts")
 	print("/meta [uuid]                     - EXAMPLE locked-slots: dump item metadata + types")
+	print("/relock                          - EXAMPLE locked-slots: re-lock hotbar 9 (locks are dynamic)")
 	print("═══════════════════════════════════════════════════════════════")
 end
 
@@ -511,14 +513,14 @@ local function cmdLocks(player: Player, stoway: StowayApi, args: { string })
 		local field = item.Metadata and item.Metadata.UnlocksHotbarSlot
 		if field ~= nil then
 			local loc = state.LocationByUUID[uuid]
-			print(("  token %s UnlocksHotbarSlot(%s)=%s at %s"):format(
+			print(("  unlock token %s UnlocksHotbarSlot(%s)=%s at %s (use it to unlock)"):format(
 				item.Id, typeof(field), tostring(field),
 				if loc then loc.Type .. "#" .. loc.Slot else "?"
 			))
 		end
 	end
 	for i = 1, state.Settings.MaxHotbarSlots do
-		local unlocked = SlotLocks.isUnlocked(state.Items, locked, i)
+		local unlocked = SlotLocks.isUnlocked(locked, i)
 		print(("  slot %d: %s"):format(i, if unlocked then "UNLOCKED" else "LOCKED"))
 	end
 	print("───────────────────────────────────────────────────────────────")
@@ -543,6 +545,39 @@ local function cmdMeta(player: Player, stoway: StowayApi, args: { string })
 		print(("  %s (%s) = %s"):format(tostring(k), typeof(v), tostring(v)))
 	end
 	print("───────────────────────────────────────────────────────────────")
+end
+
+-- EXAMPLE (example/locked-slots): re-lock hotbar 9 specifically, to
+-- showcase that locks are dynamic state rather than boot constants.
+-- Same pipe as the consume unlock (settings flip + FullSync). Stranded
+-- items stay usable; moving out remains legal.
+local function cmdRelock(player: Player, stoway: StowayApi, args: { string })
+	local state = requireState(player, stoway)
+	if not state then return end
+	-- Flip first: the eviction search below must see 9 as locked so it
+	-- never picks another locked slot as the destination.
+	local locked: { [number]: boolean } = state.Settings.LockedHotbarSlots or {}
+	locked[9] = true
+	state.Settings.LockedHotbarSlots = locked
+	if state.Hotbar[9] == nil then
+		Communications.SendFullSync(player)
+		print("[Relock] hotbar 9 locked (was empty)")
+		return
+	end
+	local dest = CoreStore.findNearestEmptyHotbarSlot(state, 9)
+	if dest == nil then
+		Communications.SendFullSync(player)
+		print("[Relock] hotbar 9 locked; occupant stranded (no free slot)")
+		return
+	end
+	local res = stoway.Move(player, { Type = "Hotbar", Slot = 9 }, { Type = "Hotbar", Slot = dest }, true)
+	if res.ok then
+		-- Move success already pushed FullSync (covers flip + move).
+		print(("[Relock] hotbar 9 locked; occupant evacuated to slot %d"):format(dest))
+	else
+		Communications.SendFullSync(player)
+		print(("[Relock] hotbar 9 locked; evacuation failed (%s)"):format(res.error and res.error.message or "?"))
+	end
 end
 
 -- DISPATCH
@@ -572,6 +607,7 @@ local commands: { [string]: (Player, StowayApi, { string }) -> () } = {
 	toggle_sort = cmdToggleSort,
 	locks = cmdLocks,
 	meta = cmdMeta,
+	relock = cmdRelock,
 	help = cmdHelp,
 }
 

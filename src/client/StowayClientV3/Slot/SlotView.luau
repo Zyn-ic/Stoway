@@ -38,9 +38,6 @@ export type SlotProps = {
 	Store: typeof(ClientStore),
 	ShowKeybind: boolean?,
 	HasBind: boolean?,
-	-- EXAMPLE (example/locked-slots): reactive lock badge. HasBind=false
-	-- (keyless) renders red "!"; Locked=true renders the Display key amber.
-	Locked: Fusion.UsedAs<boolean>?,
 	HideChrome: { string }?,
 	PackOrder: Fusion.Computed<number>?,
 	Keybind: Fusion.Computed<string>?,
@@ -344,18 +341,26 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 	end
 
 	if slotnumber then
+		-- Captured once: the fallback below must return this, never the
+		-- live property. Reading slotnumber.TextColor3 live inside the
+		-- Computed self-perpetuates (once amber, amber forever).
+		local defaultKeybindColor: Color3 = slotnumber.TextColor3
 		scope:Hydrate(slotnumber) {
 			Text = props.Keybind or "",
 			Visible = props.ShowKeybind == true,
+			-- EXAMPLE (example/locked-slots): amber while a keyed hotbar
+			-- slot is locked, red "!" when keyless. Depth-1 reactive: reads
+			-- atoms directly.
 			TextColor3 = scope:Computed(function(use: Fusion.Use): Color3
-				local locked: boolean = if props.Locked ~= nil then use(props.Locked) else false
-				if locked then
-					return LOCKED_KEYBIND_COLOR
-				end
-				if props.HasBind == false then
+				if props.HasBind == true and props.SlotType == "Hotbar" then
+					local settings: CoreTypes.Settings? = use(props.Store.Settings)
+					if not Query.isHotbarSlotUnlocked(settings, props.SlotIndex) then
+						return LOCKED_KEYBIND_COLOR
+					end
+				elseif props.HasBind == false then
 					return UNBOUND_KEYBIND_COLOR
 				end
-				return slotnumber.TextColor3
+				return defaultKeybindColor
 			end),
 		}
 	end

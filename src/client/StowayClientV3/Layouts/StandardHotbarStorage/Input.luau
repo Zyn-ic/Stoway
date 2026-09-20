@@ -56,9 +56,8 @@ end
 
 -- EXAMPLE (example/locked-slots): keybinds on locked slots stay dormant.
 local function isSlotUnlocked(store: typeof(ClientStore), slot: number): boolean
-	local items: { [string]: CoreTypes.Item } = Fusion.peek(store.Items)
 	local settings: CoreTypes.Settings? = Fusion.peek(store.Settings)
-	return Query.isHotbarSlotUnlocked(items, settings, slot)
+	return Query.isHotbarSlotUnlocked(settings, slot)
 end
 
 local function resolveHotbarUUID(store: typeof(ClientStore), visibleIndex: number): string?
@@ -268,12 +267,11 @@ function Input.Mount(
 	-- flips, so no rebuild is needed on (un)lock. Declared before
 	-- buildForPreferred so the tail sync call resolves.
 	local unlockedFlags = scope:Computed(function(use: Fusion.Use): { [number]: boolean }
-		local items: { [string]: CoreTypes.Item } = use(store.Items)
 		local settings: CoreTypes.Settings? = use(store.Settings)
 		local maxSlots = State.getMaxHotbarSlots(settings)
 		local flags: { [number]: boolean } = {}
 		for i = 1, maxSlots do
-			flags[i] = Query.isHotbarSlotUnlocked(items, settings, i)
+			flags[i] = Query.isHotbarSlotUnlocked(settings, i)
 		end
 		return flags
 	end)

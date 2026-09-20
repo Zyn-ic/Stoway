@@ -21,6 +21,9 @@ export type ItemMetadata = {
     Rarity: string?,
     Droppable: boolean?,
     Type: string?,
+    -- EXAMPLE (example/locked-slots): which hotbar slot a token unlocks
+    -- when USED (consumed by the SlotUnlockExample server script).
+    UnlocksHotbarSlot: number?,
 
     [string]: MetadataValue?
 }
@@ -178,13 +181,16 @@ export type DropResult = Result.Result<{
 }>
 
 -- Server FullSync push payload: full inventory without indexes (the
--- client rebuilds them) and without Settings (client keeps defaults).
+-- client rebuilds them) and without Settings, except LockedHotbarSlots
+-- (EXAMPLE locked-slots: the one settings field that replicates, carrying
+-- consume-on-use unlocks).
 export type FullSyncPayload = {
 	Items: { [string]: Item },
 	Hotbar: { [number]: string },
 	Storage: { [number]: string },
 	EquippedItemUUID: string?,
 	Weight: number?,
+	LockedHotbarSlots: { [number]: boolean }?,
 }
 
 return Types

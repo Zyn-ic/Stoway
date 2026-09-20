@@ -63,7 +63,31 @@ function Slots.findEmptyHotbarSlot(state: Types.InventoryState): number?
 	return nil
 end
 
--- Appends a UUID to the end of Storage.
+-- Scans outward from fromSlot (left first, then right per distance) for
+-- the first nil hotbar slot. Skips locked slots: eviction must never fill
+-- another lock. Added for the locked-slots relock demo.
+function Slots.findNearestEmptyHotbarSlot(state: Types.InventoryState, fromSlot: number): number?
+	local maxSlots = state.Settings.MaxHotbarSlots
+	local locked = state.Settings.LockedHotbarSlots
+	local maxDist = math.max(fromSlot - 1, maxSlots - fromSlot)
+	for dist = 1, maxDist do
+		local left = fromSlot - dist
+		if left >= 1
+			and not state.Hotbar[left]
+			and (locked == nil or locked[left] ~= true)
+		then
+			return left
+		end
+		local right = fromSlot + dist
+		if right <= maxSlots
+			and not state.Hotbar[right]
+			and (locked == nil or locked[right] ~= true)
+		then
+			return right
+		end
+	end
+	return nil
+end
 -- Returns the new slot index (1-based).
 -- Example: appendStorage(state, "uuid-abc")
 --   state.Storage = [..., "uuid-abc"]

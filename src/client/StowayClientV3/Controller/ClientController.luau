@@ -414,6 +414,11 @@ function ClientController.ApplyServerFullSync(payload: CoreTypes.FullSyncPayload
 	if typeof(payload.Weight) == "number" then
 		_state.Weight = payload.Weight
 	end
+	-- EXAMPLE (example/locked-slots): the one settings field that
+	-- replicates (consume-on-use unlocks). Absent = leave local locks.
+	if typeof(payload.LockedHotbarSlots) == "table" then
+		_state.Settings.LockedHotbarSlots = payload.LockedHotbarSlots
+	end
 	_state.LocationByUUID = {}
 	_state.ItemsByID = {}
 	_state.MetadataIndex = {}

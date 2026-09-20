@@ -235,6 +235,10 @@ function CoreStore.getStorageItemCount(state: Types.InventoryState): number
 	return Slots.getStorageItemCount(state)
 end
 
+function CoreStore.findNearestEmptyHotbarSlot(state: Types.InventoryState, fromSlot: number): number?
+	return Slots.findNearestEmptyHotbarSlot(state, fromSlot)
+end
+
 function CoreStore.isEquipped(state: Types.InventoryState, uuid: string): boolean
 	return State.isEquipped(state, uuid)
 end

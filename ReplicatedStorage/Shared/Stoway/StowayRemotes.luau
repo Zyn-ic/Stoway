@@ -70,6 +70,9 @@ local FullSyncPayload = {
 	Storage = SlotDict,
 	EquippedItemUUID = data.optional(data.String),
 	Weight = data.optional(data.NumberU32),
+	-- EXAMPLE (example/locked-slots): the one settings field that
+	-- replicates (consume-on-use unlocks). Absent = leave local locks.
+	LockedHotbarSlots = data.optional({ [data.NumberU8] = data.Boolean }),
 }
 
 local function makeAddOptions()

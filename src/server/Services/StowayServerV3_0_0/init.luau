@@ -116,6 +116,9 @@ local function getDefaultMetadata(template: Instance): Types.ItemMetadata
 		IsGamepass   = (template:GetAttribute("IsGamepass") or false) :: any,
 		Rarity       = (template:GetAttribute("Rarity") or "Common") :: any,
 		Type         = (template:GetAttribute("Type") or "Material") :: any,
+		-- EXAMPLE (example/locked-slots): token unlocks flow like any other
+		-- template attribute. Absent attribute = absent key (no unlock).
+		UnlocksHotbarSlot = template:GetAttribute("UnlocksHotbarSlot") :: any,
 	}
 end
 
@@ -282,7 +285,7 @@ local function hotbarSlotLocked(state: Types.InventoryState, ref: Types.SlotRef?
 	if ref == nil or ref.Type ~= "Hotbar" then
 		return false
 	end
-	return not SlotLocks.isUnlocked(state.Items, state.Settings.LockedHotbarSlots, ref.Slot)
+	return not SlotLocks.isUnlocked(state.Settings.LockedHotbarSlots, ref.Slot)
 end
 
 function Stoway.AddItem(player: Player, itemData: Types.ItemInput, options: Types.AddOptions?, replicate: boolean?): Types.AddResult

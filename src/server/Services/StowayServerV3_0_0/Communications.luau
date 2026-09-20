@@ -12,6 +12,8 @@
 -----------------------------
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
+local PlayerServiceSignals = require(ServerScriptService.Libraries.PlayerServiceSignals)
 local Remotes = require(ReplicatedStorage.Shared.Stoway.StowayRemotes)
 
 local Protocol = require(script.Parent.Protocol)
@@ -75,6 +77,8 @@ local function pushFullSync(player: Player)
 		Storage = storage,
 		EquippedItemUUID = state.EquippedItemUUID,
 		Weight = state.Weight,
+		-- EXAMPLE (example/locked-slots): unlocks ride along (nil = omit).
+		LockedHotbarSlots = state.Settings.LockedHotbarSlots,
 	})
 end
 
@@ -298,7 +302,8 @@ function Communications.Start()
 	Remotes.RequestInventorySync.OnServerEvent:Connect(function(player: Player)
 		requestSync(player)
 	end)
-	game:GetService("Players").PlayerRemoving:Connect(function(player: Player)
+
+	PlayerServiceSignals.BindToPlrRemoving:Connect(function(player: Player)
 		_lastSyncRequest[player] = nil
 	end)
 end

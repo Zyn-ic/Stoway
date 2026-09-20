@@ -260,15 +260,12 @@ function Query.sortRecords(
 	return sorted
 end
 
--- EXAMPLE (example/locked-slots, not canon): hotbar slot unlock via token
--- metadata. Nil settings (locks unknown) fails open.
-function Query.isHotbarSlotUnlocked(
-	items: { [string]: Types.Item },
-	settings: Types.Settings?,
-	slot: number
-): boolean
+-- EXAMPLE (example/locked-slots, not canon): hotbar slot unlock state.
+-- Locks live in Settings (flipped server-side on use); nil settings
+-- (locks unknown) fails open.
+function Query.isHotbarSlotUnlocked(settings: Types.Settings?, slot: number): boolean
 	local locked = if settings then settings.LockedHotbarSlots else nil
-	return SlotLocks.isUnlocked(items, locked, slot)
+	return SlotLocks.isUnlocked(locked, slot)
 end
 
 -----------------------------
