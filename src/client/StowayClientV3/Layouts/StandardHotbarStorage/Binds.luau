@@ -26,8 +26,12 @@ export type BindConfig = {
 	Console: { BindEntry }?,
 }
 
+local IllusionIAS = require(game:GetService("ReplicatedStorage").Packages.IllusionIAS)
+
+export type BindingAction = IllusionIAS.BindingObject
+
 -- Applies PC, Console, or both into an IllusionIAS BindingObject.
-function Binds.ApplyToAction(action: any, bindConfig: BindConfig?, inputType: ("PC" | "Console")?)
+function Binds.ApplyToAction(action: BindingAction, bindConfig: BindConfig?, inputType: ("PC" | "Console")?)
 	if not action or not bindConfig then return end
 	local function apply(binds: { BindEntry }?)
 		if not binds then return end
@@ -50,7 +54,8 @@ end
 
 -- Hotbar 1..10 defaults. Custom skins/layouts can add [11]..[N] entries;
 -- Input loops 1..MaxHotbarSlots and skips nils.
-Binds.HotbarSlots = {
+
+local HOTBAR_SLOTS: { [number]: BindConfig? } = {
 	[1] = {
 		Display = "1",
 		PC = { { Main = Enum.KeyCode.One } },
@@ -103,31 +108,44 @@ Binds.HotbarSlots = {
 		PC = { { Main = Enum.KeyCode.Zero } },
 		Console = { { Main = Enum.KeyCode.DPadDown, Modifiers = { Enum.KeyCode.ButtonR1 } } },
 	},
-} :: { [number]: BindConfig? }
+}
 
-Binds.Global = {
+Binds.HotbarSlots = HOTBAR_SLOTS
+
+local GLOBAL: {
+	Backpack: BindConfig,
+	SwitchMode: BindConfig,
+	InventoryActions: {
+		Swap: BindConfig,
+		Drop: BindConfig,
+		QuickMove: BindConfig,
+		Cancel: BindConfig,
+	},
+} = {
 	Backpack = {
 		PC = { { Main = Enum.KeyCode.Tab }, { Main = Enum.KeyCode.B } },
 		Console = { { Main = Enum.KeyCode.DPadLeft } },
-	} :: BindConfig,
+	},
 	SwitchMode = {
 		PC = { { Main = Enum.KeyCode.M } },
 		Console = { { Main = Enum.KeyCode.ButtonL3 } },
-	} :: BindConfig,
+	},
 	InventoryActions = {
 		Swap = {
 			Console = { { Main = Enum.KeyCode.ButtonY } },
-		} :: BindConfig,
+		},
 		Drop = {
 			Console = { { Main = Enum.KeyCode.ButtonX } },
-		} :: BindConfig,
+		},
 		QuickMove = {
 			Console = { { Main = Enum.KeyCode.ButtonL1, Modifiers = { Enum.KeyCode.ButtonR1 } } },
-		} :: BindConfig,
+		},
 		Cancel = {
 			Console = { { Main = Enum.KeyCode.ButtonB } },
-		} :: BindConfig,
+		},
 	},
 }
+
+Binds.Global = GLOBAL
 
 return Binds

@@ -20,27 +20,15 @@ local Query = require(script.Parent.Parent.CoreStore.Query)
 local ClientStore = require(script.Parent.Parent.Controller.ClientStore)
 local ClientController = require(script.Parent.Parent.Controller.ClientController)
 local ClientEvents = require(script.Parent.Parent.Controller.ClientEvents)
+local PointerDragService = require(script.Parent.Parent.Interactions.PointerDragService)
 
 local SlotView = {}
-
--- Wrappers hide Fusion's unannotated generics from the new solver.
--- Call sites stay strictly typed via the left-hand annotation.
-local function useTyped(useFn: Fusion.Use, target: any): any
-	return (useFn :: any)(target)
-end
-
-local function peekValue(target: any): any
-	return (Fusion.peek :: any)(target)
-end
 
 -----------------------------
 -- TYPES --
 -----------------------------
 
-export type DragLike = {
-	IsDragging: (self: DragLike) -> boolean,
-	WasRecentlyDragging: (self: DragLike, number?) -> boolean,
-}
+export type DragLike = PointerDragService.Service
 
 export type SlotProps = {
 	SlotType: CoreTypes.SlotType,
@@ -56,7 +44,7 @@ export type SlotProps = {
 	Visibility: Fusion.Computed<boolean>?,
 	DragService: DragLike?,
 	GlowSpread: UDim2?,
-	Hooks: { [string]: any }?,
+	Hooks: CoreTypes.HookMap?,
 }
 
 local UNBOUND_KEYBIND_COLOR = Color3.fromRGB(255, 85, 85)
@@ -91,35 +79,35 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 	local rarityframe = slotFrame:FindFirstChild("rarityframe") :: ImageLabel?
 
 	local hotbarSlotUUID = scope:Computed(function(use: Fusion.Use): string?
-		local hotbar: { [number]: string? } = useTyped(use, store.Hotbar)
+		local hotbar: { [number]: string? } = use(store.Hotbar)
 		return Query.getHotbarUUID(hotbar, props.SlotIndex)
 	end)
 
 	local storageSlotUUID = scope:Computed(function(use: Fusion.Use): string?
-		local storage: { string } = useTyped(use, store.Storage)
+		local storage: { string } = use(store.Storage)
 		return Query.getStorageUUID(storage, props.SlotIndex)
 	end)
 
 	local slotUUID = scope:Computed(function(use: Fusion.Use): string?
 		if props.SlotType == "Hotbar" then
-			return useTyped(use, hotbarSlotUUID)
+			return use(hotbarSlotUUID)
 		end
-		return useTyped(use, storageSlotUUID)
+		return use(storageSlotUUID)
 	end)
 
 	local currentItem = scope:Computed(function(use: Fusion.Use): CoreTypes.Item?
-		local items: { [string]: CoreTypes.Item } = useTyped(use, store.Items)
-		local uuid: string? = useTyped(use, slotUUID)
+		local items: { [string]: CoreTypes.Item } = use(store.Items)
+		local uuid: string? = use(slotUUID)
 		return Query.getItem(items, uuid)
 	end)
 
 	local hasItem = scope:Computed(function(use: Fusion.Use): boolean
-		return useTyped(use, currentItem) ~= nil
+		return use(currentItem) ~= nil
 	end)
 
 	local isEquipped = scope:Computed(function(use: Fusion.Use): boolean
-		local uuid: string? = useTyped(use, slotUUID)
-		local equipped: string? = useTyped(use, store.EquippedItemUUID)
+		local uuid: string? = use(slotUUID)
+		local equipped: string? = use(store.EquippedItemUUID)
 		return Query.isEquipped(equipped, uuid)
 	end)
 
@@ -127,17 +115,17 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 	-- metadata flag. Equip deletes the key via updateMetadata, which takes
 	-- the glow off. Pure presence check, no side state.
 	local isNew = scope:Computed(function(use: Fusion.Use): boolean
-		local item: CoreTypes.Item? = useTyped(use, currentItem)
+		local item: CoreTypes.Item? = use(currentItem)
 		return item ~= nil and item.Metadata ~= nil and item.Metadata.IsNew == true
 	end)
 
 	local hasImage = scope:Computed(function(use: Fusion.Use): boolean
-		local item: CoreTypes.Item? = useTyped(use, currentItem)
+		local item: CoreTypes.Item? = use(currentItem)
 		return item ~= nil and item.Metadata ~= nil and item.Metadata.Image ~= nil and item.Metadata.Image ~= ""
 	end)
 
 	local fallbackText = scope:Computed(function(use: Fusion.Use): string
-		local item: CoreTypes.Item? = useTyped(use, currentItem)
+		local item: CoreTypes.Item? = use(currentItem)
 		if not item then return "" end
 		local id = item.Id or "?"
 		if #id > 12 then return string.sub(id, 1, 10) .. ".." end
@@ -177,11 +165,11 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 
 		scope:Hydrate(slotbutton) {
 			Image = scope:Computed(function(use: Fusion.Use): string
-				local item: CoreTypes.Item? = useTyped(use, currentItem)
+				local item: CoreTypes.Item? = use(currentItem)
 				return if item and item.Metadata then item.Metadata.Image or "" else ""
 			end),
 			ImageTransparency = scope:Computed(function(use: Fusion.Use): number
-				return if useTyped(use, hasImage) then 0 else 1
+				return if use(hasImage) then 0 else 1
 			end),
 			Visible = hasItem,
 		}
@@ -189,10 +177,10 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 		scope:Hydrate(fallbackLabel) {
 			Text = fallbackText,
 			Visible = scope:Computed(function(use: Fusion.Use): boolean
-				return useTyped(use, hasItem) and not useTyped(use, hasImage)
+				return use(hasItem) and not use(hasImage)
 			end),
 			TextColor3 = scope:Computed(function(use: Fusion.Use): Color3
-				local item: CoreTypes.Item? = useTyped(use, currentItem)
+				local item: CoreTypes.Item? = use(currentItem)
 				-- Use rarity tint for fallback text so color-blind still has Id, but hue helps
 				return Colors.getRarityColor(item and item.Metadata and item.Metadata.Rarity)
 			end),
@@ -209,13 +197,13 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 					if dragService:IsDragging() then return end
 					if dragService:WasRecentlyDragging(0.25) then return end
 				end
-				local uuid: string? = peekValue(slotUUID)
+				local uuid: string? = Fusion.peek(slotUUID)
 				if not uuid then return end
-				local has: boolean = peekValue(hasItem)
+				local has: boolean = Fusion.peek(hasItem)
 				if not has then return end
 				ClientEvents.SlotClicked:Fire(props.SlotType, props.SlotIndex, uuid)
 				ClientEvents.CallHook(props.Hooks, "OnSlotClick", props.SlotType, props.SlotIndex, uuid)
-				local equipped: string? = peekValue(store.EquippedItemUUID)
+				local equipped: string? = Fusion.peek(store.EquippedItemUUID)
 				if equipped == uuid then
 					ClientController.Unequip()
 				else
@@ -253,11 +241,11 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 		-- descendant observer). Breathe uses TweenService Completed
 		-- callbacks; one-shot fade on unequip is a simple tween.
 		-- Fusion stays for the selecticon pop (acyclic: isEquipped -> tween).
-		newGlow.Enabled = peekValue(isNew)
+		newGlow.Enabled = Fusion.peek(isNew)
 		local pulsing = false
 		local currentTween: Tween? = nil
 		local function pulse(to: number)
-			if not peekValue(isNew) then
+			if not Fusion.peek(isNew) then
 				pulsing = false
 				return
 			end
@@ -277,9 +265,9 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 			tween:Play()
 			currentTween = tween
 		end
-		if peekValue(isNew) then pulse(0.66) end
+		if Fusion.peek(isNew) then pulse(0.66) end
 		scope:Observer(isNew):onChange(function()
-			if peekValue(isNew) then
+			if Fusion.peek(isNew) then
 				newGlow.Enabled = true
 				newGlow.Transparency = 0.58
 				if not pulsing then pulse(0.66) end
@@ -296,7 +284,7 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 				table.insert(
 					scope,
 					fade.Completed:Connect(function()
-						if not peekValue(isNew) then newGlow.Enabled = false end
+						if not Fusion.peek(isNew) then newGlow.Enabled = false end
 					end)
 				)
 				fade:Play()
@@ -308,7 +296,7 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 		-- Tint both channels: ImageColor3 drives image-art frames, BackgroundColor3
 		-- drives native bars (imageless templates tint via background).
 		local rarityColor: Fusion.Computed<Color3> = scope:Computed(function(use: Fusion.Use): Color3
-			local item: CoreTypes.Item? = useTyped(use, currentItem)
+			local item: CoreTypes.Item? = use(currentItem)
 			return Colors.getRarityColor(item and item.Metadata and item.Metadata.Rarity)
 		end)
 		scope:Hydrate(rarityframe) {
@@ -337,12 +325,12 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 		end
 		scope:Hydrate(stackcount) {
 			Visible = scope:Computed(function(use: Fusion.Use): boolean
-				local item: CoreTypes.Item? = useTyped(use, currentItem)
-				local settings: CoreTypes.Settings? = useTyped(use, store.Settings)
+				local item: CoreTypes.Item? = use(currentItem)
+				local settings: CoreTypes.Settings? = use(store.Settings)
 				return settings ~= nil and settings.CanStack and item ~= nil
 			end),
 			Text = scope:Computed(function(use: Fusion.Use): string
-				local item: CoreTypes.Item? = useTyped(use, currentItem)
+				local item: CoreTypes.Item? = use(currentItem)
 				if item then
 					return Query.formatAmount(item.Amount)
 				end
@@ -365,22 +353,22 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 		local origSize: UDim2 = selecticon.Size
 		local origTransparency: number = 0
 		if selecticon:IsA("ImageLabel") then
-			origTransparency = (selecticon :: ImageLabel).ImageTransparency
+			origTransparency = selecticon.ImageTransparency
 		end
 		local smallSize = UDim2.new(origSize.X.Scale * 0.85, origSize.X.Offset, origSize.Y.Scale * 0.85, origSize.Y.Offset)
-		local equipProgress: Fusion.Value<number> = (scope :: any):Value(0)
-		local tweened: Fusion.Value<number> = (scope :: any):Tween(
+		local equipProgress: Fusion.Value<number> = scope:Value(0)
+		local tweened: Fusion.Tween<number> = scope:Tween(
 			equipProgress,
 			TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.06)
 		)
 		local popSize: Fusion.Computed<UDim2> = scope:Computed(function(use: Fusion.Use): UDim2
-			local t: number = useTyped(use, tweened)
+			local t: number = use(tweened)
 			local sx: number = smallSize.X.Scale + (origSize.X.Scale - smallSize.X.Scale) * t
 			local sy: number = smallSize.Y.Scale + (origSize.Y.Scale - smallSize.Y.Scale) * t
 			return UDim2.new(sx, origSize.X.Offset, sy, origSize.Y.Offset)
 		end)
 		local popTransparency: Fusion.Computed<number> = scope:Computed(function(use: Fusion.Use): number
-			local t: number = useTyped(use, tweened)
+			local t: number = use(tweened)
 			return 1 + (origTransparency - 1) * t
 		end)
 		scope:Hydrate(selecticon) {
@@ -388,9 +376,9 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 			Size = popSize,
 			ImageTransparency = popTransparency,
 		}
-		if peekValue(isEquipped) then equipProgress:set(1) end
+		if Fusion.peek(isEquipped) then equipProgress:set(1) end
 		scope:Observer(isEquipped):onChange(function()
-			if peekValue(isEquipped) then
+			if Fusion.peek(isEquipped) then
 				equipProgress:set(1)
 				ClientEvents.Selected:Fire(props.SlotType, props.SlotIndex)
 				ClientEvents.CallHook(props.Hooks, "OnSelect", slotFrame, props.SlotType, props.SlotIndex)

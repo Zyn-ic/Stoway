@@ -17,27 +17,28 @@
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SignalPlus = require(ReplicatedStorage.Packages.SignalPlus)
+local Fusion = require(ReplicatedStorage.Packages.fusion)
 
 local PreferredInput = {}
 
-local _current: any = UserInputService.PreferredInput
+local _current: EnumItem = UserInputService.PreferredInput
 local _defaultConn: RBXScriptConnection? = nil
-local _customConn: any = nil
-local _customSignal: SignalPlus.Signal<any>? = nil
+local _customConn: SignalPlus.Connection? = nil
+local _customSignal: SignalPlus.Signal<EnumItem | string>? = nil
 
-PreferredInput.Changed = SignalPlus() :: SignalPlus.Signal<any>
+PreferredInput.Changed = SignalPlus() :: SignalPlus.Signal<EnumItem>
 
-function PreferredInput.Get(): any
+function PreferredInput.Get(): EnumItem
 	return _current
 end
 
-local function setCurrent(new: any)
+local function setCurrent(new: EnumItem)
 	if _current == new then return end
 	_current = new
 	PreferredInput.Changed:Fire(new)
 end
 
-function PreferredInput.Init(scope: any?)
+function PreferredInput.Init(scope: Fusion.Scope<typeof(Fusion)>?)
 	-- scope optional: if provided, auto-cleanup conn on doCleanup
 	if _defaultConn ~= nil then return end
 	_current = UserInputService.PreferredInput
@@ -53,6 +54,13 @@ function PreferredInput.Init(scope: any?)
 	end
 end
 
+local function fromName(name: string): EnumItem?
+	for _, item in _current.EnumType:GetEnumItems() do
+		if item.Name == name then return item end
+	end
+	return nil
+end
+
 -- Inject a game-wide signal. That signal must Fire(Enum.PreferredInput)
 -- or a string mapped via ToPreferredInput. Passing nil restores default UIS.
 function PreferredInput.SetSource(customSignal: SignalPlus.Signal<EnumItem | string>?)
@@ -62,14 +70,14 @@ function PreferredInput.SetSource(customSignal: SignalPlus.Signal<EnumItem | str
 	end
 
 	_customSignal = customSignal
-	if customSignal ~= nil and customSignal.Connect ~= nil then
+	if customSignal ~= nil then
 		_customConn = customSignal:Connect(function(val)
-			local mapped: any = nil
+			local mapped: EnumItem? = nil
 			if typeof(val) == "EnumItem" then
 				mapped = val
 			elseif typeof(val) == "string" then
 				-- string fallback: "KeyboardAndMouse" / "Gamepad" / "Touch"
-				mapped = (Enum :: any).PreferredInput[val]
+				mapped = fromName(val)
 			end
 			if mapped ~= nil then setCurrent(mapped) end
 		end)

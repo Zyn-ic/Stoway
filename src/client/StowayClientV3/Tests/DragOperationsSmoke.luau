@@ -24,13 +24,14 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SharedCore = require(ReplicatedStorage.Shared.Stoway.CoreStore)
+local CoreTypes = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
 local ClientStore = require(script.Parent.Parent.Controller.ClientStore)
 local ClientController = require(script.Parent.Parent.Controller.ClientController)
 local Signals = require(script.Parent.Parent.Signals)
 
 local Smoke = {}
 
-local function assertEq(actual: any, expected: any, msg: string)
+local function assertEq(actual: unknown, expected: unknown, msg: string)
 	if actual ~= expected then
 		error(`{msg} expected {tostring(expected)} got {tostring(actual)}`, 2)
 	end
@@ -40,31 +41,38 @@ local function assertTrue(v: boolean, msg: string)
 	if not v then error(msg, 2) end
 end
 
-local function seedState(overrides: { [string]: any }, itemsSetup: ((any) -> ())?): any
-	local baseSettings = {
-		Limit = 100,
-		HotbarType = "Static",
-		BackpackEnabled = true,
-		CanStack = true,
-		MaxStackSize = 5,
-		StackOnSwap = false,
-		StackRequiredFields = { "Rarity", "Type" },
-		StackBlacklist = { Legendary = true, Mythic = true, Special = true },
-		Sorting = false,
-		SortOrder = "None",
-	}
-	for k, v in overrides do (baseSettings :: any)[k] = v end
-	local s = SharedCore.new(baseSettings :: any)
-	if itemsSetup then itemsSetup(s) end
+local function requireItem(state: CoreTypes.InventoryState, uuid: string?, context: string): CoreTypes.Item
+	if not uuid then error(`{context}: expected an occupied slot`, 2) end
+	local item = state.Items[uuid]
+	if not item then error(`{context}: missing item {uuid}`, 2) end
+	return item
+end
+
+local function requireUUID(uuid: string?, context: string): string
+	if not uuid then error(`{context}: expected an occupied slot`, 2) end
+	return uuid
+end
+
+local function requireNumber(value: number?, context: string): number
+	if not value then error(`{context}: expected a number`, 2) end
+	return value
+end
+
+local function seedState(
+	overrides: CoreTypes.SettingsOverrides,
+	itemsSetup: ((state: CoreTypes.InventoryState) -> ())?
+): CoreTypes.InventoryState
+	local state = SharedCore.new(overrides)
+	if itemsSetup then itemsSetup(state) end
 	-- Bind controller so ClientStore mirrors state (needed for Router peek)
 	pcall(function() ClientController.Destroy() end)
 	local signals = Signals
-	ClientStore.Init(s :: any)
-	ClientController.Init(signals, s)
-	return s
+	ClientStore.Init(state)
+	ClientController.Init(signals, state)
+	return state
 end
 
-local function printState(tag: string, s: any)
+local function printState(tag: string, s: CoreTypes.InventoryState)
 	local hotbarStr = {}
 	for i = 1, 10 do
 		local uuid = s.Hotbar[i]
@@ -104,17 +112,17 @@ function Smoke.run()
 		-- Swap occupied->occupied (router would call Swap)
 		local r = ClientController.Swap({ Type = "Hotbar", Slot = 1 }, { Type = "Hotbar", Slot = 2 })
 		assertTrue(r.ok, "Swap HH occupied should ok")
-		assertEq(s.Items[s.Hotbar[1]].Id, "Shield", "H1 Shield after swap")
-		assertEq(s.Items[s.Hotbar[2]].Id, "Sword", "H2 Sword after swap")
+		assertEq(requireItem(s, s.Hotbar[1], "H1").Id, "Shield", "H1 Shield after swap")
+		assertEq(requireItem(s, s.Hotbar[2], "H2").Id, "Sword", "H2 Sword after swap")
 		printState("1-swap", s)
 		-- Move to empty hole (router empty->Move)
 		local r2 = ClientController.Move({ Type = "Hotbar", Slot = 1 }, { Type = "Hotbar", Slot = 3 })
 		assertTrue(r2.ok, "Move HH to empty should ok in Static")
 		assertEq(s.Hotbar[1], nil, "H1 empty after move")
-		assertEq(s.Items[s.Hotbar[3]].Id, "Shield", "H3 Shield after move")
+		assertEq(requireItem(s, s.Hotbar[3], "H3").Id, "Shield", "H3 Shield after move")
 		printState("1-move", s)
 		-- Click equip (SlotView MouseButton1Click simulation)
-		local uuid = s.Hotbar[3] :: string
+		local uuid = requireUUID(s.Hotbar[3], "Equip")
 		local eq = ClientController.Equip(uuid)
 		assertTrue(eq.ok, "Equip should ok")
 		assertEq(s.EquippedItemUUID, uuid, "Equipped follows Shield at H3")
@@ -192,8 +200,10 @@ function Smoke.run()
 		end)
 		-- Try Move onto occupied -> should reject DESTINATION_OCCUPIED, not stack
 		local r2 = ClientController.Move({ Type = "Hotbar", Slot = 1 }, { Type = "Storage", Slot = 1 })
-		assertTrue(not r2.ok, "Move onto occupied should reject, never stacks")
-		assertEq(r2.error and r2.error.message, "DESTINATION_OCCUPIED", "Move occupied error")
+		if r2.ok then
+			error("Move onto occupied should reject, never stacks")
+		end
+		assertEq(r2.error.message, "DESTINATION_OCCUPIED", "Move occupied error")
 		printState("3-moveNoStack", s2)
 
 		-- Blacklisted rarity should NOT stack even with StackOnSwap=true
@@ -205,8 +215,8 @@ function Smoke.run()
 		local r3 = ClientController.Swap({ Type = "Hotbar", Slot = 1 }, { Type = "Storage", Slot = 1 })
 		assertTrue(r3.ok, "Swap blacklisted should still ok (positional swap)")
 		-- Should have swapped positions, not stacked
-		assertEq(s3.Items[s3.Hotbar[1]].Amount, 3, "H1 now has dest 3 (swapped, not stacked)")
-		assertEq(s3.Items[s3.Storage[1]].Amount, 2, "S1 now has source 2")
+		assertEq(requireItem(s3, s3.Hotbar[1], "H1").Amount, 3, "H1 now has dest 3 (swapped, not stacked)")
+		assertEq(requireItem(s3, s3.Storage[1], "S1").Amount, 2, "S1 now has source 2")
 		printState("3-blacklist-swap", s3)
 		print("  [PASS] 3 StackOnSwap")
 	end
@@ -222,8 +232,8 @@ function Smoke.run()
 		end)
 		printState("4-init", s)
 		-- After compact, hotbar should be packed: [1]=Sword, [2]=Shield, [3]=nil
-		assertEq(s.Items[s.Hotbar[1]].Id, "Sword", "D H1 Sword")
-		assertEq(s.Items[s.Hotbar[2]].Id, "Shield", "D H2 Shield")
+		assertEq(requireItem(s, s.Hotbar[1], "D H1").Id, "Sword", "D H1 Sword")
+		assertEq(requireItem(s, s.Hotbar[2], "D H2").Id, "Shield", "D H2 Shield")
 		assertEq(s.Hotbar[3], nil, "D H3 empty (invisible)")
 		-- Move in Dynamic to empty hole should be rejected (router fallback covers, direct Move should reject)
 		local r = ClientController.Move({ Type = "Hotbar", Slot = 1 }, { Type = "Hotbar", Slot = 5 })
@@ -241,9 +251,9 @@ function Smoke.run()
 		-- Directly test Swap SH append via our router logic: find first nil
 		local appendSlot: number? = nil
 		for i = 1, 10 do if s.Hotbar[i]==nil then appendSlot=i; break end end
-		assertTrue(appendSlot ~= nil, "Found append slot")
+		local targetSlot = requireNumber(appendSlot, "Dynamic append")
 		local _storageUUID = s.Storage[1]
-		local r4 = ClientController.Swap({ Type = "Storage", Slot = 1 }, { Type = "Hotbar", Slot = appendSlot :: number })
+		local r4 = ClientController.Swap({ Type = "Storage", Slot = 1 }, { Type = "Hotbar", Slot = targetSlot })
 		assertTrue(r4.ok, "Storage->Hotbar append via Swap should ok in Dynamic")
 		printState("4-storageToHotbarAppend", s)
 		print("  [PASS] 4 Dynamic")

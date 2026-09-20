@@ -22,7 +22,7 @@ local SkinLoader = {}
 
 -- Parse a comma-separated Studio attribute into a name list. Non-strings
 -- and empties resolve to nil (caller falls back to built-in defaults).
-local function parseNameList(value: any): { string }?
+local function parseNameList(value: unknown): { string }?
 	if typeof(value) ~= "string" then return nil end
 	local names: { string } = {}
 	for part in string.gmatch(value, "[^,]+") do
@@ -33,7 +33,7 @@ local function parseNameList(value: any): { string }?
 	return names
 end
 
-local function parseBleedPx(value: any): number?
+local function parseBleedPx(value: unknown): number?
 	if typeof(value) == "number" then return value end
 	return nil
 end
@@ -75,7 +75,7 @@ function SkinLoader.Load(scope: Fusion.Scope<typeof(Fusion)>, playerGui: PlayerG
 	-- from the skin folder when present. Absent/failed = nil hooks and
 	-- everything still works (absent = legacy, same rule as slot attrs).
 	-- Validated against the 11-name contract; unknown entries warn.
-	local hookFuncs: { [string]: any }? = nil
+	local hookFuncs: CoreTypes.HookMap? = nil
 	local hookFolder = skinFolder:FindFirstChild("HookFuncs")
 	if hookFolder then
 		local hookModule: ModuleScript? = nil
@@ -88,13 +88,14 @@ function SkinLoader.Load(scope: Fusion.Scope<typeof(Fusion)>, playerGui: PlayerG
 		if hookModule then
 			local ok, required = pcall(require, hookModule)
 			if ok and typeof(required) == "table" then
-				hookFuncs = required :: { [string]: any }
-				for name, fn in hookFuncs :: { [string]: any } do
+				local validated: CoreTypes.HookMap = required :: CoreTypes.HookMap
+				for name, fn in validated do
 					if typeof(fn) ~= "function" then
 						warn(`[SkinLoader] hook '{name}' in '{skinAssetName}' is not a function, ignoring`)
-						;(hookFuncs :: { [string]: any })[name] = nil
+						validated[name] = nil
 					end
 				end
+				hookFuncs = validated
 			else
 				warn(`[SkinLoader] HookFuncs in '{skinAssetName}' failed to require: {tostring(required)}`)
 			end

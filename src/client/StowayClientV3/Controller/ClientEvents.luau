@@ -46,38 +46,34 @@ ClientEvents.Deselected = SignalPlus() :: SignalPlus.Signal<CoreTypes.SlotType, 
 -- hooks yield (OnSlotHover task.waits twice), so a synchronous call
 -- would stall the input/drag thread. pcall'd: a throwing hook warns
 -- once and never breaks inventory.
-function ClientEvents.CallHook(hooks: { [string]: any }?, hookName: string, ...: any)
+function ClientEvents.CallHook(hooks: CoreTypes.HookMap?, hookName: string, ...: unknown)
 	if hooks == nil then return end
 	local fn = hooks[hookName]
 	if typeof(fn) ~= "function" then return end
+	local invoke = fn :: (...unknown) -> ()
 	local args = table.pack(...)
 	task.spawn(function()
-		local ok, err = pcall(fn, table.unpack(args, 1, args.n))
+		local ok = pcall(function()
+			invoke(table.unpack(args, 1, args.n))
+		end)
 		if not ok then
-			warn(`[ClientEvents] hook '{hookName}' threw: {tostring(err)}`)
+			warn(`[ClientEvents] hook '{hookName}' threw`)
 		end
 	end)
 end
 
 function ClientEvents.Destroy()
-	-- any: the 11 signals have different arities; the loop only
-	-- needs DisconnectAll, which they all share.
-	local all: { any } = {
-		ClientEvents.SlotClicked,
-		ClientEvents.SlotHovered,
-		ClientEvents.DragStarted,
-		ClientEvents.DragEnded,
-		ClientEvents.Equipped,
-		ClientEvents.Unequipped,
-		ClientEvents.ItemAdded,
-		ClientEvents.ItemRemoved,
-		ClientEvents.Swapped,
-		ClientEvents.Selected,
-		ClientEvents.Deselected,
-	}
-	for _, signal in all do
-		signal:DisconnectAll()
-	end
+	ClientEvents.SlotClicked:DisconnectAll()
+	ClientEvents.SlotHovered:DisconnectAll()
+	ClientEvents.DragStarted:DisconnectAll()
+	ClientEvents.DragEnded:DisconnectAll()
+	ClientEvents.Equipped:DisconnectAll()
+	ClientEvents.Unequipped:DisconnectAll()
+	ClientEvents.ItemAdded:DisconnectAll()
+	ClientEvents.ItemRemoved:DisconnectAll()
+	ClientEvents.Swapped:DisconnectAll()
+	ClientEvents.Selected:DisconnectAll()
+	ClientEvents.Deselected:DisconnectAll()
 end
 
 -----------------------------

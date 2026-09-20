@@ -15,6 +15,7 @@ local Fusion = require(ReplicatedStorage.Packages.fusion)
 
 local Types = require(script.Parent.Parent.CoreStore.Types)
 local Query = require(script.Parent.Parent.CoreStore.Query)
+local Settings = require(ReplicatedStorage.Shared.Stoway.Settings)
 
 local ClientStore = {}
 
@@ -22,26 +23,22 @@ local ClientStore = {}
 -- ROOT SCOPE + ATOMS --
 -----------------------------
 
-ClientStore.RootScope = Fusion.scoped(Fusion) :: Fusion.Scope<typeof(Fusion)>
+ClientStore.RootScope = Fusion.scoped(Fusion)
 
 local Scope: Fusion.Scope<typeof(Fusion)> = ClientStore.RootScope
 
--- Typed wrappers hide Fusion's unannotated generics from the new solver.
--- Call sites stay strictly typed, single :: any lives inside wrapper.
-local function peekValue(v: any): any
-	return (Fusion.peek :: any)(v)
-end
+local initialItems: { [string]: Types.Item } = {}
+local initialHotbar: { [number]: string? } = {}
+local initialStorage: { string } = {}
+local initialEquippedItemUUID: string? = nil
+local initialSettings: Types.Settings? = nil
 
-local function newValue<T>(init: T): Fusion.Value<T>
-	return (Scope :: any):Value(init) :: Fusion.Value<T>
-end
-
-ClientStore.Items = newValue({} :: { [string]: Types.Item })
-ClientStore.Hotbar = newValue({} :: { [number]: string? })
-ClientStore.Storage = newValue({} :: { string })
-ClientStore.EquippedItemUUID = newValue(nil :: string?)
-ClientStore.Weight = newValue(0)
-ClientStore.Settings = newValue(nil :: Types.Settings?)
+ClientStore.Items = Scope:Value(initialItems)
+ClientStore.Hotbar = Scope:Value(initialHotbar)
+ClientStore.Storage = Scope:Value(initialStorage)
+ClientStore.EquippedItemUUID = Scope:Value(initialEquippedItemUUID)
+ClientStore.Weight = Scope:Value(0)
+ClientStore.Settings = Scope:Value(initialSettings)
 
 -----------------------------
 -- PUBLIC FUNCTIONS --
@@ -55,45 +52,77 @@ function ClientStore.Init(snapshot: Types.InventoryState)
 	ClientStore.Storage:set(table.clone(snapshot.Storage))
 	ClientStore.EquippedItemUUID:set(snapshot.EquippedItemUUID)
 	ClientStore.Weight:set(snapshot.Weight)
-	if typeof(snapshot.Settings) == "table" then
-		ClientStore.Settings:set((table.clone :: any)(snapshot.Settings) :: Types.Settings)
-	else
-		ClientStore.Settings:set((snapshot.Settings :: any) :: Types.Settings?)
-	end
+	ClientStore.SetEngineSettings(snapshot.Settings)
+end
+
+function ClientStore.SetEngineSettings(settings: Types.EngineSettings)
+	local clientSettings = Settings.getDefault()
+	clientSettings.HotbarType = settings.HotbarType
+	clientSettings.MaxHotbarSlots = settings.MaxHotbarSlots
+	clientSettings.Limit = settings.Limit
+	clientSettings.CanStack = settings.CanStack
+	clientSettings.MaxStackSize = settings.MaxStackSize
+	clientSettings.BackpackEnabled = settings.BackpackEnabled
+	clientSettings.Sorting = settings.Sorting
+	clientSettings.SortOrder = settings.SortOrder
+	clientSettings.StackOnSwap = settings.StackOnSwap
+	clientSettings.StackRequiredFields = table.clone(settings.StackRequiredFields)
+	clientSettings.StackBlacklist = table.clone(settings.StackBlacklist)
+	clientSettings.DefaultDroppable = settings.DefaultDroppable
+	ClientStore.Settings:set(clientSettings)
 end
 
 function ClientStore.GetSnapshot(): Types.InventoryState
-	local items: { [string]: Types.Item } = peekValue(ClientStore.Items)
-	local hotbar: { [number]: string? } = peekValue(ClientStore.Hotbar)
-	local storage: { string } = peekValue(ClientStore.Storage)
-	local equipped: string? = peekValue(ClientStore.EquippedItemUUID)
-	local weight: number = peekValue(ClientStore.Weight)
-	local settingsRaw: Types.Settings? = peekValue(ClientStore.Settings)
-	-- Snapshot expects Settings non-nil after Init (cold start falls back to nil-spoofed any)
-	local settings: Types.Settings = settingsRaw :: any
+	local items: { [string]: Types.Item } = Fusion.peek(ClientStore.Items)
+	local hotbar: { [number]: string? } = Fusion.peek(ClientStore.Hotbar)
+	local storage: { string } = Fusion.peek(ClientStore.Storage)
+	local equipped: string? = Fusion.peek(ClientStore.EquippedItemUUID)
+	local weight: number = Fusion.peek(ClientStore.Weight)
+	local settings: Types.Settings = Fusion.peek(ClientStore.Settings) or Settings.getDefault()
 	return {
 		Items = items,
+		ItemsByID = {},
 		Hotbar = hotbar,
 		Storage = storage,
+		LocationByUUID = {},
+		MetadataIndex = {},
 		EquippedItemUUID = equipped,
 		Weight = weight,
 		Settings = settings,
 	}
 end
 
+function ClientStore.GetEngineSettings(): Types.EngineSettings
+	local settings: Types.Settings = Fusion.peek(ClientStore.Settings) or Settings.getDefault()
+	return {
+		HotbarType = settings.HotbarType,
+		MaxHotbarSlots = settings.MaxHotbarSlots,
+		Limit = settings.Limit,
+		CanStack = settings.CanStack,
+		MaxStackSize = settings.MaxStackSize,
+		BackpackEnabled = settings.BackpackEnabled,
+		Sorting = settings.Sorting,
+		SortOrder = settings.SortOrder,
+		StackOnSwap = settings.StackOnSwap,
+		StackRequiredFields = table.clone(settings.StackRequiredFields),
+		StackBlacklist = table.clone(settings.StackBlacklist),
+		DefaultDroppable = settings.DefaultDroppable,
+	}
+end
+
 function ClientStore.GetSettings(): Types.Settings?
-	local settings: Types.Settings? = peekValue(ClientStore.Settings)
+	local settings: Types.Settings? = Fusion.peek(ClientStore.Settings)
 	return settings
 end
 
 function ClientStore.GetItem(uuid: string?): Types.Item?
-	local items: { [string]: Types.Item } = peekValue(ClientStore.Items)
+	local items: { [string]: Types.Item } = Fusion.peek(ClientStore.Items)
 	return Query.getItem(items, uuid)
 end
 
 function ClientStore.GetSlotOf(uuid: string): (Types.SlotType?, number?)
-	local hotbar: { [number]: string? } = peekValue(ClientStore.Hotbar)
-	local storage: { string } = peekValue(ClientStore.Storage)
+	local hotbar: { [number]: string? } = Fusion.peek(ClientStore.Hotbar)
+	local storage: { string } = Fusion.peek(ClientStore.Storage)
 	return Query.findSlotByUUID(hotbar, storage, uuid)
 end
 

@@ -10,8 +10,10 @@
 -- DEPENDENCIES --
 -----------------------------
 
-local CoreStore = require(game:GetService("ReplicatedStorage").Shared.Stoway.CoreStore)
-local Types = require(game:GetService("ReplicatedStorage").Shared.Stoway.CoreStore.Types)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CoreStore = require(ReplicatedStorage.Shared.Stoway.CoreStore)
+local Types = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
+local Remotes = require(ReplicatedStorage.Shared.Stoway.StowayRemotes)
 
 -----------------------------
 -- VARIABLES --
@@ -411,6 +413,42 @@ local function cmdSetHotbarType(player: Player, stoway: StowayApi, args: { strin
 	end
 end
 
+local function normalizeSkin(raw: string?): string?
+	if not raw then return nil end
+	local normalized = raw:sub(1, 1):upper() .. raw:sub(2):lower()
+	if normalized == "Default" or normalized == "Modern" or normalized == "Metal" then
+		return normalized
+	end
+	return nil
+end
+
+local function sendLayout(player: Player, layout: string, skin: string)
+	Remotes.LayoutChanged:FireClient(player, {
+		layout = layout,
+		skin = skin,
+	})
+	print(("[Settings] UI layout changed to %s / %s for %s"):format(layout, skin, player.Name))
+end
+
+local function cmdSetSkin(player: Player, stoway: StowayApi, args: { string })
+	local skin = normalizeSkin(args[2])
+	if not skin then
+		print("Usage: /set_skin [Default|Modern|Metal]")
+		return
+	end
+	sendLayout(player, "StandardHotbarStorage", skin)
+end
+
+local function cmdSetLayout(player: Player, stoway: StowayApi, args: { string })
+	local layout = args[2]
+	local skin = normalizeSkin(args[3] or "Default")
+	if layout ~= "StandardHotbarStorage" or not skin then
+		print("Usage: /set_layout StandardHotbarStorage [Default|Modern|Metal]")
+		return
+	end
+	sendLayout(player, layout, skin)
+end
+
 local function cmdToggleSort(player: Player, stoway: StowayApi, args: { string })
 	local state = requireState(player, stoway)
 	if not state then return end
@@ -444,6 +482,8 @@ local function cmdHelp(player: Player, stoway: StowayApi, args: { string })
 	print("/set_max_stack [n]              - Set max stack size")
 	print("/set_hotbar_slots [n]           - Set hotbar slot count")
 	print("/set_hotbar_type [Static|Dynamic] - Switch hotbar type (auto-compacts)")
+	print("/set_skin [Default|Modern|Metal]  - Switch the UI skin")
+	print("/set_layout StandardHotbarStorage [skin] - Switch layout and skin")
 	print("/toggle_sort                    - Toggle auto-sort on/off")
 	print("═══════════════════════════════════════════════════════════════")
 end
@@ -470,6 +510,8 @@ local commands: { [string]: (Player, StowayApi, { string }) -> () } = {
 	set_max_stack = cmdSetMaxStack,
 	set_hotbar_slots = cmdSetHotbarSlots,
 	set_hotbar_type = cmdSetHotbarType,
+	set_skin = cmdSetSkin,
+	set_layout = cmdSetLayout,
 	toggle_sort = cmdToggleSort,
 	help = cmdHelp,
 }

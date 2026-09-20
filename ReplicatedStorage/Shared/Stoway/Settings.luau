@@ -23,6 +23,11 @@ local DEFAULT_CATEGORIES: { [string]: Types.CategoryDef } = {
 	Consumable = { DisplayName = "Consumables", Color = Color3.fromRGB(90, 130, 95), Order = 2 },
 	Material = { DisplayName = "Materials", Color = Color3.fromRGB(130, 120, 90), Order = 3 },
 	Armor = { DisplayName = "Armor", Color = Color3.fromRGB(100, 110, 145), Order = 4 },
+	Trinket = { DisplayName = "Trinkets", Color = Color3.fromRGB(130, 95, 150), Order = 5 },
+	-- Catch-all for typeless items (groupStorageByType buckets them as
+	-- "Other") and any Type with no dedicated entry. Sorted last so real
+	-- categories always lead.
+	Other = { DisplayName = "Other", Color = Color3.fromRGB(105, 105, 115), Order = 99 },
 }
 
 local DEFAULT_SETTINGS: Types.Settings = {

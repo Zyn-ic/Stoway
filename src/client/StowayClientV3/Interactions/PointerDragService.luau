@@ -26,6 +26,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Fusion = require(ReplicatedStorage.Packages.fusion)
 local CoreTypes = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
+local ClientTypes = require(script.Parent.Parent.CoreStore.Types)
 local ClientEvents = require(script.Parent.Parent.Controller.ClientEvents)
 
 local PointerDragService = {}
@@ -50,7 +51,7 @@ type SelfData = {
 	_backpackFrame: Frame?,
 	_hotbarFrame: Frame?,
 	_ghostHidden: { string }?,
-	_hooks: { [string]: any }?,
+	_hooks: ClientTypes.HookMap?,
 	_enabled: boolean,
 	_dropMap: { [GuiObject]: SlotRef },
 	_dropFrames: { GuiObject },
@@ -99,7 +100,7 @@ function PointerDragService.new(
 	backpackFrame: Frame?,
 	hotbarFrame: Frame?,
 	ghostHidden: { string }?,
-	hooks: { [string]: any }?
+	hooks: ClientTypes.HookMap?
 ): Service
 	local self = setmetatable({}, PointerDragService) :: Service
 	self._layoutScope = layoutScope

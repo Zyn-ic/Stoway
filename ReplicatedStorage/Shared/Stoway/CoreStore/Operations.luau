@@ -204,7 +204,7 @@ local function createItem(
 		UUID = uuid,
 		Id = itemId,
 		Amount = finalAmount,
-		Metadata = Utils.deepCopy(metadata) :: Types.ItemMetadata,
+		Metadata = Utils.deepCopy(metadata),
 	}
 
 	state.Items[uuid] = item
@@ -499,7 +499,7 @@ function Operations.remove(
 		UUID = item.UUID,
 		Id = item.Id,
 		Amount = amountToRemove,
-		Metadata = Utils.deepCopy(item.Metadata) :: Types.ItemMetadata,
+		Metadata = Utils.deepCopy(item.Metadata),
 	}
 
 	-- Partial removal — item still has Amount > 0
@@ -814,7 +814,7 @@ function Operations.split(
 		UUID = Utils.generateUUID(),
 		Id = item.Id,
 		Amount = splitAmount,
-		Metadata = Utils.deepCopy(item.Metadata) :: Types.ItemMetadata,
+		Metadata = Utils.deepCopy(item.Metadata),
 	}
 
 	state.Items[newItem.UUID] = newItem
@@ -925,7 +925,7 @@ end
 function Operations.updateMetadata(
 	state: Types.InventoryState,
 	uuid: string,
-	updates: { [string]: any }
+	updates: Types.MetadataUpdates
 ): Types.MetadataUpdateResult
 	local item = state.Items[uuid]
 
@@ -933,7 +933,7 @@ function Operations.updateMetadata(
 		return Err("ITEM_NOT_FOUND")
 	end
 
-	local oldMetadata = table.clone(item.Metadata) :: Types.ItemMetadata
+	local oldMetadata: Types.ItemMetadata = table.clone(item.Metadata)
 	local updatedFields: { string } = {}
 
 	for key, value in updates do

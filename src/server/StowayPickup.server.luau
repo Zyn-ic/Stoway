@@ -15,6 +15,7 @@
 local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
 local ServerScriptService = game:GetService("ServerScriptService")
+local Workspace = game:GetService("Workspace")
 
 -----------------------------
 -- DEPENDENCIES --
@@ -29,12 +30,15 @@ local Stoway = require(ServerScriptService.Services.StowayServerV3_0_0)
 local TAG = "Stoway"
 local CLAIM_LIFETIME = 15
 
+local configuredTools = setmetatable({} :: { [Tool]: boolean }, { __mode = "k" })
+local pickupInProgress = setmetatable({} :: { [Tool]: boolean }, { __mode = "k" })
+
 -----------------------------
 -- PRIVATE FUNCTIONS --
 -----------------------------
 
--- Metadata is everything on the tool except the system attributes the
--- Drop route stamps (UUID/Amount/Id). Attribute types round-trip.
+-- Metadata is everything on the tool except the attributes used to identify
+-- the dropped item itself. Other attributes round-trip as item metadata.
 local function readMetadata(tool: Tool): { [string]: any }
 	local meta: { [string]: any } = {}
 	for key, value in tool:GetAttributes() do
@@ -46,8 +50,12 @@ local function readMetadata(tool: Tool): { [string]: any }
 end
 
 local function setup(tool: Tool)
-	if tool:GetAttribute("StowayClaimed") then return end
-	tool:SetAttribute("StowayClaimed", true)
+	-- Only a descendant of Workspace is a live world drop and may receive a
+	-- prompt or Debris timer. A tagged template can briefly exist elsewhere;
+	-- Workspace.DescendantAdded below catches it when it becomes live.
+	if not tool:IsDescendantOf(Workspace) then return end
+	if configuredTools[tool] then return end
+	configuredTools[tool] = true
 
 	-- The route strips already; this covers hand-placed tagged tools.
 	-- Default touch pickup must never fire: the prompt is the only way in.
@@ -69,18 +77,18 @@ local function setup(tool: Tool)
 	prompt.Parent = handle or tool
 	prompt.Triggered:Connect(function(player: Player)
 		if tool.Parent == nil then return end
-		if tool:GetAttribute("StowayPickedUp") then return end
-		tool:SetAttribute("StowayPickedUp", true)
+		if pickupInProgress[tool] then return end
 		local id = tool:GetAttribute("Id")
 		local amount = tool:GetAttribute("Amount")
 		if typeof(id) ~= "string" then return end
+		pickupInProgress[tool] = true
 		local itemId: string = id
 		local itemAmount: number = if typeof(amount) == "number" then amount else 1
 		local res = Stoway.AddToBackpack(player, { Id = itemId, Amount = itemAmount, Metadata = readMetadata(tool) }, nil, true)
 		if res.ok then
 			tool:Destroy()
 		else
-			tool:SetAttribute("StowayPickedUp", false)
+			pickupInProgress[tool] = nil
 			warn(`[StowayPickup] add failed for {player.Name}: {res.error.message}`)
 		end
 	end)
@@ -97,6 +105,16 @@ for _, inst in CollectionService:GetTagged(TAG) do
 end
 CollectionService:GetInstanceAddedSignal(TAG):Connect(function(inst: Instance)
 	if inst:IsA("Tool") then setup(inst) end
+end)
+
+-- A Tool can inherit a CollectionService tag from a Studio template while it
+-- is cloned into a Character or Backpack. In that case the tag-added signal
+-- fires before the Tool reaches Workspace; catch the later parenting event so
+-- the world-drop prompt is still installed.
+Workspace.DescendantAdded:Connect(function(inst: Instance)
+	if inst:IsA("Tool") and CollectionService:HasTag(inst, TAG) then
+		setup(inst)
+	end
 end)
 
 print("[StowayPickup] watching for tagged tools")

@@ -23,6 +23,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local SharedCore = require(ReplicatedStorage.Shared.Stoway.CoreStore)
+local CoreTypes = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
 local ClientStore = require(script.Parent.Parent.Controller.ClientStore)
 local MockData = require(script.Parent.Parent.Mock.MockData)
 local Signals = require(script.Parent.Parent.Signals)
@@ -74,14 +75,26 @@ local function getSlotButtonVisible(slotFrame: Frame?): boolean
 	return (btn :: GuiObject).Visible
 end
 
-local function assertEqual(actual: any, expected: any, msg: string)
+local function assertEqual(actual: unknown, expected: unknown, msg: string)
 	if actual ~= expected then
 		error(`{msg} | expected {tostring(expected)}, got {tostring(actual)}`, 2)
 	end
 end
 
-local function assertTrue(v: any, msg: string)
+local function assertTrue(v: boolean, msg: string)
 	if not v then error(msg, 2) end
+end
+
+local function requireItem(state: CoreTypes.InventoryState, uuid: string?, context: string): CoreTypes.Item
+	if not uuid then error(`{context}: expected an occupied slot`, 2) end
+	local item = state.Items[uuid]
+	if not item then error(`{context}: missing item {uuid}`, 2) end
+	return item
+end
+
+local function requireUUID(uuid: string?, context: string): string
+	if not uuid then error(`{context}: expected an occupied slot`, 2) end
+	return uuid
 end
 
 local function flush()
@@ -97,8 +110,8 @@ end
 
 type Case = {
 	title: string,
-	setup: (any) -> any,
-	assert: (any, ScreenGui?, Frame?, Frame?, ScrollingFrame?, TextLabel?) -> (),
+	setup: (typeof(SharedCore)) -> CoreTypes.InventoryState,
+	assert: (CoreTypes.InventoryState, ScreenGui?, Frame?, Frame?, ScrollingFrame?, TextLabel?) -> (),
 }
 
 local cases: { Case } = {}
@@ -140,8 +153,8 @@ table.insert(cases, {
 		return s
 	end,
 	assert = function(state, _gui, hotbar, _backpack, _scrolling, _weight)
-		assertEqual(state.Items[state.Hotbar[1]].Id, "Shield", "H1 Shield")
-		assertEqual(state.Items[state.Hotbar[2]].Id, "Sword", "H2 Sword")
+		assertEqual(requireItem(state, state.Hotbar[1], "H1").Id, "Shield", "H1 Shield")
+		assertEqual(requireItem(state, state.Hotbar[2], "H2").Id, "Sword", "H2 Sword")
 		local f1 = getSlotFrame(hotbar, "Hotbar-1")
 		local f2 = getSlotFrame(hotbar, "Hotbar-2")
 		assertTrue(getSlotButtonVisible(f1) and getSlotButtonVisible(f2), "Both slotbuttons visible")
@@ -157,13 +170,13 @@ table.insert(cases, {
 		local s = SC.new({ Limit = 100, HotbarType = "Static" })
 		SC.addToHotbar(s, { Id = "Sword", Amount = 1, Metadata = { Rarity = "Rare", Type = "Weapon", Image = "rbxassetid://111" } })
 		SC.addToHotbar(s, { Id = "Shield", Amount = 1, Metadata = { Rarity = "Common", Type = "Armor", Image = "rbxassetid://222" } })
-		SC.equip(s, s.Hotbar[1])
+		SC.equip(s, requireUUID(s.Hotbar[1], "Equip"))
 		SC.swap(s, { Type = "Hotbar", Slot = 1 }, { Type = "Hotbar", Slot = 2 })
 		return s
 	end,
 	assert = function(state, _gui, hotbar, _backpack, _scrolling, _weight)
-		assertEqual(state.Items[state.Hotbar[1]].Id, "Shield", "H1 Shield after swap")
-		assertEqual(state.Items[state.Hotbar[2]].Id, "Sword", "H2 Sword after swap")
+		assertEqual(requireItem(state, state.Hotbar[1], "H1").Id, "Shield", "H1 Shield after swap")
+		assertEqual(requireItem(state, state.Hotbar[2], "H2").Id, "Sword", "H2 Sword after swap")
 		assertEqual(state.EquippedItemUUID, state.Hotbar[2], "Equipped follows Sword to H2")
 		local f1 = getSlotFrame(hotbar, "Hotbar-1")
 		local f2 = getSlotFrame(hotbar, "Hotbar-2")
@@ -182,15 +195,17 @@ table.insert(cases, {
 		local s = SC.new({ Limit = 100, HotbarType = "Static" })
 		SC.addToHotbar(s, { Id = "Sword", Amount = 1, Metadata = { Rarity = "Rare", Type = "Weapon", Image = "rbxassetid://111" } })
 		SC.addToHotbar(s, { Id = "Shield", Amount = 1, Metadata = { Rarity = "Common", Type = "Armor", Image = "rbxassetid://222" } })
-		SC.equip(s, s.Hotbar[1])
+		SC.equip(s, requireUUID(s.Hotbar[1], "Equip"))
 		ClientStore.Init(s)
 		ClientController.Init(Signals, s)
 		Signals.Swap:Fire({ Type = "Hotbar", Slot = 1 }, { Type = "Hotbar", Slot = 2 })
-		return ClientController.GetState()
+		local state = ClientController.GetState()
+		if not state then error("ClientController did not retain the signal test state") end
+		return state
 	end,
 	assert = function(state, _gui, hotbar, _backpack, _scrolling, _weight)
-		assertEqual(state.Items[state.Hotbar[1]].Id, "Shield", "H1 Shield via Signal")
-		assertEqual(state.Items[state.Hotbar[2]].Id, "Sword", "H2 Sword via Signal")
+		assertEqual(requireItem(state, state.Hotbar[1], "H1").Id, "Shield", "H1 Shield via Signal")
+		assertEqual(requireItem(state, state.Hotbar[2], "H2").Id, "Sword", "H2 Sword via Signal")
 		assertEqual(state.EquippedItemUUID, state.Hotbar[2], "Equipped follows via Signal")
 		local f1 = getSlotFrame(hotbar, "Hotbar-1")
 		local f2 = getSlotFrame(hotbar, "Hotbar-2")
@@ -211,23 +226,24 @@ function VisualHarness.run(intervalSec: number?)
 	for idx, case in cases do
 		print(`\n[Case {idx}] {case.title}`)
 		pcall(function() ClientController.Destroy() end)
-		local okSetup, stateOrErr = pcall(case.setup, SharedCore)
+	local okSetup, stateOrErr = pcall(case.setup, SharedCore)
 		if not okSetup then warn(`  [SETUP FAIL] {stateOrErr}`); task.wait(interval); continue end
-		local state = stateOrErr :: any
+		local state = stateOrErr
 		local isSignalCase = string.find(case.title, "via SignalPlus") ~= nil
 		if not isSignalCase then
 			pcall(function() ClientController.Destroy() end)
 			local okInit, errInit = pcall(function() ClientStore.Init(state) end)
 			if not okInit then warn(`  [INIT FAIL] {errInit}`); task.wait(interval); continue end
 		else
-			state = ClientController.GetState() or state
+			local currentState = ClientController.GetState()
+			if currentState then state = currentState end
 		end
 		flush()
 		local gui, hotbar, backpack, scrolling, weight, _search = getGui()
-		local packed = table.pack(pcall(case.assert, state, gui, hotbar, backpack, scrolling, weight))
-		local okAssert = packed[1] :: boolean
-		local errAssert = packed[2]
-		if okAssert then print(`  [PASS] {case.title}`) else warn(`  [FAIL] {case.title}: {errAssert}`) end
+		local okAssert = pcall(function()
+			case.assert(state, gui, hotbar, backpack, scrolling, weight)
+		end)
+		if okAssert then print(`  [PASS] {case.title}`) else warn(`  [FAIL] {case.title}`) end
 		task.wait(interval)
 	end
 	pcall(function() ClientController.Destroy() end)
@@ -242,13 +258,18 @@ function VisualHarness.runCase(idx: number, intervalSec: number?)
 	pcall(function() ClientController.Destroy() end)
 	local state = case.setup(SharedCore)
 	local isSignalCase = string.find(case.title, "via SignalPlus") ~= nil
-	if not isSignalCase then ClientStore.Init(state) else state = ClientController.GetState() or state end
+	if not isSignalCase then
+		ClientStore.Init(state)
+	else
+		local currentState = ClientController.GetState()
+		if currentState then state = currentState end
+	end
 	flush()
 	local gui, hotbar, backpack, scrolling, weight, _ = getGui()
-	local packed = table.pack(pcall(case.assert, state, gui, hotbar, backpack, scrolling, weight))
-	local ok = packed[1] :: boolean
-	local err = packed[2]
-	if ok then print(`  [PASS] {case.title}`) else warn(`  [FAIL] {case.title}: {err}`) end
+	local ok = pcall(function()
+		case.assert(state, gui, hotbar, backpack, scrolling, weight)
+	end)
+	if ok then print(`  [PASS] {case.title}`) else warn(`  [FAIL] {case.title}`) end
 	task.wait(interval)
 	pcall(function() ClientController.Destroy() end)
 end

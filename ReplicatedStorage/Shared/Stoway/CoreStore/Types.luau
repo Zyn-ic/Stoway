@@ -7,6 +7,7 @@ export type HotbarType = "Static" | "Dynamic"
 export type SortOrder = "None" | "Name" | "Rarity" | "ItemType"
 export type SlotType = "Hotbar" | "Storage"
 export type PlacementMode = "Auto" | "Hotbar" | "Backpack" | "Slot"
+export type MetadataValue = string | number | boolean
 
 export type SlotRef = {
     Type: SlotType,
@@ -21,8 +22,10 @@ export type ItemMetadata = {
     Droppable: boolean?,
     Type: string?,
 
-    [string]: any
+    [string]: MetadataValue?
 }
+
+export type MetadataUpdates = { [string]: MetadataValue? }
 
 export type Item = {
     UUID: string,

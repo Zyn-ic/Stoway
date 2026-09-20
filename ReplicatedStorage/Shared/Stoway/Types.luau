@@ -21,6 +21,8 @@ export type SlotRef = {
 	Slot: number,
 }
 
+export type MetadataValue = string | number | boolean
+
 export type ItemMetadata = {
 	Description: string?,
 	Image: string?,
@@ -28,8 +30,10 @@ export type ItemMetadata = {
 	Rarity: string?,
 	Droppable: boolean?,
 	Type: string?,
-	[string]: any,
+	[string]: MetadataValue?,
 }
+
+export type MetadataUpdates = { [string]: MetadataValue? }
 
 export type Item = {
 	UUID: string,
@@ -66,6 +70,24 @@ export type Settings = {
 	-- grouped view is just one example of settings-driven sort/filter —
 	-- later a given Layout/Skin may bake this in rather than exposing it.
 	GroupByCategory: boolean,
+}
+
+export type SettingsOverrides = {
+	HotbarType: HotbarType?,
+	MaxHotbarSlots: number?,
+	Limit: number?,
+	CanStack: boolean?,
+	MaxStackSize: number?,
+	BackpackEnabled: boolean?,
+	Sorting: boolean?,
+	SortOrder: SortOrder?,
+	StackOnSwap: boolean?,
+	StackRequiredFields: { string }?,
+	StackBlacklist: { [string]: boolean }?,
+	DefaultDroppable: boolean?,
+	UiSkin: string?,
+	Categories: { [string]: CategoryDef }?,
+	GroupByCategory: boolean?,
 }
 
 export type InventoryState = {

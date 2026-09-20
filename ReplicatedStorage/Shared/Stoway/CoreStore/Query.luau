@@ -29,7 +29,7 @@ end
 
 -- Returns all items as an array. O(n) full scan.
 function Query.getAllItems(state: Types.InventoryState): { Types.Item }
-	local items = table.create(#state.Items)
+	local items: { Types.Item } = {}
 
 	for _, item in state.Items do
 		table.insert(items, item)
@@ -167,7 +167,7 @@ function Query.find(state: Types.InventoryState, query: string | { Id: string?, 
 	end
 
 	-- Fallback: full Items scan (no metadata index or no metadata in query)
-	local results = table.create(math.min(#state.Items, 16))
+	local results: { Types.Item } = {}
 
 	for _, item in state.Items do
 		local matches = true
@@ -186,7 +186,7 @@ end
 
 -- Returns all items matching a predicate. O(n) full scan.
 function Query.filter(state: Types.InventoryState, predicate: (Types.Item) -> boolean): { Types.Item }
-	local results = table.create(math.min(#state.Items, 16))
+	local results: { Types.Item } = {}
 
 	for _, item in state.Items do
 		if predicate(item) then

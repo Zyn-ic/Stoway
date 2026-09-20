@@ -71,7 +71,8 @@ end
 
 -- Sentinel value for deleting a metadata field via updateMetadata:
 -- CoreStore.updateMetadata(state, uuid, { HeatDmg = CoreStore.METADATA_DELETE })
-CoreStore.METADATA_DELETE = Operations.METADATA_DELETE
+local METADATA_DELETE: string = Operations.METADATA_DELETE
+CoreStore.METADATA_DELETE = METADATA_DELETE
 
 function CoreStore.add(
 	state: Types.InventoryState,
@@ -185,7 +186,7 @@ end
 function CoreStore.updateMetadata(
 	state: Types.InventoryState,
 	uuid: string,
-	updates: { [string]: any }
+	updates: Types.MetadataUpdates
 ): Types.MetadataUpdateResult
 	local result = Operations.updateMetadata(state, uuid, updates)
 	triggerAutoSort(state)

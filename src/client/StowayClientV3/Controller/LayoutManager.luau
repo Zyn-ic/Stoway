@@ -64,7 +64,7 @@ function LayoutManager.SetLayout(
 
 	LayoutManager.Teardown()
 
-	local layoutScope: Fusion.Scope<typeof(Fusion)> = (rootScope :: any):deriveScope()
+	local layoutScope: Fusion.Scope<typeof(Fusion)> = rootScope:deriveScope()
 	currentLayoutScope = layoutScope
 	currentLayoutKey = hotbarTypeKey
 	currentSkinKey = skinKey

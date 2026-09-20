@@ -88,6 +88,16 @@ function StowayClient.Init()
 		Equipped = ClientController.ApplyServerEquipped,
 		Unequipped = ClientController.ApplyServerUnequipped,
 		FullSync = ClientController.ApplyServerFullSync,
+		LayoutChanged = function(hotbarTypeKey: string, skinKey: string)
+			LayoutManager.SetLayout(
+				ClientStore.RootScope,
+				playerGui,
+				ClientStore,
+				hotbarTypeKey,
+				skinKey
+			)
+			print(`[StowayClientV3] layout changed to {hotbarTypeKey} / {skinKey}`)
+		end,
 	})
 	NetworkClient.RequestSnapshot()
 

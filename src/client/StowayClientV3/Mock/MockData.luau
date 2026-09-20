@@ -10,8 +10,7 @@
 -----------------------------
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local SharedTypes = require(ReplicatedStorage.Shared.Stoway.Types)
-local Settings = require(ReplicatedStorage.Shared.Stoway.Settings)
+local CoreTypes = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
 
 local MockData = {}
 
@@ -19,7 +18,7 @@ local MockData = {}
 -- PRIVATE FUNCTIONS --
 -----------------------------
 
-local function item(uuid: string, id: string, amount: number, rarity: string, itemType: string, isNew: boolean?): SharedTypes.Item
+local function item(uuid: string, id: string, amount: number, rarity: string, itemType: string, isNew: boolean?): CoreTypes.Item
 	return {
 		UUID = uuid,
 		Id = id,
@@ -40,10 +39,8 @@ end
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
--- any: seed straddles the full engine state and the client mirror (nominally
--- distinct under the new solver); both Init paths narrow it on receipt.
-function MockData.build(): any
-	local items: { [string]: SharedTypes.Item } = {
+function MockData.build(): CoreTypes.InventoryState
+	local items: { [string]: CoreTypes.Item } = {
 		["iron-sword-1"] = item("iron-sword-1", "IronSword", 1, "Rare", "Weapon"),
 		["steel-dagger-1"] = item("steel-dagger-1", "SteelDagger", 1, "Common", "Weapon", true),
 		["fire-bow-1"] = item("fire-bow-1", "FireBow", 1, "Legendary", "Weapon", true),
@@ -63,7 +60,20 @@ function MockData.build(): any
 		weight += it.Amount
 	end
 
-	local settings = Settings.getDefault({ Limit = 15000 })
+	local settings: CoreTypes.Settings = {
+		HotbarType = "Static",
+		MaxHotbarSlots = 10,
+		Limit = 15000,
+		CanStack = true,
+		MaxStackSize = 5,
+		BackpackEnabled = true,
+		Sorting = false,
+		SortOrder = "None",
+		StackOnSwap = false,
+		StackRequiredFields = { "Rarity", "Type" },
+		StackBlacklist = { Legendary = true, Mythic = true, Special = true },
+		DefaultDroppable = true,
+	}
 
 	local hotbar: { [number]: string? } = {
 		[1] = "iron-sword-1",
@@ -80,7 +90,7 @@ function MockData.build(): any
 	-- state.LocationByUUID[uuid]) does not hit nil. Mock bypasses State.new()
 	-- on purpose to keep large Amounts for formatAmount demo, so we build
 	-- the derived tables by hand.
-	local locationByUUID: { [string]: any } = {}
+	local locationByUUID: { [string]: CoreTypes.SlotRef } = {}
 	local itemsByID: { [string]: { string } } = {}
 	local metadataIndex: { [string]: { [string]: { string } } } = {}
 
@@ -95,7 +105,7 @@ function MockData.build(): any
 		if not byId then byId = {}; itemsByID[it.Id] = byId end
 		table.insert(byId, uuid)
 		for _, field in { "Rarity", "Type" } do
-			local v = (it.Metadata :: any)[field]
+			local v = it.Metadata[field]
 			if v ~= nil then
 				local sv = tostring(v)
 				local fieldTab = metadataIndex[field]

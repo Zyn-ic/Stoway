@@ -114,7 +114,7 @@ local function getDefaultMetadata(template: Instance): Types.ItemMetadata
 		               else true) :: any,
 		IsGamepass   = (template:GetAttribute("IsGamepass") or false) :: any,
 		Rarity       = (template:GetAttribute("Rarity") or "Common") :: any,
-		Type         = (template:GetAttribute("Type") or "material") :: any,
+		Type         = (template:GetAttribute("Type") or "Material") :: any,
 	}
 end
 
@@ -149,6 +149,16 @@ local function getDropCFrame(player: Player): CFrame?
 	local hrp = character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if not hrp then return nil end
 	return hrp.CFrame * CFrame.new(0, 0, -5)
+end
+
+-- The inventory owns the equipped Tool lifecycle. Remove every Tool before
+-- mounting the next one so stale Roblox instances cannot remain in Character.
+local function clearCharacterTools(character: Model)
+	for _, child in character:GetChildren() do
+		if child:IsA("Tool") then
+			child:Destroy()
+		end
+	end
 end
 
 -- Makes a world tool pickup-proof against default touch behavior: the
@@ -365,19 +375,18 @@ function Stoway.EquipSlot(player: Player, uuid: string, replicate: boolean?): Ty
 		local result = cs.equip(state, uuid)
 		if not result.ok then return result end
 
-		-- Equip Roblox-side: clone tool template into the character
+		-- Equip Roblox-side: clear stale tools, then clone the template into the character
 		local character = player.Character
+		if character then
+			clearCharacterTools(character)
+		end
 		local template = getToolTemplate(item.Id)
 		if character and template then
-			-- Destroy any stale duplicate with this UUID already in character (idempotency)
-			for _, child in character:GetChildren() do
-				if child:IsA("Tool") and child:GetAttribute("UUID") == uuid then
-					child:Destroy()
-					break
-				end
-			end
 			local tool = template:Clone()
 			applyToolAttributes(tool, item)
+			-- The tag is reserved for live world drops. A Studio template may
+			-- carry stale CollectionService state, so never equip that tag.
+			CollectionService:RemoveTag(tool, STOWAY_DROP_TAG)
 			tool.Parent = character  -- parenting a Tool to the Character equips it in Roblox
 		end
 
@@ -390,23 +399,14 @@ function Stoway.UnequipSlot(player: Player, replicate: boolean?): Types.UnequipR
 		local state = _store[player]
 		if not state then print(state); return Result.Err({ kind = EK.NotFound, message = "NO_STATE" }) end
 
-		-- Snapshot UUID before CoreStore clears it
-		local equippedUUID = state.EquippedItemUUID
-
 		local result = cs.unequip(state)
 		if not result.ok then return result end
 
-		-- Unequip Roblox-side: move the tool from Character to Backpack
-		if equippedUUID then
-			local character = player.Character
-			if character then
-				for _, child in character:GetChildren() do
-					if child:IsA("Tool") and child:GetAttribute("UUID") == equippedUUID then
-						child:Destroy()
-						break
-					end
-				end
-			end
+		-- Unequip Roblox-side: remove every Tool from Character, including any
+		-- stale instance left by an earlier equip.
+		local character = player.Character
+		if character then
+			clearCharacterTools(character)
 		end
 
 		return result
@@ -510,14 +510,19 @@ function Stoway.Drop(player: Player, uuid: string, amount: number?, replicate: b
 			worldTool = cloned
 		end
 
-		-- Tag for the pickup script, strip default touch pickup, then
-		-- position 5 studs in front of where the player is looking.
-		CollectionService:AddTag(worldTool, STOWAY_DROP_TAG)
+		-- Strip default touch pickup and position 5 studs in front of where
+		-- the player is looking before making this a live, tagged world drop.
+		-- Remove a stale template/equipped tag before re-adding it after the
+		-- Workspace parent change. This keeps the tag-added pickup signal valid.
+		CollectionService:RemoveTag(worldTool, STOWAY_DROP_TAG)
 		stripTouch(worldTool)
 		if dropCFrame then
 			worldTool:PivotTo(dropCFrame)
 		end
 		worldTool.Parent = Workspace
+		-- Add the tag only after parenting: StowayPickup intentionally ignores
+		-- tagged templates in ServerStorage.
+		CollectionService:AddTag(worldTool, STOWAY_DROP_TAG)
 
 		return Result.Ok({
 			removedItem = droppedSnapshot,

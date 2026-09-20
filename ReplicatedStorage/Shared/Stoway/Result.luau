@@ -16,12 +16,19 @@ local Result = {}
 
 export type ErrorKind = "PermissionDenied" | "InvalidArgument" | "NotFound" | "NotAvailable"
 
-Result.ErrorKind = {
-	PermissionDenied = "PermissionDenied" :: "PermissionDenied",
-	InvalidArgument = "InvalidArgument" :: "InvalidArgument",
-	NotFound = "NotFound" :: "NotFound",
-	NotAvailable = "NotAvailable" :: "NotAvailable",
+local ERROR_KIND: {
+	PermissionDenied: "PermissionDenied",
+	InvalidArgument: "InvalidArgument",
+	NotFound: "NotFound",
+	NotAvailable: "NotAvailable",
+} = {
+	PermissionDenied = "PermissionDenied",
+	InvalidArgument = "InvalidArgument",
+	NotFound = "NotFound",
+	NotAvailable = "NotAvailable",
 }
+
+Result.ErrorKind = ERROR_KIND
 
 export type Error = {
 	kind: ErrorKind,

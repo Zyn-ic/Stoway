@@ -22,10 +22,6 @@ local LayoutInput = require(script.Input)
 
 local StandardHotbarStorage = {}
 
-local function peekValue(target: any): any
-	return (Fusion.peek :: any)(target)
-end
-
 -----------------------------
 -- PUBLIC FUNCTIONS --
 -----------------------------
@@ -48,10 +44,10 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 	end
 	local function hasDestItem(target: CoreTypes.SlotRef): boolean
 		if target.Type == "Hotbar" then
-			local hotbar: { [number]: string? } = peekValue(store.Hotbar)
+			local hotbar: { [number]: string? } = Fusion.peek(store.Hotbar)
 			return hotbar[target.Slot] ~= nil
 		else
-			local storage: { string } = peekValue(store.Storage)
+			local storage: { string } = Fusion.peek(store.Storage)
 			return storage[target.Slot] ~= nil
 		end
 	end
@@ -76,7 +72,7 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 		scope,
 		draggingGui,
 		function(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef?, context: PointerDragService.DragContext)
-			local settings: CoreTypes.Settings? = peekValue(store.Settings)
+			local settings: CoreTypes.Settings? = Fusion.peek(store.Settings)
 			local backpackEnabled = settings == nil or settings.BackpackEnabled ~= false
 			local hotbarType: CoreTypes.HotbarType = if settings then settings.HotbarType else "Static"
 
@@ -107,7 +103,7 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 			-- No slot hit: empty-area vs outside
 			if context.overBackpack and from.Type == "Hotbar" and backpackEnabled then
 				-- AddToBackpack: Hotbar -> Storage append (Move HS path ignores dest slot and appends)
-				local storage: { string } = peekValue(store.Storage)
+				local storage: { string } = Fusion.peek(store.Storage)
 				local appendSlot = #storage + 1
 				handleMove(from, { Type = "Storage", Slot = appendSlot })
 				return
@@ -115,7 +111,7 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 
 			if context.overHotbar and from.Type == "Storage" and hotbarType == "Dynamic" then
 				-- Dynamic hotbar: dropping storage item over hotbar background inserts at first empty hotbar slot
-				local hotbar: { [number]: string? } = peekValue(store.Hotbar)
+				local hotbar: { [number]: string? } = Fusion.peek(store.Hotbar)
 				local maxSlots = if settings then settings.MaxHotbarSlots else 10
 				local appendSlot: number? = nil
 				for i = 1, maxSlots do
@@ -133,10 +129,10 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 				-- validates, spawns the world Tool, and pushes Removed.
 				local uuid: string? = nil
 				if from.Type == "Hotbar" then
-					local hotbar: { [number]: string? } = peekValue(store.Hotbar)
+					local hotbar: { [number]: string? } = Fusion.peek(store.Hotbar)
 					uuid = hotbar[from.Slot]
 				else
-					local storage: { string } = peekValue(store.Storage)
+					local storage: { string } = Fusion.peek(store.Storage)
 					uuid = storage[from.Slot]
 				end
 				if uuid then

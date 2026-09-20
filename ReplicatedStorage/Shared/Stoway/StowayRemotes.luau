@@ -11,12 +11,13 @@ local EquippedPayload = {
 	previousUUID = data.optional(data.String),
 }
 local RevertPayload = { success = data.Boolean, fromSlot = data.optional(data.String) }
+local LayoutChangedPayload = { layout = data.String, skin = data.String }
 
 local SlotRef = { Type = data.String, Slot = data.NumberU8 }
 
 -- METADATA WIRE SCHEMA (open-ended)
 -- -----------------------------
--- Metadata is { [string]: any } (see CoreStore/Types.luau). On the wire we
+-- Metadata is { [string]: string | number | boolean } (see CoreStore/Types.luau). On the wire we
 -- send it as an OPEN dynamic dict, so ANY consumer-defined field transmits
 -- automatically. Tool attributes, custom stats, rarity, anything — no schema
 -- edits needed.
@@ -25,9 +26,9 @@ local SlotRef = { Type = data.String, Slot = data.NumberU8 }
 --   Description (string)   Image (string)     IsGamepass (boolean)
 --   Rarity (string)        Droppable (bool)   Type (string)
 -- On the client, read these by trusting the naming convention; do NOT runtime
--- type-check. Every value arrives as `any` and carries its own type-tag byte,
+-- type-check. Every value arrives decoded from its own type-tag byte,
 -- so numbers stay numbers and strings stay strings through the round-trip.
-local MetadataSchema = { [data.String] = data.any }
+local MetadataSchema = { [data.String] = data.Any }
 
 -- QUICKNET SINGLE-USE RULE (Parser.luau: processSchema mutates optional
 -- wrappers in place: schema[2] = processed. The first register() of a
@@ -110,6 +111,7 @@ return {
 	InventoryUnequipped = QuickNet:register("InventoryUnequipped", EquippedPayload),
 	InventoryRevert = QuickNet:register("InventoryRevert", RevertPayload),
 	InventoryFullSync = QuickNet:register("InventoryFullSync", FullSyncPayload),
+	LayoutChanged = QuickNet:register("LayoutChanged", LayoutChangedPayload),
 	-- Client -> server requests. Registered under operation names; the
 	-- server branch listens on this same module, so names stay in sync
 	-- by construction. FireServer with no listener is a silent no-op.

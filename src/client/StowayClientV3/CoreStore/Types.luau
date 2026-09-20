@@ -27,9 +27,12 @@ export type Item = SharedTypes.Item
 export type ItemInput = CoreStoreTypes.ItemInput
 export type AddOptions = SharedTypes.AddOptions
 export type ItemMetadata = SharedTypes.ItemMetadata
+export type MetadataValue = SharedTypes.MetadataValue
+export type MetadataUpdates = SharedTypes.MetadataUpdates
 export type CategoryDef = SharedTypes.CategoryDef
 export type Settings = SharedTypes.Settings
-export type InventoryState = SharedTypes.InventoryState
+export type EngineSettings = CoreStoreTypes.Settings
+export type InventoryState = CoreStoreTypes.InventoryState
 
 -----------------------------
 -- CLIENT-LOCAL TYPES --
@@ -44,6 +47,10 @@ export type ItemRecord = {
 	index: number,
 	uuid: string,
 }
+
+-- Studio skin hook modules are an intentionally dynamic boundary: they are
+-- loaded from an Instance and validated at runtime by SkinLoader.
+export type HookMap = { [string]: unknown }
 
 -- Storage grouped by item type for display.
 export type GroupedStorage = { [string]: { ItemRecord } }
@@ -78,7 +85,7 @@ export type SkinHandle = {
 	-- typed as a string map; the Studio module itself (self-contained
 	-- --!strict) is the precise contract. Call sites invoke via
 	-- ClientEvents.CallHook (spawn+pcall).
-	Hooks: { [string]: any }?,
+	Hooks: HookMap?,
 }
 
 -----------------------------

@@ -42,15 +42,20 @@ Colors.RarityOrder = {
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
+local function normalizeRarity(rarity: string): string
+	return rarity:sub(1, 1):upper() .. rarity:sub(2):lower()
+end
+
 function Colors.getRarityColor(rarity: string?): Color3
-	return Colors.RarityColors[rarity] or Color3.fromRGB(80, 80, 80)
+	local key = if rarity then normalizeRarity(rarity) else nil
+	return Colors.RarityColors[key] or Color3.fromRGB(80, 80, 80)
 end
 
 function Colors.getRarityRank(rarity: string?): number
 	if not rarity then
 		return 0
 	end
-	return Colors.RarityOrder[rarity] or 0
+	return Colors.RarityOrder[normalizeRarity(rarity)] or 0
 end
 
 function Colors.getTypeColor(itemType: string?): Color3

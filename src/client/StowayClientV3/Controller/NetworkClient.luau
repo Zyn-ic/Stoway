@@ -41,12 +41,13 @@ export type ApplyHandlers = {
 	Equipped: (uuid: string) -> (),
 	Unequipped: () -> (),
 	FullSync: (payload: CoreTypes.FullSyncPayload) -> (),
+	LayoutChanged: (hotbarTypeKey: string, skinKey: string) -> (),
 }
 
 local _applies: ApplyHandlers? = nil
 local _lastFullSync: CoreTypes.FullSyncPayload? = nil
 
-type Connection = { Disconnect: (any) -> () }
+type Connection = { Disconnect: (self: Connection) -> () }
 
 local _conns: { Connection } = {}
 
@@ -140,7 +141,7 @@ function NetworkClient.SendUnequip()
 	end)
 end
 
-function NetworkClient.SendUpdateMetadata(uuid: string, updates: { [string]: any })
+function NetworkClient.SendUpdateMetadata(uuid: string, updates: CoreTypes.MetadataUpdates)
 	send("UpdateMetadata", function()
 		R.UpdateMetadata:FireServer({ uuid = uuid, updates = updates })
 	end)
@@ -214,6 +215,16 @@ function NetworkClient.Connect(applies: ApplyHandlers)
 		if not _applies then return end
 		if not pcall(_applies.FullSync, payload) then
 			warn("[NetworkClient] ApplyServerFullSync failed")
+		end
+	end)
+	_conns[#_conns + 1] = R.LayoutChanged.OnClientEvent:Connect(function(payload)
+		if not _applies then return end
+		if typeof(payload.layout) ~= "string" or typeof(payload.skin) ~= "string" then
+			warn("[NetworkClient] invalid layout change payload")
+			return
+		end
+		if not pcall(_applies.LayoutChanged, payload.layout, payload.skin) then
+			warn("[NetworkClient] ApplyServerLayoutChanged failed")
 		end
 	end)
 end

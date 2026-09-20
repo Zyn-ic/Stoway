@@ -16,8 +16,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SignalPlus = require(ReplicatedStorage.Packages.SignalPlus)
 
 local CoreStore = require(ReplicatedStorage.Shared.Stoway.CoreStore)
+local Result = require(ReplicatedStorage.Shared.Stoway.Result)
 local ClientStore = require(script.Parent.ClientStore)
 local CoreTypes = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
+local ClientTypes = require(script.Parent.Parent.CoreStore.Types)
 local Signals = require(script.Parent.Parent.Signals)
 local ClientEvents = require(script.Parent.ClientEvents)
 local NetworkClient = require(script.Parent.NetworkClient)
@@ -28,13 +30,20 @@ local _state: CoreTypes.InventoryState? = nil
 local _connections: { SignalPlus.Connection } = {}
 local _signals: typeof(Signals)? = nil
 -- Skin hook table (Layer 2), set per mount by the layout. Nil = no hooks.
-local _hooks: { [string]: any }? = nil
+local _hooks: ClientTypes.HookMap? = nil
 
 -----------------------------
 -- PRIVATE FUNCTIONS --
 -----------------------------
 
-local function hydrateIfNeeded(state: any)
+local function noState(): { ok: false, error: Result.Error }
+	return Result.Err({
+		kind = Result.ErrorKind.NotAvailable,
+		message = "NO_STATE",
+	})
+end
+
+local function hydrateIfNeeded(state: CoreTypes.InventoryState)
 	if not state then return end
 	if state.LocationByUUID ~= nil and state.ItemsByID ~= nil and state.MetadataIndex ~= nil then return end
 	state.LocationByUUID = state.LocationByUUID or {}
@@ -50,7 +59,7 @@ local function hydrateIfNeeded(state: any)
 		end
 	end
 	if next(state.ItemsByID) == nil and state.Items then
-		for uuid, it in state.Items :: any do
+		for uuid, it in state.Items do
 			local id = it.Id
 			local bucket = state.ItemsByID[id]
 			if not bucket then bucket = {}; state.ItemsByID[id] = bucket end
@@ -58,7 +67,7 @@ local function hydrateIfNeeded(state: any)
 		end
 	end
 	if next(state.MetadataIndex) == nil and state.Items then
-		for uuid, it in state.Items :: any do
+		for uuid, it in state.Items do
 			for _, field in { "Rarity", "Type" } do
 				local v = it.Metadata and it.Metadata[field]
 				if v ~= nil then
@@ -81,11 +90,7 @@ local function sync()
 	ClientStore.Storage:set(table.clone(_state.Storage))
 	ClientStore.EquippedItemUUID:set(_state.EquippedItemUUID)
 	ClientStore.Weight:set(_state.Weight)
-	if typeof(_state.Settings) == "table" then
-		ClientStore.Settings:set(table.clone(_state.Settings) :: any)
-	else
-		ClientStore.Settings:set(_state.Settings)
-	end
+	ClientStore.SetEngineSettings(_state.Settings)
 end
 
 -- Pre-op slot resolution for (slotType, index) payloads. Remove destroys
@@ -97,8 +102,8 @@ local function lookupSlot(uuid: string): CoreTypes.SlotRef?
 	return _state.LocationByUUID[uuid]
 end
 
-local function equipAndClearNew(uuid: string)
-	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
+local function equipAndClearNew(uuid: string): CoreTypes.EquipResult
+	if not _state then return noState() end
 	local res = CoreStore.equip(_state, uuid)
 	if res.ok then
 		-- Glow off: delete the IsNew flag. Presence renders, absence hides.
@@ -117,8 +122,8 @@ end
 
 -- Shared op bodies: signal handlers AND direct APIs route through these
 -- so each success fires exactly one bus event + one skin hook (res.ok only).
-local function swapOp(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
-	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
+local function swapOp(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef): CoreTypes.SwapResult
+	if not _state then return noState() end
 	hydrateIfNeeded(_state)
 	local res = CoreStore.swap(_state, from, to)
 	if res.ok then
@@ -130,8 +135,8 @@ local function swapOp(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
 	return res
 end
 
-local function removeOp(uuid: string, amount: number?)
-	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
+local function removeOp(uuid: string, amount: number?): CoreTypes.RemoveResult
+	if not _state then return noState() end
 	hydrateIfNeeded(_state)
 	local ref = lookupSlot(uuid)
 	local res = CoreStore.remove(_state, uuid, amount)
@@ -146,13 +151,13 @@ local function removeOp(uuid: string, amount: number?)
 	return res
 end
 
-local function addOp(itemInput: CoreTypes.ItemInput, opts: CoreTypes.AddOptions?)
-	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
+local function addOp(itemInput: CoreTypes.ItemInput, opts: CoreTypes.AddOptions?): CoreTypes.AddResult
+	if not _state then return noState() end
 	hydrateIfNeeded(_state)
 	local res = CoreStore.add(_state, itemInput, opts)
 	if res.ok then
 		sync()
-		local value = (res :: any).value
+		local value = res.value
 		if value ~= nil then
 			-- addedItems are AddedSlot tables {uuid, slotType, slot}:
 			-- fire the server-reported destination directly.
@@ -184,8 +189,8 @@ local function addOp(itemInput: CoreTypes.ItemInput, opts: CoreTypes.AddOptions?
 	return res
 end
 
-local function unequipOp()
-	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
+local function unequipOp(): CoreTypes.UnequipResult
+	if not _state then return noState() end
 	hydrateIfNeeded(_state)
 	local equipped: string? = _state.EquippedItemUUID
 	local ref: CoreTypes.SlotRef? = nil
@@ -216,7 +221,7 @@ local function indexItem(uuid: string, item: CoreTypes.Item)
 	table.insert(idBucket, uuid)
 	if item.Metadata then
 		for _, field in { "Rarity", "Type" } do
-			local v = (item.Metadata :: any)[field]
+			local v = item.Metadata[field]
 			if v ~= nil then
 				local sv = tostring(v)
 				local ft = _state.MetadataIndex[field]
@@ -463,7 +468,8 @@ local function bindSignals(signals: typeof(Signals))
 	table.insert(_connections, signals.MarkNew:Connect(function(uuid: string)
 		if not _state then return end
 		hydrateIfNeeded(_state)
-		local ok, res = pcall(CoreStore.updateMetadata, _state, uuid, { IsNew = true })
+		local updates: CoreTypes.MetadataUpdates = { IsNew = true }
+		local ok, res = pcall(CoreStore.updateMetadata, _state, uuid, updates)
 		if ok and res and res.ok then sync() elseif not ok then warn("[ClientController] MarkNew error", res) end
 	end))
 end
@@ -479,11 +485,12 @@ function ClientController.Init(signals: typeof(Signals), snapshot: CoreTypes.Inv
 		hydrateIfNeeded(full)
 		-- Boundary cast: full engine state carries server-only indexes
 		-- (ItemsByID, LocationByUUID, MetadataIndex) beyond the client mirror shape.
-		ClientStore.Init(full :: any)
+		ClientStore.Init(full)
 		sync()
 	else
-		_state = ClientStore.GetSnapshot() :: any
-		hydrateIfNeeded(_state)
+		local state = ClientStore.GetSnapshot()
+		_state = state
+		hydrateIfNeeded(state)
 	end
 	bindSignals(signals)
 end
@@ -506,17 +513,17 @@ function ClientController.Sync()
 	sync()
 end
 
-function ClientController.SetHooks(hooks: { [string]: any }?)
+function ClientController.SetHooks(hooks: ClientTypes.HookMap?)
 	_hooks = hooks
 end
 
 -- Direct core API for Interactions (drag, input). No Signals, just add onto core.
-function ClientController.Swap(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
+function ClientController.Swap(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef): CoreTypes.SwapResult
 	return swapOp(from, to)
 end
 
-function ClientController.Move(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
-	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
+function ClientController.Move(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef): CoreTypes.MoveResult
+	if not _state then return noState() end
 	hydrateIfNeeded(_state)
 	local res = CoreStore.move(_state, from, to)
 	if res.ok then
@@ -526,7 +533,7 @@ function ClientController.Move(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
 	return res
 end
 
-function ClientController.Remove(uuid: string, amount: number?)
+function ClientController.Remove(uuid: string, amount: number?): CoreTypes.RemoveResult
 	return removeOp(uuid, amount)
 end
 
@@ -538,13 +545,13 @@ function ClientController.RequestDrop(uuid: string, amount: number?)
 	NetworkClient.SendDrop(uuid, amount)
 end
 
-function ClientController.Equip(uuid: string)
-	if not _state then return { ok = false, error = { message = "NO_STATE" } } :: any end
+function ClientController.Equip(uuid: string): CoreTypes.EquipResult
+	if not _state then return noState() end
 	hydrateIfNeeded(_state)
 	return equipAndClearNew(uuid)
 end
 
-function ClientController.Unequip()
+function ClientController.Unequip(): CoreTypes.UnequipResult
 	return unequipOp()
 end
 
