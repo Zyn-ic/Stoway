@@ -8,13 +8,14 @@
 ]]
 
 local SlotLocks = require(game:GetService("ReplicatedStorage").Shared.Stoway.SlotLocks)
+local SharedTypes = require(game:GetService("ReplicatedStorage").Shared.Stoway.Types)
 
-local function plainItem(): { Metadata: { [string]: any }? }
-	return { Metadata = {} }
+local function plainItem(uuid: string): SharedTypes.Item
+	return { UUID = uuid, Id = "TestItem", Amount = 1, Metadata = {} }
 end
 
-local function tokenItem(slot: number): { Metadata: { [string]: any }? }
-	return { Metadata = { UnlocksHotbarSlot = slot } }
+local function tokenItem(uuid: string, slot: number): SharedTypes.Item
+	return { UUID = uuid, Id = "PouchToken", Amount = 1, Metadata = { UnlocksHotbarSlot = slot } }
 end
 
 return function(describe: any, it: any, expect: any)
@@ -28,17 +29,17 @@ return function(describe: any, it: any, expect: any)
 		end)
 
 		it("locked with no token held", function()
-			local items = { a = plainItem() }
+			local items = { a = plainItem("a") }
 			expect(SlotLocks.isUnlocked(items, { [9] = true }, 9)).toBe(false)
 		end)
 
 		it("unlocked while holding the token", function()
-			local items = { a = plainItem(), token = tokenItem(9) }
+			local items = { a = plainItem("a"), token = tokenItem("token", 9) }
 			expect(SlotLocks.isUnlocked(items, { [9] = true }, 9)).toBe(true)
 		end)
 
 		it("a token for another slot does not unlock", function()
-			local items = { token = tokenItem(3) }
+			local items = { token = tokenItem("token", 3) }
 			expect(SlotLocks.isUnlocked(items, { [9] = true }, 9)).toBe(false)
 		end)
 

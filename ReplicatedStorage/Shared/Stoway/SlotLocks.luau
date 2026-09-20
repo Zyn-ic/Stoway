@@ -22,18 +22,17 @@ local SlotLocks = {}
 -- every tool attribute into item metadata untouched.
 SlotLocks.UNLOCK_FIELD = "UnlocksHotbarSlot"
 
-export type LockableItem = {
-	Metadata: { [string]: Types.MetadataValue? }?,
-}
-
 -----------------------------
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
 -- True when `slot` may bind: not locked, or a token item is held.
 -- Nil lock set (unknown settings) fails open.
+-- NOTE: items is typed as the shared Item (not a narrower structural
+-- alias). The new solver matches table arguments exactly, so a bespoke
+-- { Metadata ... } shape rejects real Item tables at call sites.
 function SlotLocks.isUnlocked(
-	items: { [string]: LockableItem },
+	items: { [string]: Types.Item },
 	locked: { [number]: boolean }?,
 	slot: number
 ): boolean
