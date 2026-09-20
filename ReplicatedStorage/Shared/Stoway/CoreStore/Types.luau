@@ -57,6 +57,9 @@ export type Settings = {
     StackBlacklist: { [string]: boolean },
 
     DefaultDroppable: boolean,
+
+    -- EXAMPLE (example/locked-slots, not canon): see Shared/Stoway/Types.
+    LockedHotbarSlots: { [number]: boolean }?,
 }
 
 export type SettingsOverrides = {
@@ -76,6 +79,8 @@ export type SettingsOverrides = {
     StackBlacklist: { [string]: boolean }?,
 
     DefaultDroppable: boolean?,
+
+    LockedHotbarSlots: { [number]: boolean }?,
 }
 
 export type InventoryState = {

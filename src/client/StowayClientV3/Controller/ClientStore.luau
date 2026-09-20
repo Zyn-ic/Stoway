@@ -69,6 +69,9 @@ function ClientStore.SetEngineSettings(settings: Types.EngineSettings)
 	clientSettings.StackRequiredFields = table.clone(settings.StackRequiredFields)
 	clientSettings.StackBlacklist = table.clone(settings.StackBlacklist)
 	clientSettings.DefaultDroppable = settings.DefaultDroppable
+	clientSettings.LockedHotbarSlots = if settings.LockedHotbarSlots
+		then table.clone(settings.LockedHotbarSlots)
+		else nil
 	ClientStore.Settings:set(clientSettings)
 end
 

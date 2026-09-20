@@ -96,12 +96,13 @@ local HOTBAR_SLOTS: { [number]: BindConfig? } = {
 		PC = { { Main = Enum.KeyCode.Eight } },
 		Console = { { Main = Enum.KeyCode.ButtonA, Modifiers = { Enum.KeyCode.ButtonL1 } } },
 	},
-	-- SPARSE TEST: [9] has Display but no keys. Slot 9 must render + drag +
-	-- tap, show a red "!" badge, and fire no PC/Console bind.
+	-- EXAMPLE (example/locked-slots): [9] carries live keys that stay
+	-- dormant until a token unlocks the slot (LockedHotbarSlots). Missing
+	-- index or missing PC/Console side still means no bind ever.
 	[9] = {
 		Display = "9",
-		-- PC = { { Main = Enum.KeyCode.Nine } },
-		-- Console = { { Main = Enum.KeyCode.DPadUp, Modifiers = { Enum.KeyCode.ButtonR1 } } },
+		PC = { { Main = Enum.KeyCode.Nine } },
+		Console = { { Main = Enum.KeyCode.DPadUp, Modifiers = { Enum.KeyCode.ButtonR1 } } },
 	},
 	[10] = {
 		Display = "0",

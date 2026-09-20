@@ -27,6 +27,7 @@ local Protocol = require(script.Protocol)
 local Communications = require(script.Communications)
 
 local Result = require(ReplicatedStorage.Shared.Stoway.Result)
+local SlotLocks = require(ReplicatedStorage.Shared.Stoway.SlotLocks)
 
 -- Minimal contract for the injected CoreStore module.
 type CoreStoreApi = {
@@ -273,6 +274,17 @@ end
 
 local EK = Result.ErrorKind
 
+-- EXAMPLE (example/locked-slots): refuse placement INTO a locked hotbar
+-- slot. Moving OUT of one stays legal so stranded items (token dropped
+-- mid-hold) can always be rescued. Equip-by-UUID is unchecked: a stranded
+-- item remains usable, only its keybind goes dormant.
+local function hotbarSlotLocked(state: Types.InventoryState, ref: Types.SlotRef?): boolean
+	if ref == nil or ref.Type ~= "Hotbar" then
+		return false
+	end
+	return not SlotLocks.isUnlocked(state.Items, state.Settings.LockedHotbarSlots, ref.Slot)
+end
+
 function Stoway.AddItem(player: Player, itemData: Types.ItemInput, options: Types.AddOptions?, replicate: boolean?): Types.AddResult
 	return route(player, "AddItem", resolveReplicate(replicate), function(cs: CoreStoreApi)
 		local state = _store[player]
@@ -317,6 +329,9 @@ function Stoway.AddToHotbar(player: Player, itemData: Types.ItemInput, slot: num
 
 		local merged: Types.ItemInput = table.clone(itemData)
 		merged.Metadata = mergeMetadata(itemData.Metadata, getDefaultMetadata(template))
+		if slot ~= nil and hotbarSlotLocked(state, { Type = "Hotbar", Slot = slot }) then
+			return Result.Err({ kind = EK.InvalidArgument, message = "SLOT_LOCKED" })
+		end
 		return cs.addToHotbar(state, merged, slot)
 	end)
 end
@@ -333,6 +348,9 @@ function Stoway.SwapSlots(player: Player, fromRef: Types.SlotRef, toRef: Types.S
 	return route(player, "SwapSlots", resolveReplicate(replicate), function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return Result.Err({ kind = EK.NotFound, message = "NO_STATE" }) end
+		if hotbarSlotLocked(state, toRef) then
+			return Result.Err({ kind = EK.InvalidArgument, message = "SLOT_LOCKED" })
+		end
 		return cs.swap(state, fromRef, toRef)
 	end)
 end
@@ -341,6 +359,9 @@ function Stoway.SwapStack(player: Player, fromRef: Types.SlotRef, toRef: Types.S
 	return route(player, "SwapStack", resolveReplicate(replicate), function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return Result.Err({ kind = EK.NotFound, message = "NO_STATE" }) end
+		if hotbarSlotLocked(state, toRef) then
+			return Result.Err({ kind = EK.InvalidArgument, message = "SLOT_LOCKED" })
+		end
 		return cs.swapStack(state, fromRef, toRef)
 	end)
 end
@@ -349,6 +370,9 @@ function Stoway.Move(player: Player, fromRef: Types.SlotRef, toRef: Types.SlotRe
 	return route(player, "Move", resolveReplicate(replicate), function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return Result.Err({ kind = EK.NotFound, message = "NO_STATE" }) end
+		if hotbarSlotLocked(state, toRef) then
+			return Result.Err({ kind = EK.InvalidArgument, message = "SLOT_LOCKED" })
+		end
 		return cs.move(state, fromRef, toRef)
 	end)
 end
@@ -357,6 +381,9 @@ function Stoway.Split(player: Player, uuid: string, amount: number, destination:
 	return route(player, "Split", resolveReplicate(replicate), function(cs: CoreStoreApi)
 		local state = _store[player]
 		if not state then return Result.Err({ kind = EK.NotFound, message = "NO_STATE" }) end
+		if hotbarSlotLocked(state, destination) then
+			return Result.Err({ kind = EK.InvalidArgument, message = "SLOT_LOCKED" })
+		end
 		return cs.split(state, uuid, amount, destination)
 	end)
 end

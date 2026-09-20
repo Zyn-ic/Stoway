@@ -48,10 +48,15 @@ end
 
 -- Scans hotbar left-to-right for the first nil slot.
 -- In Static mode, this fills holes. In Dynamic mode, this is the append position.
+-- EXAMPLE (example/locked-slots): locked slots are never auto-filled;
+-- explicit placement there is refused by the server routes.
 function Slots.findEmptyHotbarSlot(state: Types.InventoryState): number?
+	local locked = state.Settings.LockedHotbarSlots
 	for slot = 1, state.Settings.MaxHotbarSlots do
 		if not state.Hotbar[slot] then
-			return slot
+			if locked == nil or locked[slot] ~= true then
+				return slot
+			end
 		end
 	end
 

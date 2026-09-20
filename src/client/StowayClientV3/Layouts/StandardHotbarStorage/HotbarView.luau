@@ -194,13 +194,26 @@ function HotbarView.Create(
 			return Query.packedHotbarOrder(hotbar, items, slotIndex, dyn)
 		end)
 
-		-- Unbound when the entry is missing OR carries no usable keys
-		-- (e.g. Display-only). Unbound slots keep rendering + drag + tap.
+		-- Keys exist, but the slot only binds while unlocked (EXAMPLE:
+		-- example/locked-slots). Keyless slots keep the legacy red "!".
 		local bindCfg = Binds.HotbarSlots[slotIndex]
-		local hasBind = bindCfg ~= nil and (bindCfg.PC ~= nil or bindCfg.Console ~= nil)
+		local hasKeys = bindCfg ~= nil and (bindCfg.PC ~= nil or bindCfg.Console ~= nil)
+
+		local isUnlocked = slotScope:Computed(function(use: Fusion.Use): boolean
+			if not hasKeys then
+				return false
+			end
+			local items: { [string]: CoreTypes.Item } = use(store.Items)
+			local settings: CoreTypes.Settings? = use(store.Settings)
+			return Query.isHotbarSlotUnlocked(items, settings, slotIndex)
+		end)
+
+		local isLocked = slotScope:Computed(function(use: Fusion.Use): boolean
+			return hasKeys and not use(isUnlocked)
+		end)
 
 		local keybind = slotScope:Computed(function(use: Fusion.Use): string
-			if not hasBind then return "!" end
+			if not hasKeys then return "!" end
 			if bindCfg ~= nil and bindCfg.Display ~= nil then return bindCfg.Display end
 			local display: number = use(packOrder)
 			return if display == 10 then "0" else tostring(display)
@@ -220,7 +233,8 @@ function HotbarView.Create(
 			Template = slotTemplate,
 			Store = store,
 			ShowKeybind = true,
-			HasBind = hasBind,
+			HasBind = hasKeys,
+			Locked = isLocked,
 			HideChrome = skin.HideInHotbar,
 			PackOrder = packOrder,
 			Keybind = keybind,

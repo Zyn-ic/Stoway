@@ -11,6 +11,7 @@
 
 local Types = require("./Types")
 local Colors = require("@game/ReplicatedStorage/Shared/Stoway/Colors")
+local SlotLocks = require("@game/ReplicatedStorage/Shared/Stoway/SlotLocks")
 
 local Query = {}
 
@@ -257,6 +258,17 @@ function Query.sortRecords(
 		return a.index < b.index
 	end)
 	return sorted
+end
+
+-- EXAMPLE (example/locked-slots, not canon): hotbar slot unlock via token
+-- metadata. Nil settings (locks unknown) fails open.
+function Query.isHotbarSlotUnlocked(
+	items: { [string]: Types.Item },
+	settings: Types.Settings?,
+	slot: number
+): boolean
+	local locked = if settings then settings.LockedHotbarSlots else nil
+	return SlotLocks.isUnlocked(items, locked, slot)
 end
 
 -----------------------------

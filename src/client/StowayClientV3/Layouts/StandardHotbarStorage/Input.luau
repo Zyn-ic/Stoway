@@ -54,6 +54,13 @@ local function isBackpackEnabled(store: typeof(ClientStore)): boolean
 	return s == nil or s.BackpackEnabled ~= false
 end
 
+-- EXAMPLE (example/locked-slots): keybinds on locked slots stay dormant.
+local function isSlotUnlocked(store: typeof(ClientStore), slot: number): boolean
+	local items: { [string]: CoreTypes.Item } = Fusion.peek(store.Items)
+	local settings: CoreTypes.Settings? = Fusion.peek(store.Settings)
+	return Query.isHotbarSlotUnlocked(items, settings, slot)
+end
+
 local function resolveHotbarUUID(store: typeof(ClientStore), visibleIndex: number): string?
 	local settings: CoreTypes.Settings? = Fusion.peek(store.Settings)
 	local hotbar: { [number]: string? } = Fusion.peek(store.Hotbar)
@@ -128,6 +135,7 @@ function Input.Mount(
 )
 	local actions: { BindingObject } = {}
 	local inventoryActions: { BindingObject } = {}
+	local slotActions: { [number]: BindingObject } = {}
 	local pendingThreads: { thread } = {}
 
 	local backpackAction: BindingObject? = nil
@@ -146,6 +154,7 @@ function Input.Mount(
 			pcall(function() a:Destroy() end)
 		end
 		table.clear(inventoryActions)
+		table.clear(slotActions)
 
 		if backpackAction == nil then return end
 		if switchAction == nil then return end
@@ -254,6 +263,28 @@ function Input.Mount(
 		GuiService.GuiNavigationEnabled = false
 	end
 
+	-- EXAMPLE (example/locked-slots): live-toggle slot binds as tokens move
+	-- in/out of the inventory. Actions stay mounted; only their enabled flag
+	-- flips, so no rebuild is needed on (un)lock. Declared before
+	-- buildForPreferred so the tail sync call resolves.
+	local unlockedFlags = scope:Computed(function(use: Fusion.Use): { [number]: boolean }
+		local items: { [string]: CoreTypes.Item } = use(store.Items)
+		local settings: CoreTypes.Settings? = use(store.Settings)
+		local maxSlots = State.getMaxHotbarSlots(settings)
+		local flags: { [number]: boolean } = {}
+		for i = 1, maxSlots do
+			flags[i] = Query.isHotbarSlotUnlocked(items, settings, i)
+		end
+		return flags
+	end)
+	local function syncSlotEnabled()
+		local flags: { [number]: boolean } = Fusion.peek(unlockedFlags)
+		for i, a in slotActions do
+			a:SetEnabled(flags[i] ~= false)
+		end
+	end
+	scope:Observer(unlockedFlags):onChange(syncSlotEnabled)
+
 	local function buildForPreferred(pref: EnumItem)
 		cleanupActions()
 		applySelectionObjects()
@@ -314,12 +345,14 @@ function Input.Mount(
 					local a: BindingObject = IllusionIAS.new("StowaySlot" .. tostring(i))
 					Binds.ApplyToAction(a, cfg, "Console")
 				a.Activated:Connect(function(_active: IllusionIAS.variant, pressed: boolean?)
-						if not pressed then return end
-						if consoleMode ~= "Hotbar" then return end
-						doEquipSlot(store, i)
-					end)
+					if not pressed then return end
+					if consoleMode ~= "Hotbar" then return end
+					if not isSlotUnlocked(store, i) then return end
+					doEquipSlot(store, i)
+				end)
 					IllusionIAS.addContext("StowayHotbar", a)
 					table.insert(actions, a)
+					slotActions[i] = a
 				end
 			end
 			-- Inventory actions (Y/X/R1+L1/B) – only while Inventory; gate on pressed
@@ -446,16 +479,19 @@ function Input.Mount(
 				Binds.ApplyToAction(a, cfg, "PC")
 				 a.Activated:Connect(function(_active: IllusionIAS.variant, pressed: boolean?)
 					if not pressed then return end
+					if not isSlotUnlocked(store, i) then return end
 					doEquipSlot(store, i)
 				end)
 				IllusionIAS.addContext("StowayHotbar", a)
 				table.insert(actions, a)
+				slotActions[i] = a
 			end
 			GuiService.GuiNavigationEnabled = false
 			GuiService.SelectedObject = nil
 			if skin.HotbarFrame then skin.HotbarFrame.SelectionGroup = false end
 			if skin.ScrollingFrame then skin.ScrollingFrame.SelectionGroup = false end
 		end
+		syncSlotEnabled()
 	end
 
 	-- initial

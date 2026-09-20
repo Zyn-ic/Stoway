@@ -70,6 +70,10 @@ export type Settings = {
 	-- grouped view is just one example of settings-driven sort/filter —
 	-- later a given Layout/Skin may bake this in rather than exposing it.
 	GroupByCategory: boolean,
+	-- EXAMPLE (example/locked-slots, not canon): hotbar slots that stay
+	-- unbound until a token item (Metadata.UnlocksHotbarSlot == slot) is
+	-- held. Shared here so client and server enforce one rule.
+	LockedHotbarSlots: { [number]: boolean }?,
 }
 
 export type SettingsOverrides = {
@@ -88,6 +92,7 @@ export type SettingsOverrides = {
 	UiSkin: string?,
 	Categories: { [string]: CategoryDef }?,
 	GroupByCategory: boolean?,
+	LockedHotbarSlots: { [number]: boolean }?,
 }
 
 export type InventoryState = {

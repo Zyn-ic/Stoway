@@ -49,6 +49,9 @@ local DEFAULT_SETTINGS: Types.Settings = {
 	-- storage view is what you see out of the box; flip to false to render
 	-- the plain ungrouped backpack ScrollingFrame instead.
 	GroupByCategory = true,
+	-- EXAMPLE (example/locked-slots, not canon): slot 9 stays unbound
+	-- until a token item (Metadata.UnlocksHotbarSlot == 9) is held.
+	LockedHotbarSlots = { [9] = true },
 }
 
 -----------------------------

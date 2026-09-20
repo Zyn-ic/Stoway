@@ -36,6 +36,10 @@ local DEFAULT_SETTINGS: Types.Settings = {
 	},
 
 	DefaultDroppable = true,
+
+	-- EXAMPLE (example/locked-slots, not canon): locked slots are skipped
+	-- by auto-placement and refused by the server routes.
+	LockedHotbarSlots = { [9] = true },
 }
 
 -----------------------------

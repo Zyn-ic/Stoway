@@ -38,6 +38,9 @@ export type SlotProps = {
 	Store: typeof(ClientStore),
 	ShowKeybind: boolean?,
 	HasBind: boolean?,
+	-- EXAMPLE (example/locked-slots): reactive lock badge. HasBind=false
+	-- (keyless) renders red "!"; Locked=true renders the Display key amber.
+	Locked: Fusion.UsedAs<boolean>?,
 	HideChrome: { string }?,
 	PackOrder: Fusion.Computed<number>?,
 	Keybind: Fusion.Computed<string>?,
@@ -48,6 +51,7 @@ export type SlotProps = {
 }
 
 local UNBOUND_KEYBIND_COLOR = Color3.fromRGB(255, 85, 85)
+local LOCKED_KEYBIND_COLOR = Color3.fromRGB(255, 190, 80)
 
 -----------------------------
 -- PUBLIC FUNCTIONS --
@@ -343,7 +347,16 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 		scope:Hydrate(slotnumber) {
 			Text = props.Keybind or "",
 			Visible = props.ShowKeybind == true,
-			TextColor3 = if props.HasBind == false then UNBOUND_KEYBIND_COLOR else slotnumber.TextColor3,
+			TextColor3 = scope:Computed(function(use: Fusion.Use): Color3
+				local locked: boolean = if props.Locked ~= nil then use(props.Locked) else false
+				if locked then
+					return LOCKED_KEYBIND_COLOR
+				end
+				if props.HasBind == false then
+					return UNBOUND_KEYBIND_COLOR
+				end
+				return slotnumber.TextColor3
+			end),
 		}
 	end
 
