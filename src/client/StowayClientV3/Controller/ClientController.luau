@@ -244,6 +244,52 @@ end
 -- commands today, request router tomorrow) into local state. They call
 -- CoreStore directly and NEVER FireServer — the server already applied
 -- them; echoing back would loop the moment listeners exist.
+--
+-- Ghost healing: a push can arrive for a slot whose occupant has no Items
+-- entry (a removal that never landed — e.g. a dropped remote). That ghost
+-- renders empty and weighs nothing, but blocks the slot forever if we
+-- skip. evictGhost drops every reference to such a uuid so the
+-- authoritative push can land. A conflict with a REAL item keeps the old
+-- warn+skip: that means a genuine bug elsewhere, never destroy data.
+local function evictGhost(uuid: string)
+	if not _state then return end
+	for slot, occupant in _state.Hotbar do
+		if occupant == uuid then
+			_state.Hotbar[slot] = nil
+		end
+	end
+	local storage = _state.Storage
+	for i = #storage, 1, -1 do
+		if storage[i] == uuid then
+			table.remove(storage, i)
+		end
+	end
+	-- Packed storage shifted: re-derive storage locations.
+	for idx, id in storage do
+		local loc = _state.LocationByUUID[id]
+		if loc ~= nil and loc.Type == "Storage" then
+			loc.Slot = idx
+		end
+	end
+	_state.LocationByUUID[uuid] = nil
+	for _, bucket in _state.ItemsByID do
+		for i = #bucket, 1, -1 do
+			if bucket[i] == uuid then
+				table.remove(bucket, i)
+			end
+		end
+	end
+	for _, field in _state.MetadataIndex do
+		for _, bucket in field do
+			for i = #bucket, 1, -1 do
+				if bucket[i] == uuid then
+					table.remove(bucket, i)
+				end
+			end
+		end
+	end
+end
+
 function ClientController.ApplyServerAdded(uuid: string, item: CoreTypes.Item, slotType: string?, slot: number?)
 	if not _state then return end
 	hydrateIfNeeded(_state)
@@ -260,9 +306,14 @@ function ClientController.ApplyServerAdded(uuid: string, item: CoreTypes.Item, s
 		return
 	end
 	if slotType == "Hotbar" then
-		if _state.Hotbar[slot] ~= nil then
-			warn(`[ClientController] server add to occupied hotbar {tostring(slot)}, skipping`)
-			return
+		local occupant = _state.Hotbar[slot]
+		if occupant ~= nil then
+			if _state.Items[occupant] ~= nil then
+				warn(`[ClientController] server add to occupied hotbar {tostring(slot)}, skipping`)
+				return
+			end
+			warn(`[ClientController] healing ghost hotbar {tostring(slot)} (stale {occupant})`)
+			evictGhost(occupant)
 		end
 		_state.Hotbar[slot] = uuid
 	else
@@ -294,6 +345,10 @@ function ClientController.ApplyServerRemoved(uuid: string, amount: number?)
 			ClientEvents.ItemRemoved:Fire(ref.Type, ref.Slot)
 			ClientEvents.CallHook(_hooks, "OnItemRemove", ref.Type, ref.Slot)
 		end
+	else
+		-- Loud: a removal the server performed but we could not mirror is
+		-- exactly how ghost slots are born.
+		warn("[ClientController] server remove failed locally", res.error and res.error.message or tostring(res))
 	end
 end
 
