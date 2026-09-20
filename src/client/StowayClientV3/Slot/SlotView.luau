@@ -222,61 +222,97 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 			end)
 		)
 
-		-- New-item glow: soft white halo behind the cell via UIShadow.
-		-- Pulse is a slow breathe (0.51 <-> 0.66). On equip the IsNew
-		-- flag is deleted; we tween Transparency to 1 once instead of
-		-- snapping off. Parent is the CELL so the button draws above
-		-- the shadow — opaque Default button occludes cleanly (behind
-		-- glow), transparent Modern/Metal no longer light up.
-		local newGlow = scope:New("UIShadow") {
-			Name = "NewGlow",
-			Color = Color3.new(1, 1, 1),
-			Transparency = 0.58,
-			BlurRadius = UDim.new(0.3, 0),
-			Spread = props.GlowSpread or UDim2.new(0.05, 0, 0.05, 0),
-			Offset = UDim2.new(0, 0, 0, 0),
-			Parent = slotFrame,
-		} :: UIShadow
+		-- New-item glow: soft white halo behind the cell via UIShadow. The
+		-- instance exists ONLY while the IsNew flag is present — created on
+		-- demand, destroyed on clear. Pulse is a slow breathe (0.51 <-> 0.66).
+		-- On equip the IsNew flag is deleted; we tween Transparency to 1 once
+		-- instead of snapping off, then destroy. Parent is the CELL so the
+		-- button draws above the shadow — opaque Default button occludes
+		-- cleanly (behind glow), transparent Modern/Metal no longer light up.
+		local glow: UIShadow? = nil
+		local pulsing = false
+		local currentTween: Tween? = nil
+		local function ensureGlow(): UIShadow
+			local existing = slotFrame:FindFirstChild("NewGlow")
+			if existing and existing:IsA("UIShadow") then
+				glow = existing
+				return existing
+			end
+			local created = scope:New("UIShadow") {
+				Name = "NewGlow",
+				Color = Color3.new(1, 1, 1),
+				Transparency = 0.58,
+				BlurRadius = UDim.new(0.3, 0),
+				Spread = props.GlowSpread or UDim2.new(0.05, 0, 0.05, 0),
+				Offset = UDim2.new(0, 0, 0, 0),
+				Parent = slotFrame,
+			} :: UIShadow
+			glow = created
+			return created
+		end
+		local function destroyGlow()
+			if currentTween then
+				currentTween:Cancel()
+				currentTween = nil
+			end
+			pulsing = false
+			local g = glow
+			glow = nil
+			if g then
+				g:Destroy()
+			end
+		end
 		-- Oscillator must NOT be a Fusion cycle (ancestor write from
 		-- descendant observer). Breathe uses TweenService Completed
 		-- callbacks; one-shot fade on unequip is a simple tween.
 		-- Fusion stays for the selecticon pop (acyclic: isEquipped -> tween).
-		newGlow.Enabled = Fusion.peek(isNew)
-		local pulsing = false
-		local currentTween: Tween? = nil
 		local function pulse(to: number)
-			if not Fusion.peek(isNew) then
+			local g = glow
+			if g == nil or not Fusion.peek(isNew) then
 				pulsing = false
 				return
 			end
 			pulsing = true
 			local tween = TweenService:Create(
-				newGlow,
+				g,
 				TweenInfo.new(1.0, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
 				{ Transparency = to }
 			)
+			currentTween = tween
 			table.insert(scope, tween)
 			table.insert(
 				scope,
 				tween.Completed:Connect(function()
+					if glow == nil then
+						return
+					end
 					pulse(if to < 0.58 then 0.66 else 0.51)
 				end)
 			)
 			tween:Play()
-			currentTween = tween
 		end
-		if Fusion.peek(isNew) then pulse(0.66) end
+		if Fusion.peek(isNew) then
+			ensureGlow().Transparency = 0.58
+			pulse(0.66)
+		end
 		scope:Observer(isNew):onChange(function()
 			if Fusion.peek(isNew) then
-				newGlow.Enabled = true
-				newGlow.Transparency = 0.58
-				if not pulsing then pulse(0.66) end
+				ensureGlow().Transparency = 0.58
+				if not pulsing then
+					pulse(0.66)
+				end
 			else
-				if currentTween then currentTween:Cancel() end
+				if currentTween then
+					currentTween:Cancel()
+					currentTween = nil
+				end
 				pulsing = false
-				newGlow.Enabled = true
+				local g = glow
+				if g == nil then
+					return
+				end
 				local fade = TweenService:Create(
-					newGlow,
+					g,
 					TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 					{ Transparency = 1 }
 				)
@@ -284,7 +320,9 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 				table.insert(
 					scope,
 					fade.Completed:Connect(function()
-						if not Fusion.peek(isNew) then newGlow.Enabled = false end
+						if not Fusion.peek(isNew) and glow == g then
+							destroyGlow()
+						end
 					end)
 				)
 				fade:Play()
