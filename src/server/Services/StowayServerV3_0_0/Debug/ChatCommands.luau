@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CoreStore = require(ReplicatedStorage.Shared.Stoway.CoreStore)
 local Types = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
 local Remotes = require(ReplicatedStorage.Shared.Stoway.StowayRemotes)
+local SlotLocks = require(ReplicatedStorage.Shared.Stoway.SlotLocks)
 
 -----------------------------
 -- VARIABLES --
@@ -485,7 +486,63 @@ local function cmdHelp(player: Player, stoway: StowayApi, args: { string })
 	print("/set_skin [Default|Modern|Metal]  - Switch the UI skin")
 	print("/set_layout StandardHotbarStorage [skin] - Switch layout and skin")
 	print("/toggle_sort                    - Toggle auto-sort on/off")
+	print("/locks                           - EXAMPLE locked-slots: per-slot lock verdicts")
+	print("/meta [uuid]                     - EXAMPLE locked-slots: dump item metadata + types")
 	print("═══════════════════════════════════════════════════════════════")
+end
+
+-- EXAMPLE (example/locked-slots): lock verification endpoints. Read-only:
+-- they dump state, never mutate it.
+
+-- Per-slot lock verdicts from server state (same rule the routes enforce).
+local function cmdLocks(player: Player, stoway: StowayApi, args: { string })
+	local state = requireState(player, stoway)
+	if not state then return end
+	local locked = state.Settings.LockedHotbarSlots
+	printBox(("LOCKS for %s"):format(player.Name))
+	if locked then
+		for slot, flag in locked do
+			print(("  locked[%s] = %s"):format(tostring(slot), tostring(flag)))
+		end
+	else
+		print("  LockedHotbarSlots = nil (example code not live?)")
+	end
+	for uuid, item in state.Items do
+		local field = item.Metadata and item.Metadata.UnlocksHotbarSlot
+		if field ~= nil then
+			local loc = state.LocationByUUID[uuid]
+			print(("  token %s UnlocksHotbarSlot(%s)=%s at %s"):format(
+				item.Id, typeof(field), tostring(field),
+				if loc then loc.Type .. "#" .. loc.Slot else "?"
+			))
+		end
+	end
+	for i = 1, state.Settings.MaxHotbarSlots do
+		local unlocked = SlotLocks.isUnlocked(state.Items, locked, i)
+		print(("  slot %d: %s"):format(i, if unlocked then "UNLOCKED" else "LOCKED"))
+	end
+	print("───────────────────────────────────────────────────────────────")
+end
+
+-- Full metadata dump for one item (answers "does it have the field?").
+local function cmdMeta(player: Player, stoway: StowayApi, args: { string })
+	local state = requireState(player, stoway)
+	if not state then return end
+	local uuid = args[2]
+	if not uuid then
+		print("Usage: /meta [uuid]")
+		return
+	end
+	local item = state.Items[uuid]
+	if not item then
+		print(("[Meta] unknown uuid %s"):format(uuid))
+		return
+	end
+	printBox(("[Meta] %s (%s)"):format(item.Id, uuid))
+	for k, v in item.Metadata do
+		print(("  %s (%s) = %s"):format(tostring(k), typeof(v), tostring(v)))
+	end
+	print("───────────────────────────────────────────────────────────────")
 end
 
 -- DISPATCH
@@ -513,6 +570,8 @@ local commands: { [string]: (Player, StowayApi, { string }) -> () } = {
 	set_skin = cmdSetSkin,
 	set_layout = cmdSetLayout,
 	toggle_sort = cmdToggleSort,
+	locks = cmdLocks,
+	meta = cmdMeta,
 	help = cmdHelp,
 }
 
