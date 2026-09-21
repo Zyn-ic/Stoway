@@ -173,13 +173,18 @@ export type DropResult = Result.Result<{
 }>
 
 -- Server FullSync push payload: full inventory without indexes (the
--- client rebuilds them) and without Settings (client keeps defaults).
+-- client rebuilds them) plus a Settings snapshot — the convergence
+-- backstop for sparse SettingsChanged pushes (see docs/specs/SettingsSync.md).
+-- Open map, not the domain nominal: wire data just crossed serialization,
+-- and fixed tables without index signatures are rejected where indexed
+-- maps are expected.
 export type FullSyncPayload = {
 	Items: { [string]: Item },
 	Hotbar: { [number]: string },
 	Storage: { [number]: string },
 	EquippedItemUUID: string?,
 	Weight: number?,
+	Settings: { [string]: any }?,
 }
 
 return Types

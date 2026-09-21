@@ -116,8 +116,16 @@ function SkinLoader.Load(scope: Fusion.Scope<typeof(Fusion)>, playerGui: PlayerG
 	local hideInHotbar: { string }? = if slotFolder then parseNameList(slotFolder:GetAttribute("HideInHotbar")) else nil
 	local slotBleedPx: number? = if slotFolder then parseBleedPx(slotFolder:GetAttribute("SlotBleedPx")) else nil
 
-	-- Single shared DraggingGui at the GUI root; create as a last resort.
-	local existingDragging = guiFolder and (guiFolder:FindFirstChild("DraggingGui") :: ScreenGui?)
+	-- Single shared DraggingGui: prefer the live one already in PlayerGui.
+	-- The folder lookup alone misses it (it moved out on first mount), which
+	-- used to strand the template in PlayerGui and clone a duplicate on
+	-- every skin switch. Adopt it, destroy any extras, else fall back to the
+	-- folder template (moved, never scope-owned — it is shared), else create
+	-- scope-owned as a last resort.
+	local existingDragging = playerGui:FindFirstChild("DraggingGui") :: ScreenGui?
+	if existingDragging == nil then
+		existingDragging = guiFolder and (guiFolder:FindFirstChild("DraggingGui") :: ScreenGui?)
+	end
 	local draggingGui: ScreenGui
 	if existingDragging then
 		existingDragging.IgnoreGuiInset = false
@@ -132,6 +140,11 @@ function SkinLoader.Load(scope: Fusion.Scope<typeof(Fusion)>, playerGui: PlayerG
 		created.Parent = playerGui
 		table.insert(scope, created)
 		draggingGui = created
+	end
+	for _, child in playerGui:GetChildren() do
+		if child:IsA("ScreenGui") and child.Name == "DraggingGui" and child ~= draggingGui then
+			child:Destroy()
+		end
 	end
 
 	return {

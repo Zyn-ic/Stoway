@@ -314,10 +314,11 @@ function Input.Mount(
 					local a: BindingObject = IllusionIAS.new("StowaySlot" .. tostring(i))
 					Binds.ApplyToAction(a, cfg, "Console")
 				a.Activated:Connect(function(_active: IllusionIAS.variant, pressed: boolean?)
-						if not pressed then return end
-						if consoleMode ~= "Hotbar" then return end
-						doEquipSlot(store, i)
-					end)
+					if not pressed then return end
+					if consoleMode ~= "Hotbar" then return end
+					if i > getMaxSlots(store) then return end
+					doEquipSlot(store, i)
+				end)
 					IllusionIAS.addContext("StowayHotbar", a)
 					table.insert(actions, a)
 				end
@@ -446,6 +447,7 @@ function Input.Mount(
 				Binds.ApplyToAction(a, cfg, "PC")
 				 a.Activated:Connect(function(_active: IllusionIAS.variant, pressed: boolean?)
 					if not pressed then return end
+					if i > getMaxSlots(store) then return end
 					doEquipSlot(store, i)
 				end)
 				IllusionIAS.addContext("StowayHotbar", a)
@@ -457,6 +459,17 @@ function Input.Mount(
 			if skin.ScrollingFrame then skin.ScrollingFrame.SelectionGroup = false end
 		end
 	end
+
+	-- Rebuild binds when MaxHotbarSlots changes (settings replicate now):
+	-- actions for slots beyond a shrunk max would otherwise linger and keep
+	-- equipping hidden slots. Runs once per mount; rebuilds are rare.
+	local liveMaxSlots = scope:Computed(function(use: Fusion.Use): number
+		local settings: CoreTypes.Settings? = use(store.Settings)
+		return State.getMaxHotbarSlots(settings)
+	end)
+	scope:Observer(liveMaxSlots):onChange(function()
+		buildForPreferred(PreferredInput.Get())
+	end)
 
 	-- initial
 	PreferredInput.Init(scope)

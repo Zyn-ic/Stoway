@@ -80,6 +80,15 @@ local function printBox(title: string)
 	print("───────────────────────────────────────────────────────────────")
 end
 
+-- Push engine settings so the client UI rebuilds (hotbar size/type,
+-- sorting display, weight limit...). Without it the client keeps stale
+-- atoms and diverges (e.g. server packs Dynamic while the client still
+-- renders Static holes). Sends are SPARSE: each mutation below fires only
+-- the field(s) it changed (intent clarity + minimal bytes). FullSync
+-- carries the full snapshot as the convergence backstop.
+-- (Helper removed in favor of per-site literals: what is sent is visible
+-- exactly where it changes.)
+
 -- INVENTORY DISPLAY
 
 local function cmdInv(player: Player, stoway: StowayApi, args: { string })
@@ -400,6 +409,7 @@ local function cmdToggleStack(player: Player, stoway: StowayApi, args: { string 
 	if not state then return end
 	state.Settings.CanStack = not state.Settings.CanStack
 	print("[Settings] CanStack:", state.Settings.CanStack)
+	Remotes.SettingsChanged:FireClient(player, { CanStack = state.Settings.CanStack })
 end
 
 local function cmdToggleLimit(player: Player, stoway: StowayApi, args: { string })
@@ -407,6 +417,7 @@ local function cmdToggleLimit(player: Player, stoway: StowayApi, args: { string 
 	if not state then return end
 	state.Settings.Limit = if state.Settings.Limit == 0 then 15 else 0
 	print("[Settings] Limit:", state.Settings.Limit, "(0 = Infinite)")
+	Remotes.SettingsChanged:FireClient(player, { Limit = state.Settings.Limit })
 end
 
 local function cmdSetLimit(player: Player, stoway: StowayApi, args: { string })
@@ -415,6 +426,7 @@ local function cmdSetLimit(player: Player, stoway: StowayApi, args: { string })
 	local newLimit = tonumber(args[2]) or 15
 	state.Settings.Limit = newLimit
 	print("[Settings] Limit set to:", newLimit)
+	Remotes.SettingsChanged:FireClient(player, { Limit = newLimit })
 end
 
 local function cmdSetMaxStack(player: Player, stoway: StowayApi, args: { string })
@@ -423,6 +435,7 @@ local function cmdSetMaxStack(player: Player, stoway: StowayApi, args: { string 
 	local newMax = tonumber(args[2]) or 5
 	state.Settings.MaxStackSize = newMax
 	print("[Settings] MaxStackSize set to:", newMax)
+	Remotes.SettingsChanged:FireClient(player, { MaxStackSize = newMax })
 end
 
 local function cmdSetHotbarSlots(player: Player, stoway: StowayApi, args: { string })
@@ -431,6 +444,7 @@ local function cmdSetHotbarSlots(player: Player, stoway: StowayApi, args: { stri
 	local newSlots = tonumber(args[2]) or 9
 	state.Settings.MaxHotbarSlots = newSlots
 	print("[Settings] MaxHotbarSlots set to:", newSlots)
+	Remotes.SettingsChanged:FireClient(player, { MaxHotbarSlots = newSlots })
 end
 
 local function cmdSetHotbarType(player: Player, stoway: StowayApi, args: { string })
@@ -441,9 +455,11 @@ local function cmdSetHotbarType(player: Player, stoway: StowayApi, args: { strin
 	if raw == "Static" then
 		CoreStore.setHotbarType(state, "Static")
 		print("[Settings] HotbarType set to: Static")
+		Remotes.SettingsChanged:FireClient(player, { HotbarType = "Static" })
 	elseif raw == "Dynamic" then
 		CoreStore.setHotbarType(state, "Dynamic")
 		print("[Settings] HotbarType set to: Dynamic")
+		Remotes.SettingsChanged:FireClient(player, { HotbarType = "Dynamic" })
 	else
 		print("Usage: /set_hotbar_type [Static|Dynamic]")
 	end
@@ -490,6 +506,7 @@ local function cmdToggleSort(player: Player, stoway: StowayApi, args: { string }
 	if not state then return end
 	state.Settings.Sorting = not state.Settings.Sorting
 	print("[Settings] Sorting:", state.Settings.Sorting)
+	Remotes.SettingsChanged:FireClient(player, { Sorting = state.Settings.Sorting })
 end
 
 -- HELP

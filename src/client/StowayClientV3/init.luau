@@ -98,6 +98,15 @@ function StowayClient.Init()
 			)
 			print(`[StowayClientV3] layout changed to {hotbarTypeKey} / {skinKey}`)
 		end,
+		-- Engine settings replicate sparsely per change (chat debug today,
+		-- any server flow tomorrow). Funnels through the controller (not the
+		-- store directly) so _state stays in sync: later sync() calls then
+		-- re-apply these values instead of clobbering atoms with the boot
+		-- snapshot. Atoms drive every view, so this rebuilds the whole UI.
+		SettingsChanged = function(patch)
+			ClientController.ApplyServerSettings(patch)
+			print("[StowayClientV3] settings updated from server")
+		end,
 	})
 	NetworkClient.RequestSnapshot()
 
@@ -113,6 +122,13 @@ function StowayClient.Init()
 		state = emptyState()
 	end
 	ClientController.Init(Signals, state)
+
+	-- Join-push race cover: if a FullSync (with settings) landed before
+	-- Init, mirror it now; later pushes apply through the normal path.
+	local bootSnap = NetworkClient.GetLastFullSync()
+	if bootSnap and typeof(bootSnap.Settings) == "table" then
+		ClientController.ApplyServerSettings(bootSnap.Settings)
+	end
 
 	-- Single source of truth: Settings.UiSkin selects both the loader key
 	-- and the GUI asset folder (1:1 contract in LayoutManager).

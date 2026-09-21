@@ -13,6 +13,26 @@ local EquippedPayload = {
 local RevertPayload = { success = data.Boolean, fromSlot = data.optional(data.String) }
 local LayoutChangedPayload = { layout = data.String, skin = data.String }
 
+-- Sparse per-change payload: every field optional, senders include ONLY
+-- what changed (intent clarity + minimal bytes). Inline fresh tables,
+-- registered once (see single-use rule above). Convergence note: a dropped
+-- partial leaves that field stale — FullSync carries the full snapshot as
+-- the backstop (see docs/specs/SettingsSync.md).
+local SettingsPayload = {
+	HotbarType = data.optional(data.String),
+	MaxHotbarSlots = data.optional(data.NumberU8),
+	Limit = data.optional(data.NumberU32),
+	CanStack = data.optional(data.Boolean),
+	MaxStackSize = data.optional(data.NumberU32),
+	BackpackEnabled = data.optional(data.Boolean),
+	Sorting = data.optional(data.Boolean),
+	SortOrder = data.optional(data.String),
+	StackOnSwap = data.optional(data.Boolean),
+	StackRequiredFields = data.optional({ data.String }),
+	StackBlacklist = data.optional({ [data.String] = data.Boolean }),
+	DefaultDroppable = data.optional(data.Boolean),
+}
+
 local SlotRef = { Type = data.String, Slot = data.NumberU8 }
 
 -- METADATA WIRE SCHEMA (open-ended)
@@ -70,6 +90,23 @@ local FullSyncPayload = {
 	Storage = SlotDict,
 	EquippedItemUUID = data.optional(data.String),
 	Weight = data.optional(data.NumberU32),
+	-- Settings snapshot (convergence backstop for sparse pushes). Fresh
+	-- inline tables (single-use rule); mirrors SettingsPayload field for
+	-- field so the shapes can't drift unnoticed.
+	Settings = data.optional({
+		HotbarType = data.String,
+		MaxHotbarSlots = data.NumberU8,
+		Limit = data.NumberU32,
+		CanStack = data.Boolean,
+		MaxStackSize = data.NumberU32,
+		BackpackEnabled = data.Boolean,
+		Sorting = data.Boolean,
+		SortOrder = data.String,
+		StackOnSwap = data.Boolean,
+		StackRequiredFields = { data.String },
+		StackBlacklist = { [data.String] = data.Boolean },
+		DefaultDroppable = data.Boolean,
+	}),
 }
 
 local function makeAddOptions()
@@ -112,6 +149,7 @@ return {
 	InventoryRevert = QuickNet:register("InventoryRevert", RevertPayload),
 	InventoryFullSync = QuickNet:register("InventoryFullSync", FullSyncPayload),
 	LayoutChanged = QuickNet:register("LayoutChanged", LayoutChangedPayload),
+	SettingsChanged = QuickNet:register("SettingsChanged", SettingsPayload),
 	-- Client -> server requests. Registered under operation names; the
 	-- server branch listens on this same module, so names stay in sync
 	-- by construction. FireServer with no listener is a silent no-op.

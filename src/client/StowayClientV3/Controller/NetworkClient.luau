@@ -42,6 +42,7 @@ export type ApplyHandlers = {
 	Unequipped: () -> (),
 	FullSync: (payload: CoreTypes.FullSyncPayload) -> (),
 	LayoutChanged: (hotbarTypeKey: string, skinKey: string) -> (),
+	SettingsChanged: (patch: { [string]: any }) -> (),
 }
 
 local _applies: ApplyHandlers? = nil
@@ -209,6 +210,9 @@ function NetworkClient.Connect(applies: ApplyHandlers)
 	end)
 	_conns[#_conns + 1] = R.InventoryRevert.OnClientEvent:Connect(function(payload)
 		warn(`[NetworkClient] server revert (log-only): {tostring(payload.fromSlot)}`)
+		-- A revert means the optimistic local op forked from server truth.
+		-- Resync wholesale (cooldown-gated server-side) to heal any drift.
+		NetworkClient.RequestSnapshot()
 	end)
 	_conns[#_conns + 1] = R.InventoryFullSync.OnClientEvent:Connect(function(payload: CoreTypes.FullSyncPayload)
 		_lastFullSync = payload
@@ -225,6 +229,16 @@ function NetworkClient.Connect(applies: ApplyHandlers)
 		end
 		if not pcall(_applies.LayoutChanged, payload.layout, payload.skin) then
 			warn("[NetworkClient] ApplyServerLayoutChanged failed")
+		end
+	end)
+	_conns[#_conns + 1] = R.SettingsChanged.OnClientEvent:Connect(function(payload)
+		if not _applies then return end
+		if typeof(payload) ~= "table" then
+			warn("[NetworkClient] invalid settings payload")
+			return
+		end
+		if not pcall(_applies.SettingsChanged, payload) then
+			warn("[NetworkClient] ApplyServerSettingsChanged failed")
 		end
 	end)
 end

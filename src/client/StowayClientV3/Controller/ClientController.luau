@@ -414,6 +414,11 @@ function ClientController.ApplyServerFullSync(payload: CoreTypes.FullSyncPayload
 	if typeof(payload.Weight) == "number" then
 		_state.Weight = payload.Weight
 	end
+	-- Settings snapshot (convergence backstop for sparse pushes): same
+	-- patch applier as the live path, then the trailing sync() fans out.
+	if typeof(payload.Settings) == "table" then
+		ClientController.ApplyServerSettings(payload.Settings)
+	end
 	_state.LocationByUUID = {}
 	_state.ItemsByID = {}
 	_state.MetadataIndex = {}
@@ -437,6 +442,29 @@ function ClientController.ApplyServerUnequipped()
 			ClientEvents.CallHook(_hooks, "OnUnequip", ref.Type, ref.Slot)
 		end
 	end
+end
+
+-- Live settings patches (sparse per change, see SettingsChanged). Overlays
+-- present fields onto _state first so later sync() calls re-apply them
+-- instead of clobbering atoms with the boot snapshot, then syncs once
+-- (single atomic atoms update via SetEngineSettings). Unknown keys are
+-- ignored by construction. Engine fields only.
+function ClientController.ApplyServerSettings(patch: { [string]: any })
+	if not _state then return end
+	local s = _state.Settings
+	if patch.HotbarType ~= nil then s.HotbarType = patch.HotbarType end
+	if patch.MaxHotbarSlots ~= nil then s.MaxHotbarSlots = patch.MaxHotbarSlots end
+	if patch.Limit ~= nil then s.Limit = patch.Limit end
+	if patch.CanStack ~= nil then s.CanStack = patch.CanStack end
+	if patch.MaxStackSize ~= nil then s.MaxStackSize = patch.MaxStackSize end
+	if patch.BackpackEnabled ~= nil then s.BackpackEnabled = patch.BackpackEnabled end
+	if patch.Sorting ~= nil then s.Sorting = patch.Sorting end
+	if patch.SortOrder ~= nil then s.SortOrder = patch.SortOrder end
+	if patch.StackOnSwap ~= nil then s.StackOnSwap = patch.StackOnSwap end
+	if patch.StackRequiredFields ~= nil then s.StackRequiredFields = table.clone(patch.StackRequiredFields) end
+	if patch.StackBlacklist ~= nil then s.StackBlacklist = table.clone(patch.StackBlacklist) end
+	if patch.DefaultDroppable ~= nil then s.DefaultDroppable = patch.DefaultDroppable end
+	sync()
 end
 
 local function bindSignals(signals: typeof(Signals))

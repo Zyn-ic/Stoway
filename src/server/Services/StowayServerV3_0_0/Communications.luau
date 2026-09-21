@@ -69,12 +69,28 @@ local function pushFullSync(player: Player)
 	for idx, uuid in state.Storage do
 		storage[idx] = uuid
 	end
+	local s = state.Settings
 	Remotes.InventoryFullSync:FireClient(player, {
 		Items = items,
 		Hotbar = hotbar,
 		Storage = storage,
 		EquippedItemUUID = state.EquippedItemUUID,
 		Weight = state.Weight,
+		-- Settings snapshot (convergence backstop for sparse pushes).
+		Settings = {
+			HotbarType = s.HotbarType,
+			MaxHotbarSlots = s.MaxHotbarSlots,
+			Limit = s.Limit,
+			CanStack = s.CanStack,
+			MaxStackSize = s.MaxStackSize,
+			BackpackEnabled = s.BackpackEnabled,
+			Sorting = s.Sorting,
+			SortOrder = s.SortOrder,
+			StackOnSwap = s.StackOnSwap,
+			StackRequiredFields = s.StackRequiredFields,
+			StackBlacklist = s.StackBlacklist,
+			DefaultDroppable = s.DefaultDroppable,
+		},
 	})
 end
 
