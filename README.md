@@ -123,23 +123,6 @@ Every operation returns a result object with `success`, `error` (if failed), and
   (e.g. `example/locked-slots`: metadata-keyed hotbar slot unlocks).
   See `BRANCH_PLAN.md`. Example branches are never merged; canon stays minimal.
 
-## First-Seen Glow (`IsNew`)
-
-`IsNew` is client-ephemera, never server truth:
-
-- Game code grants with the flag (`AddItem` with `IsNew` in metadata, replicate on),
-  then strips it silently (metadata delete, replicate off).
-- The client renders the glow purely from metadata (add, sync, metadata update)
-  and clears it locally on equip via `updateMetadata` — never sent back.
-- Invariants: server state must never hold `IsNew` (else `FullSync` resurrects
-  cleared glows); any `FullSync` wipes lingering glows (implicit mark-all-seen).
-- The `NewGlow` instance exists only while the flag is present (created on
-  demand, destroyed on clear).
-
-## Debug Chat Commands (added)
-
-- `/addnew [id] [amount?]` — add-with-`IsNew` + silent server strip (demo above).
-
 ## Client Robustness
 
 - Ghost-slot healing: if an `Added` push arrives for an occupied hotbar slot

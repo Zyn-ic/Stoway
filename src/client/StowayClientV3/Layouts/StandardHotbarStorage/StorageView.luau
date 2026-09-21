@@ -385,7 +385,6 @@ function StorageView.Create(
 				Store = store,
 				HideChrome = skin.HideInStorage,
 				DragService = dragService,
-				GlowSpread = skin.GlowSpread,
 				Hooks = skin.Hooks,
 			})
 			do

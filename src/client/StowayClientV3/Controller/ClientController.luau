@@ -106,8 +106,6 @@ local function equipAndClearNew(uuid: string): CoreTypes.EquipResult
 	if not _state then return noState() end
 	local res = CoreStore.equip(_state, uuid)
 	if res.ok then
-		-- Glow off: delete the IsNew flag. Presence renders, absence hides.
-		CoreStore.updateMetadata(_state, uuid, { IsNew = CoreStore.METADATA_DELETE })
 		sync()
 		-- Equip never moves the item: post-op lookup is valid.
 		local ref = lookupSlot(uuid)
@@ -375,7 +373,6 @@ function ClientController.ApplyServerEquipped(uuid: string)
 	end
 	local res = CoreStore.equip(_state, uuid)
 	if res.ok then
-		CoreStore.updateMetadata(_state, uuid, { IsNew = CoreStore.METADATA_DELETE })
 		sync()
 		local ref = lookupSlot(uuid)
 		if ref ~= nil then
@@ -386,8 +383,7 @@ function ClientController.ApplyServerEquipped(uuid: string)
 end
 
 -- Wholesale replace from a FullSync push. Indexes are rebuilt from the
--- slot tables; Settings stay local (not covered); IsNew flags do not
--- survive (server never sets them). Silent: no per-item events.
+-- slot tables; Settings stay local (not covered). Silent: no per-item events.
 function ClientController.ApplyServerFullSync(payload: CoreTypes.FullSyncPayload)
 	if not _state then return end
 	local items = payload.Items
@@ -546,14 +542,6 @@ local function bindSignals(signals: typeof(Signals))
 		hydrateIfNeeded(_state)
 		local ok, res = pcall(unequipOp)
 		if ok and res and res.ok then sync() elseif not ok then warn("[ClientController] Unequip error", res) end
-	end))
-
-	table.insert(_connections, signals.MarkNew:Connect(function(uuid: string)
-		if not _state then return end
-		hydrateIfNeeded(_state)
-		local updates: CoreTypes.MetadataUpdates = { IsNew = true }
-		local ok, res = pcall(CoreStore.updateMetadata, _state, uuid, updates)
-		if ok and res and res.ok then sync() elseif not ok then warn("[ClientController] MarkNew error", res) end
 	end))
 end
 

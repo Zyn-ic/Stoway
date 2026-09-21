@@ -77,9 +77,6 @@ export type SkinHandle = {
 	-- Per-skin layout data (optional): desktop hotbar X scale. Absent =
 	-- the shared default; mobile taper is never overridden.
 	DesktopHotbarXScale: number?,
-	-- Per-skin glow tuning: UIShadow spread. Absent = shared default
-	-- (0.05 scale on both axes). Metal uses a wider 0.5 spread.
-	GlowSpread: UDim2?,
 	-- Skin hook table (Layer 2): the required HookFuncs module from the
 	-- Studio skin folder, or nil when the skin declares none. Boundary-
 	-- typed as a string map; the Studio module itself (self-contained

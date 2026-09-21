@@ -190,42 +190,6 @@ local function cmdAddHot(player: Player, stoway: StowayApi, args: { string })
 	end
 end
 
--- DEMO (not canon): the intended first-seen flow using only core ops.
--- Adds WITH IsNew (replicates: the client glows), then strips it
--- server-side silently (replicate=false: no echo) so server state stays
--- clean and FullSync can never resurrect the glow. New stacks only;
--- pre-existing stacks keep whatever they had. Any tool, auto placement.
-local function cmdAddNew(player: Player, stoway: StowayApi, args: { string })
-	local itemId = args[2]
-	if not itemId then
-		print("Usage: /addnew [itemId] [amount?]")
-		return
-	end
-	local amount = tonumber(args[3]) or 1
-	local result = stoway.AddItem(player, { Id = itemId, Amount = amount, Metadata = { IsNew = true } }, nil, true)
-	if not result.ok then
-		print(("[AddNew] %s x%d"):format(itemId, amount))
-		print("  Success: false")
-		print("  Reason:", result.error.message)
-		return
-	end
-	print(("[AddNew] %s x%d"):format(itemId, amount))
-	print("  Success: true")
-	print("  Added:", result.value.addedAmount or 0)
-	print("  Overflow:", result.value.overflow or 0)
-	local added = result.value.addedItems
-	if added then
-		for _, entry in added do
-			local strip = stoway.UpdateMetadata(player, entry.uuid, { IsNew = CoreStore.METADATA_DELETE }, false)
-			if strip.ok then
-				print(("  Unmarked (server-clean): %s"):format(entry.uuid))
-			else
-				print(("  Strip failed for %s: %s"):format(entry.uuid, strip.error and strip.error.message or "?"))
-			end
-		end
-	end
-end
-
 -- REMOVE ITEM
 
 local function cmdRemove(player: Player, stoway: StowayApi, args: { string })
@@ -519,7 +483,6 @@ local function cmdHelp(player: Player, stoway: StowayApi, args: { string })
 	print("/add [id] [amount?]             - Add item (auto placement)")
 	print("/addback [id] [amount?]         - Add directly to backpack")
 	print("/addhot [id] [amount?] [slot?]  - Add directly to hotbar")
-	print("/addnew [id] [amount?]         - Add as new (glow), server stripped silently")
 	print("/remove [uuid] [amount?]        - Remove item by UUID")
 	print("/drop [uuid] [amount?]         - Drop item into the world")
 	print("/swap [t1] [s1] [t2] [s2]       - Swap two slots")
@@ -549,7 +512,6 @@ local commands: { [string]: (Player, StowayApi, { string }) -> () } = {
 	add = cmdAdd,
 	addback = cmdAddBack,
 	addhot = cmdAddHot,
-	addnew = cmdAddNew,
 	remove = cmdRemove,
 	drop = cmdDrop,
 	swap = cmdSwap,
