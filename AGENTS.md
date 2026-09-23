@@ -16,9 +16,7 @@ Stoway is a Roblox inventory framework. The core is a pure Luau inventory engine
 
 **Communications adapter:** `src/server/Services/StowayServerV3_0_0/Communications.luau`
 
-**Old server code:** `src/server/StowayServerV1_2/` (legacy reference, may be deleted)
-
-**Client (StowayClientV3, branch `client-v3-sonnet`):** `src/client/StowayClientV3/` — Fusion 0.3 (`isRelease=true`, Studio `Workspace.Fusion` snapshot, `UsedAs`/`Graph`/`lazy For`) client. Mapped to `StarterPlayer.StarterPlayerScripts` via `default.project.json`. Core phase: settings-driven hotbar + sectioned storage from mock data. Drag, multi-platform, hooks come later. Structured around the master plan's `HotbarType` vs `UiSkin` split: `CoreStore/` (pure state+query), `Controller/` (Fusion RootScope + `LayoutManager`), `Layouts/<HotbarType>/` (render engines), `Skins/<SkinName>/` (GUI prefab loaders), `Slot/SlotView.luau` (shared across layouts). Scopes are `Fusion.Scope<typeof(Fusion)>` (see Fusion notes below). See `src/client/StowayClientV3/README.md`.
+**Client (StowayClientV3, branch `client`):** `src/client/StowayClientV3/` — Fusion 0.3 (`isRelease=true`, Studio `Workspace.Fusion` snapshot, `UsedAs`/`Graph`/`lazy For`) client. Mapped to `StarterPlayer.StarterPlayerScripts` via `default.project.json`. Boots from the server snapshot; settings-driven hotbar + sectioned storage, drag + drop, multi-platform input (PC/console/touch), skin hooks. Structured around the master plan's `HotbarType` vs `UiSkin` split: `CoreStore/` (pure state+query), `Controller/` (Fusion RootScope + `LayoutManager`), `Layouts/<HotbarType>/` (render engines), `Skins/<SkinName>/` (GUI prefab loaders), `Slot/SlotView.luau` (shared across layouts). Scopes are `Fusion.Scope<typeof(Fusion)>` (see Fusion notes below). See `src/client/StowayClientV3/README.md`.
 
 **Shared (Stoway):** `ReplicatedStorage/Shared/Stoway/` — shared types, settings defaults, colors, Result type, StowayRemotes wire, **CoreStore** (see below).
 
@@ -30,20 +28,19 @@ Stoway is a Roblox inventory framework. The core is a pure Luau inventory engine
 
 ## Running Tests
 
-This repo is tested and used **in Roblox Studio only** — no Lune. The legacy Lune suites under
-`src/server/tests/` are retired (kept for reference only; they will not run since CoreStore
-modules now use static Instance-path requires).
+This repo is tested and used **in Roblox Studio only** — no Lune. All legacy
+suites (`src/server/tests/`, client harness files, Studio `Runner` specs) were
+purged; the suite is being rebuilt (see Test Plan below). Type checking is the
+standing gate until then.
 
 ### Type checking (luau-lsp analyze)
 
-Run from the repo root to type-check everything except vendored packages:
+Run from the repo root to type-check everything except vendored packages
+(`rojo serve` keeps `sourcemap.json` fresh via `--watch` — do NOT regenerate
+it by hand, just point the analyzer at the root copy):
 
 ```
-& "C:\Users\yum\.rokit\bin\rojo.exe" sourcemap default.project.json --output "sourcemap.json"  # also --watch via rojo serve
-& "C:\Users\yum\.rokit\bin\luau-lsp.exe" analyze `
-  --definitions="globalTypes.d.luau" `
-  --sourcemap="sourcemap.json" `
-  --ignore="**/Packages/**" "src" "ReplicatedStorage\Tests"
+/home/yum/.rokit/bin/luau-lsp analyze --definitions="globalTypes.d.luau" --sourcemap="sourcemap.json" --ignore="**/Packages/**" src
 ```
 
 - Download Roblox definitions once from
@@ -52,24 +49,14 @@ Run from the repo root to type-check everything except vendored packages:
 - Expected result: **0 errors** outside `ReplicatedStorage/Packages/**` with the old solver (`LuauSolverV2=false`, `rokit` default). With Zed `fflags > enable_new_solver:true` (`LuauSolverV2=true`) you will see `Value`/`Computed` `nil | T` vs `T` noise on `ClientStore`/`SlotView` — add explicit `:: Fusion.Value<T>` / `:: Fusion.Computed<T>` or `function(use: Fusion.Use): string?` to silence, or set `enable_new_solver:false` to match CI.
 - In Studio, the luau-lsp VS Code extension resolves requires via Rojo sourcemap + `.luaurc`.
 
-### Studio data specs
+### Studio specs (removed)
 
-Open Studio and run in the Command Bar:
-
-```
-require(game.ReplicatedStorage.Tests.Runner).run()
-```
-
-Covers client Query pure logic (grouping, search, sortRecords, packedHotbarOrder,
-formatAmount/formatWeight) plus Shared CoreStore MetadataIndex/sort. No Play mode needed.
+The `ReplicatedStorage/Tests/` runner + specs were purged with the legacy
+suites. Client testing is being rebuilt per the Test Plan below.
 
 ### Replication default
 
 `replicate` is opt-in on every Stoway operation route: `nil` (omitted) means **no** replication; pass `true` to echo a server-side change to a client. Passing `false` is equivalent to omitting it.
-
-### Web Test Tool
-
-Open `src/server/tests/web/index.html` in a browser. No build step, no server needed. This is a full JS port of CoreStore.
 
 ---
 
@@ -95,7 +82,7 @@ local Protocol = require(script.Protocol)        -- child of an init.luau folder
 ```
 
 `.luaurc` aliases are still configured for the luau-lsp extension but production code does
-not use them at runtime. Legacy Lune suites in `src/server/tests/` still reference them.
+not use them at runtime.
 
 **Do NOT use:**
 - Relative paths like `require("../CoreStore/Types")` — break in luau-lsp Roblox mode
@@ -150,22 +137,27 @@ return ModuleName
 |------|---------|-----------|
 | `init.luau` | Orchestration facade | Init, createPlayer, get, removePlayer, getAll, registerAdapter, 12 operation routes |
 | `Communications.luau` | Network adapter + gatekeeper | Init(Stoway, NetworkService, folder), QuickNet handlers, validation, replicate decisions, Stoway adapter |
+| `Debug/ChatCommands.luau` | Chat debug commands; settings mutators push sparse `SettingsChanged` | cmd* |
 
-### StowayClient (Client Layer, branch `client-v3-sonnet`)
+### StowayClient (Client Layer, branch `client`)
 
 | File | Purpose | Public API |
 |------|---------|-----------|
-| `init.client.luau` | LocalScript entry | StowayClient.Init() |
-| `init.luau` | Client entry point | Init (seed mock data, LayoutManager.SetLayout) |
+| `../Start.client.luau` | LocalScript entry (sibling of the module, never fused) | require + StowayClient.Init() |
+| `init.luau` | Client entry point | Init (server snapshot boot, LayoutManager.SetLayout) |
 | `CoreStore/Types.luau` | Client-local type re-exports + SkinHandle/GroupedStorage shapes | Types only |
 | `CoreStore/State.luau` | Settings-derived defaults (pure) | getMaxHotbarSlots, slotIndices, isBackpackEnabled |
 | `CoreStore/Query.luau` | Pure lookups/derivations (no Fusion/Instances) | getItem, findSlotByUUID, packedHotbarOrder, isHotbarSlotVisible, groupStorageByType, orderedGroupKeys, formatWeight |
 | `Controller/ClientStore.luau` | Fusion RootScope + reactive atoms (Items/Hotbar/Storage/Weight/Settings) | RootScope, Value atoms, Init, GetSnapshot, GetSettings, GetItem, GetSlotOf |
+| `Controller/ClientController.luau` | Signals bus -> atoms; server-apply paths, ghost-slot healing, ApplyServerSettings funnel | swapOp/moveOp/addOp/removeOp/equipAndClearNew, ApplyServer* |
+| `Controller/NetworkClient.luau` | QuickNet sends (one FireServer per op) + push subscriptions; revert triggers resync | Send*, RequestSnapshot, Connect |
 | `Controller/LayoutManager.luau` | Mounts a `Layouts[]` engine against a `Skins[]` loader; owns LayoutScope lifecycle | SetLayout, Teardown, GetCurrentLayout |
 | `Layouts/StandardHotbarStorage/init.luau` | HotbarType engine: Static/Dynamic hotbar + sectioned storage | Mount(scope, skin, store) |
 | `Layouts/StandardHotbarStorage/HotbarView.luau` | Hotbar 1..MaxHotbarSlots, Static holes / Dynamic packing | Create(scope, skin, store) |
 | `Layouts/StandardHotbarStorage/StorageView.luau` | Sectioned storage: type groups + collapse headers + weight label | Create(scope, skin, store) |
-| `Skins/DefaultModern/init.luau` | UiSkin prefab loader (`ReplicatedStorage.Stoway.GUI.<name>`) | Load(scope, playerGui, skinAssetName) |
+| `Layouts/StandardHotbarStorage/Input.luau` | Per-layout IAS binds + PreferredInput; rebuilds on MaxHotbarSlots change | Mount(scope, skin, store, dragService) |
+| `Skins/SkinLoader/init.luau` | Generic prefab loader; owns the single shared DraggingGui singleton | Load(scope, playerGui, skinAssetName) |
+| `Skins/Default|Modern|Metal/init.luau` | Thin per-skin modules stamping look data onto the handle | Load(scope, playerGui, skinAssetName) |
 | `Slot/SlotView.luau` | Slot hydration: image, stack count, rarity frame, keybind, equipped, packing. Shared across all layouts. | Create(scope, props) |
 | `Mock/MockData.luau` | Seeded inventory for the pure client test | build() |
 
@@ -251,34 +243,33 @@ StackBlacklist = { Legendary = true, Mythic = true, Special = true }
 - **Dynamic hotbar:** Compacts after remove/swap/move. Static preserves holes. Use `CoreStore.setHotbarType(state, "Dynamic")` to switch types — it auto-compacts.
 - **Auto-sort:** Triggers after any mutating operation when `Sorting = true`. Sorts Storage only. Hotbar is never sorted (user-controlled).
 - **MetadataIndex:** Indexed fields: Rarity, Type. O(1) bucket lookups for find().
+- **Settings replication:** engine settings push sparsely per change (`SettingsChanged`); `FullSync` carries the full snapshot as backstop. Client overlays onto `_state`, never atoms directly.
+- **Optimistic ops + revert:** client applies drags locally; server rejects arrive as revert + resync (no silent forks).
+- **Ghost healing:** an `Added` push for an occupied hotbar slot whose occupant has no item entry is evicted, not skipped. Real-item conflicts still warn + skip.
 
 ---
 
-## Test Structure
+## Test Plan
 
-### corestore_operations_test.luau (66 tests)
+Legacy suites (Lune, client harness, Studio Runner specs) are purged. The
+rebuild comes in two phases:
 
-Tests for: swap, swapStack, move, split, metadata, sort, MetadataIndex, equip/unequip, dynamic hotbar. Visual pass/fail output.
+### Phase 1 — data-output tests (now)
 
-### stoway_server_test.luau (21 tests)
+One observer-only LocalScript per area (NotifyExample pattern): subscribes to
+the bus, peeks live store state, prints structured data lines to Output, then
+disables itself. A human evaluates pass/fail from the data. Proven workable:
+in-game requires DO reach live modules (the late `LockedSlotsVerify` printed
+live token metadata + verdicts) — the no-table-access limit applies to MCP
+executes, not to in-game scripts. Prefer direct store peeks over GUI scraping:
+GUI can't be trusted for core-functional verification (a correct state can
+render wrong and vice versa).
 
-Tests for: Stoway orchestration layer — player lifecycle, operation routing, adapter dispatch, concurrent operation blocking.
+### Phase 2 — automated shape asserts (later)
 
-### corestore_addtest.luau (25 tests)
-
-Tests for: add operations, stacking, overflow, capacity, weight, placement modes, blacklisting. 20 pass + 5 deliberate failures.
-
-### manual_test.luau
-
-Lune REPL for interactive testing. Load modules, save/load JSON state.
-
-### Studio Data Specs (new)
-
-`ReplicatedStorage/Tests/ClientData.spec.luau` + `Runner.luau` — pure table checks for client Query (grouping, search, sortRecords, packedHotbarOrder, formatAmount) and Shared CoreStore MetadataIndex/sort. Run in Studio: `require(game.ReplicatedStorage.Tests.Runner).run()` in Command Bar. No Fusion/Instances needed. Lune suites are kept for now and will be retired as Studio coverage grows.
-
-### Web Test Tool (12 scenarios)
-
-Fill Hotbar, Stack Test, Overflow, Capacity, Blacklist, Swap, Move, Split, Sort by Rarity, Multi-Player, Dynamic Hotbar, Weight Tracking.
+Same harness plus `expect`-style asserts (error on mismatch) so Output shows
+pass/fail without human reading. Enable per playtest; keep tests off the
+canon runtime path (no requires from production code).
 
 ---
 
@@ -296,6 +287,8 @@ docs/
     MetadataUpdateRules.md      -- All mutable, no auto re-stack
     NetworkProtocol.md          -- QuickNet event names, payloads, validation rules
     ReplicationRules.md         -- Origin tracking, replicate decision, rollback format
+    SettingsSync.md             -- Sparse SettingsChanged pushes + FullSync backstop, structural-vs-cosmetic table
+    TestingRules.md             -- Observer-only data-output tests, then automated asserts
   site/                         -- Documentation website (vanilla HTML/CSS/JS)
 ```
 
@@ -315,3 +308,5 @@ docs/
 10. **Dynamic Hotbar slot availability** — The only available slot is the append position (`findEmptyHotbarSlot`). Operations targeting non-append slots are rejected with `DESTINATION_UNAVAILABLE`. Preferred slot is ignored in Dynamic mode. Use `CoreStore.setHotbarType(state, "Dynamic")` to switch types — it auto-compacts the hotbar.
 11. **`Fusion.Scope<any>` has no `Hydrate`/`ForPairs`** — `Types.Scope<Constructors> = {Task} & Constructors`, so `Scope<any>` is `any & {Task}` with no Fusion members. Use `Fusion.Scope<typeof(Fusion)>` (as in `HotbarView`, `StorageView`, `SlotView`, `LayoutManager`, `PointerDragService`). Zed `enable_new_solver:true` surfaces this.
 12. **Lazy `For` side-effects need `Observer`** — Studio `Fusion` `For` is `timeliness="lazy"`. `scope:ForPairs` that only does `SlotView.Create` + `Parent = hotbarFrame` and ignores the returned table never runs unless observed. Wrap side-effect `For`s with `local f = scope:ForPairs(...); Fusion.peek(f); scope:Observer(f)` as in `HotbarView`/`StorageView`. The 0.3.1 `For` was eager via `updateAll`.
+13. **No live property reads as `Computed` fallbacks** — `return slotnumber.TextColor3` inside the `Computed` bound TO `slotnumber.TextColor3` self-perpetuates (once amber, amber forever). Capture once (`local default = inst.Prop`) and return the capture. The codebase already does this (`originalPosition`, `origSize`).
+14. **Pushed settings go through `_state` first** — writing atoms directly gets clobbered by the next op's `sync()` (proven live: 10 slots after set-to-4). Funnel: `ClientController.ApplyServerSettings` (overlay onto `_state`, then `sync()` fans out). Same for any future pushed state.
