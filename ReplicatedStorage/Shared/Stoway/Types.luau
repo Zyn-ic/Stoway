@@ -62,6 +62,9 @@ export type Settings = {
 	StackBlacklist: { [string]: boolean },
 	DefaultDroppable: boolean,
 	UiSkin: string,
+	-- HotbarType layout engine key (LayoutManager.Layouts). Boot mounts
+	-- this; runtime switches arrive via the LayoutChanged event.
+	Layout: string,
 	Categories: { [string]: CategoryDef },
 	-- Client/UI-only demo toggle: when true, Storage renders as collapsible
 	-- groups by Metadata.Type (StorageView); when false, Storage renders as
@@ -86,6 +89,7 @@ export type SettingsOverrides = {
 	StackBlacklist: { [string]: boolean }?,
 	DefaultDroppable: boolean?,
 	UiSkin: string?,
+	Layout: string?,
 	Categories: { [string]: CategoryDef }?,
 	GroupByCategory: boolean?,
 }

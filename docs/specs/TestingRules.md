@@ -18,9 +18,14 @@ human-judged data output first, automated shape asserts later.
    events; read GUI only when the screen itself is the spec (keybind labels).
 3. **Structured output.** Every line is prefixed `[TestName]` with `key=value`
    pairs. A human (Phase 1) or an assert (Phase 2) judges from Output.
-4. **Self-disabling.** Each test disables itself after running
-   (`script.Disabled = true`, session-only, file untouched). File present =
-   runs once per play; toggle `Disabled` in Explorer pre-play to skip.
+4. **Self-disabling (main thread only).** Each test sets `script.Disabled = true`
+   when its run completes (session-only, file untouched). That halts the main
+   thread and queued defers — but bus/observer subscriptions stay rooted in
+   live state and keep firing. Design watchers content-keyed and idempotent;
+   file present = runs on boot, toggle `Disabled` in Explorer pre-play to skip.
+5. **Boot reads race Init.** A deferred baseline can run before the client
+   boots (nil atoms/`_state`). Guard nil state and label it; the first real
+   event still verifies.
 5. **No canon requires.** Tests live outside the runtime path. Production
    must boot and run identically with every test file deleted.
 

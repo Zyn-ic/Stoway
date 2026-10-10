@@ -13,6 +13,12 @@
 	Drag commits call the caller-supplied onCommit(from,to) which hits
 	ClientInventoryController directly, not Signals (Signals are mock RemoteEvents
 	for the 5s LocalScript smoke test only).
+
+	Sweep mode (SetSweepEnabled): Jailbreak-style paint-to-move. No ghost;
+	crossing the threshold arms the sweep, and every new slot the pointer
+	enters commits onCommit(current, entered) live (the caller returns
+	whether it applied; only applied crossings advance the ripple).
+	Release commits nothing — a press with no crossing is a tap.
 ]]
 -----------------------------
 -- VARIABLES --
@@ -46,7 +52,8 @@ export type DragContext = {
 type SelfData = {
 	_layoutScope: Fusion.Scope<typeof(Fusion)>,
 	_draggingGui: ScreenGui,
-	_onCommit: (from: SlotRef, to: SlotRef?, context: DragContext) -> (),
+	-- Returns whether the commit applied; sweep advances only on true.
+	_onCommit: (from: SlotRef, to: SlotRef?, context: DragContext) -> boolean,
 	_slotTemplate: Frame?,
 	_backpackFrame: Frame?,
 	_hotbarFrame: Frame?,
@@ -70,6 +77,12 @@ type SelfData = {
 	_releaseConn: RBXScriptConnection?,
 	_moveConn: RBXScriptConnection?,
 	_lastDragEnd: number,
+	-- Sweep mode: armed past threshold, current ripple head, optional
+	-- press gate (layouts reject drags starting on empty slots).
+	_sweepEnabled: boolean,
+	_sweepArmed: boolean,
+	_sweepCurrent: SlotRef?,
+	_sweepCanBegin: ((SlotRef) -> boolean)?,
 }
 
 -----------------------------
@@ -95,7 +108,7 @@ end
 function PointerDragService.new(
 	layoutScope: Fusion.Scope<typeof(Fusion)>,
 	draggingGui: ScreenGui,
-	onCommit: (from: SlotRef, to: SlotRef?, context: DragContext) -> (),
+	onCommit: (from: SlotRef, to: SlotRef?, context: DragContext) -> boolean,
 	slotTemplate: Frame?,
 	backpackFrame: Frame?,
 	hotbarFrame: Frame?,
@@ -129,6 +142,10 @@ function PointerDragService.new(
 	self._releaseConn = nil :: RBXScriptConnection?
 	self._moveConn = nil :: RBXScriptConnection?
 	self._lastDragEnd = 0
+	self._sweepEnabled = false
+	self._sweepArmed = false
+	self._sweepCurrent = nil :: SlotRef?
+	self._sweepCanBegin = nil :: ((SlotRef) -> boolean)?
 
 	local releaseConn = UserInputService.InputEnded:Connect(function(input: InputObject)
 		if not self._enabled then return end
@@ -159,11 +176,22 @@ function PointerDragService.RegisterDraggable(self: Service, slotScope: Fusion.S
 			if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
 			local cur = Vector2.new(input.Position.X, input.Position.Y)
 			self._lastMousePos = cur
+			-- Armed sweep: every movement hit-tests for a new crossing.
+			if self._dragging and self._sweepArmed then
+				self:_sweepStep(cur)
+				return
+			end
 			local dist = (cur - self._pressPos).Magnitude
 			local threshold = if input.UserInputType == Enum.UserInputType.Touch then 10 else 5
 			if dist >= threshold and not self._dragging then
-				if self._checkConn then self._checkConn:Disconnect(); self._checkConn = nil end
-				self:_beginDrag(cur)
+				if self._sweepEnabled then
+					-- Sweep keeps this connection alive for crossings;
+					-- _beginSweep disconnects it again on gate reject.
+					self:_beginSweep(cur)
+				else
+					if self._checkConn then self._checkConn:Disconnect(); self._checkConn = nil end
+					self:_beginDrag(cur)
+				end
 			end
 		end)
 		self._checkConn = checkConn
@@ -189,6 +217,19 @@ function PointerDragService.SetEnabled(self: Service, enabled: boolean)
 	if not enabled and self._dragging then self:_cancelPress(); self:_endDrag() end
 end
 
+-- Sweep/paint mode: arm on threshold instead of ghosting, commit per
+-- slot crossing, release commits nothing. Tap (no crossing) still equips
+-- via SlotView Activated + the WasRecentlyDragging guard.
+function PointerDragService.SetSweepEnabled(self: Service, enabled: boolean)
+	self._sweepEnabled = enabled
+end
+
+-- Optional press gate for sweep mode: consulted at arm time, so drags
+-- starting on empty slots never begin (the release falls through to tap).
+function PointerDragService.SetSweepCanBegin(self: Service, predicate: ((SlotRef) -> boolean)?)
+	self._sweepCanBegin = predicate
+end
+
 function PointerDragService.IsDragging(self: Service): boolean
 	return self._dragging
 end
@@ -208,11 +249,120 @@ function PointerDragService.Destroy(self: Service)
 	self._pressSlotRef = nil
 	self._ghostRotValue = nil
 	self._ghostRotSpring = nil
+	self._sweepArmed = false
+	self._sweepCurrent = nil
 end
 
 -----------------------------
 -- INTERNAL --
 -----------------------------
+
+-- Shared slot hit-test: drop-map walk (direct + parent) with an
+-- isInside fallback for frames the pointer query misses.
+function PointerDragService._resolveTarget(self: Service, mousePos: Vector2): SlotRef?
+	local hitFrames: { GuiObject } = {}
+	local playerGui = self._draggingGui.Parent :: PlayerGui?
+	if not playerGui then
+		playerGui = Players.LocalPlayer:FindFirstChild("PlayerGui") :: PlayerGui?
+	end
+	local ok, res = pcall(function()
+		if playerGui then
+			return playerGui:GetGuiObjectsAtPosition(mousePos.X, mousePos.Y)
+		end
+		return {}
+	end)
+	if ok and res then hitFrames = res :: { GuiObject } else hitFrames = {} end
+
+	for _, guiObj in hitFrames do
+		local ref = self._dropMap[guiObj]
+		if ref then return ref end
+		local parent = guiObj.Parent
+		if parent then
+			local pr = self._dropMap[parent :: GuiObject]
+			if pr then return pr end
+		end
+	end
+	for frame, ref in self._dropMap do
+		if frame.Visible and isInside(frame, mousePos) then return ref end
+	end
+	return nil
+end
+
+function PointerDragService._buildContext(self: Service, mousePos: Vector2): DragContext
+	-- Determine container hover for empty-area semantics (AddToBackpack / Remove / Dynamic insert)
+	local overBackpack = false
+	local overHotbar = false
+	if self._backpackFrame and self._backpackFrame.Visible then
+		overBackpack = isInside(self._backpackFrame, mousePos)
+	end
+	if self._hotbarFrame and self._hotbarFrame.Visible then
+		overHotbar = isInside(self._hotbarFrame, mousePos)
+	end
+	return {
+		overBackpack = overBackpack,
+		overHotbar = overHotbar,
+		mousePos = mousePos,
+	}
+end
+
+-- Sweep arm: no ghost. Threshold crossed counts as a gesture (release
+-- suppresses tap-equip via _lastDragEnd), even with zero crossings.
+function PointerDragService._beginSweep(self: Service, _curPos: Vector2)
+	if self._dragging then return end
+	local pressRef = self._pressSlotRef
+	if pressRef == nil then
+		self:_cancelPress()
+		return
+	end
+	if self._sweepCanBegin ~= nil and not self._sweepCanBegin(pressRef) then
+		self:_cancelPress()
+		return
+	end
+	self._dragging = true
+	self._sweepArmed = true
+	self._sweepCurrent = table.clone(pressRef)
+
+	ClientEvents.DragStarted:Fire(pressRef.Type, pressRef.Slot)
+	ClientEvents.CallHook(self._hooks, "OnDragStart", pressRef.Type, pressRef.Slot)
+end
+
+-- One movement tick of an armed sweep: commit each newly entered slot
+-- live, advancing the ripple head only on applied commits.
+function PointerDragService._sweepStep(self: Service, curPos: Vector2)
+	local current = self._sweepCurrent
+	if not current then return end
+	local target = self:_resolveTarget(curPos)
+	if not target then return end
+	if target.Type == current.Type and target.Slot == current.Slot then return end
+	local from = table.clone(current)
+	local context = self:_buildContext(curPos)
+	local committed = self._onCommit(from, target, context)
+	if committed then
+		self._sweepCurrent = table.clone(target)
+	end
+end
+
+-- Sweep release: everything already applied per crossing, so there is no
+-- final commit and no ghost to destroy. Just close the gesture.
+function PointerDragService._endSweep(self: Service, _input: InputObject?)
+	self._dragging = false
+	self._sweepArmed = false
+	-- Stamped at release (not arm): a long sweep ending back over a slot
+	-- must still suppress tap-equip.
+	self._lastDragEnd = os.clock()
+	if self._checkConn then self._checkConn:Disconnect(); self._checkConn = nil end
+	if self._moveConn then self._moveConn:Disconnect(); self._moveConn = nil end
+
+	local from = self._pressSlotRef
+	self._pressSlotRef = nil
+	self._pressFrame = nil
+	self._sweepCurrent = nil
+	-- Release, before anything else: the sweep happened regardless.
+	if from then
+		ClientEvents.DragEnded:Fire(from.Type, from.Slot)
+		ClientEvents.CallHook(self._hooks, "OnDragEnd", from.Type, from.Slot)
+	end
+end
 
 function PointerDragService._beginDrag(self: Service, curPos: Vector2)
 	if self._dragging then return end
@@ -311,6 +461,12 @@ function PointerDragService._beginDrag(self: Service, curPos: Vector2)
 end
 
 function PointerDragService._endDrag(self: Service, input: InputObject?)
+	-- Armed sweep releases here too (disable path + InputEnded): every
+	-- crossing already applied, so close with no final commit.
+	if self._sweepArmed then
+		self:_endSweep(input)
+		return
+	end
 	if not self._dragging then self:_cancelPress(); return end
 	self._dragging = false
 	self._lastDragEnd = os.clock()
@@ -324,49 +480,8 @@ function PointerDragService._endDrag(self: Service, input: InputObject?)
 		mousePos = getMousePos()
 	end
 
-	local hitFrames: { GuiObject } = {}
-	local playerGui = self._draggingGui.Parent :: PlayerGui?
-	if not playerGui then
-		playerGui = Players.LocalPlayer:FindFirstChild("PlayerGui") :: PlayerGui?
-	end
-	local ok, res = pcall(function()
-		if playerGui then
-			return playerGui:GetGuiObjectsAtPosition(mousePos.X, mousePos.Y)
-		end
-		return {}
-	end)
-	if ok and res then hitFrames = res :: { GuiObject } else hitFrames = {} end
-
-	local targetRef: SlotRef? = nil
-	for _, guiObj in hitFrames do
-		local ref = self._dropMap[guiObj]
-		if ref then targetRef = ref; break end
-		local parent = guiObj.Parent
-		if parent then
-			local pr = self._dropMap[parent :: GuiObject]
-			if pr then targetRef = pr; break end
-		end
-	end
-	if not targetRef then
-		for frame, ref in self._dropMap do
-			if frame.Visible and isInside(frame, mousePos) then targetRef = ref; break end
-		end
-	end
-
-	-- Determine container hover for empty-area semantics (AddToBackpack / Remove / Dynamic insert)
-	local overBackpack = false
-	local overHotbar = false
-	if self._backpackFrame and self._backpackFrame.Visible then
-		overBackpack = isInside(self._backpackFrame, mousePos)
-	end
-	if self._hotbarFrame and self._hotbarFrame.Visible then
-		overHotbar = isInside(self._hotbarFrame, mousePos)
-	end
-	local context: DragContext = {
-		overBackpack = overBackpack,
-		overHotbar = overHotbar,
-		mousePos = mousePos,
-	}
+	local targetRef: SlotRef? = self:_resolveTarget(mousePos)
+	local context: DragContext = self:_buildContext(mousePos)
 
 	if self._ghost then self._ghost:Destroy(); self._ghost = nil end
 	self._ghostPosValue = nil

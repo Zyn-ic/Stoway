@@ -228,6 +228,21 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 		}
 	end
 
+	-- Team ring: any template with a "teamframe" child gets its
+	-- BackgroundColor3 driven by Metadata.Team (Jailbreak-style layouts).
+	-- Templates without the child are untouched.
+	local teamframe = slotFrame:FindFirstChild("teamframe") :: GuiObject?
+	if teamframe then
+		scope:Hydrate(teamframe) {
+			BackgroundColor3 = scope:Computed(function(use: Fusion.Use): Color3
+				local item: CoreTypes.Item? = use(currentItem)
+				local raw = if item and item.Metadata then item.Metadata.Team else nil
+				return Colors.getTeamColor(if typeof(raw) == "string" then raw else nil)
+			end),
+			Visible = hasItem,
+		}
+	end
+
 	if stackcount then
 		-- Keep badge inside the cell and tilted for readability.
 		if props.SlotType == "Storage" then
@@ -262,10 +277,21 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 	end
 
 	if slotnumber then
+		-- Captured once: live reads as Computed fallbacks self-perpetuate.
+		local defaultNumberColor: Color3 = slotnumber.TextColor3
 		scope:Hydrate(slotnumber) {
 			Text = props.Keybind or "",
 			Visible = props.ShowKeybind == true,
-			TextColor3 = if props.HasBind == false then UNBOUND_KEYBIND_COLOR else slotnumber.TextColor3,
+			TextColor3 = scope:Computed(function(use: Fusion.Use): Color3
+				-- Unbound keeps the legacy red badge.
+				if props.HasBind == false then return UNBOUND_KEYBIND_COLOR end
+				local item: CoreTypes.Item? = use(currentItem)
+				local raw = if item and item.Metadata then item.Metadata.Team else nil
+				if typeof(raw) == "string" then
+					return Colors.getTeamColor(raw)
+				end
+				return defaultNumberColor
+			end),
 		}
 	end
 

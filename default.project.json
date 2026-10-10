@@ -1,10 +1,14 @@
 {
   "name": "Stoway",
+  "syncbackRules": {
+    "ignoreTrees": ["ReplicatedStorage/Stoway"]
+  },
   "tree": {
     "$className": "DataModel",
 
     "ReplicatedStorage":{
-      "$path": "ReplicatedStorage"
+      "$path": "ReplicatedStorage",
+      "$ignoreUnknownInstances": true
     },
 
     "ServerScriptService": {

@@ -432,8 +432,15 @@ end
 local function normalizeSkin(raw: string?): string?
 	if not raw then return nil end
 	local normalized = raw:sub(1, 1):upper() .. raw:sub(2):lower()
-	if normalized == "Default" or normalized == "Modern" or normalized == "Metal" then
+	if normalized == "Default" or normalized == "Modern" or normalized == "Metal" or normalized == "Jailbreak" then
 		return normalized
+	end
+	return nil
+end
+
+local function normalizeLayout(raw: string?): string?
+	if raw == "StandardHotbarStorage" or raw == "JailbreakHotbar" then
+		return raw
 	end
 	return nil
 end
@@ -449,20 +456,55 @@ end
 local function cmdSetSkin(player: Player, stoway: StowayApi, args: { string })
 	local skin = normalizeSkin(args[2])
 	if not skin then
-		print("Usage: /set_skin [Default|Modern|Metal]")
+		print("Usage: /set_skin [Default|Modern|Metal|Jailbreak]")
 		return
 	end
-	sendLayout(player, "StandardHotbarStorage", skin)
+	-- Skin-only switch keeps its paired engine: Jailbreak skin mounts
+	-- the JailbreakHotbar layout, every other skin mounts Standard.
+	local layout = if skin == "Jailbreak" then "JailbreakHotbar" else "StandardHotbarStorage"
+	sendLayout(player, layout, skin)
 end
 
 local function cmdSetLayout(player: Player, stoway: StowayApi, args: { string })
-	local layout = args[2]
+	local layout = normalizeLayout(args[2])
 	local skin = normalizeSkin(args[3] or "Default")
-	if layout ~= "StandardHotbarStorage" or not skin then
-		print("Usage: /set_layout StandardHotbarStorage [Default|Modern|Metal]")
+	if not layout or not skin then
+		print("Usage: /set_layout [StandardHotbarStorage|JailbreakHotbar] [Default|Modern|Metal|Jailbreak]")
 		return
 	end
 	sendLayout(player, layout, skin)
+end
+
+local function normalizeTeam(raw: string?): string?
+	if not raw then return nil end
+	local lowered = string.lower(raw)
+	if lowered == "criminal" then
+		return "Criminal"
+	elseif lowered == "cop" or lowered == "police" then
+		return "Police"
+	elseif lowered == "prison" or lowered == "prisoner" then
+		return "Prisoner"
+	end
+	return nil
+end
+
+-- Demo helper for Jailbreak-style slot themes: stamps Metadata.Team on
+-- every item (replicated) so slot rings tint red/blue/orange. Ports
+-- directly to a Conch command when chat cmds migrate.
+local function cmdSetTeam(player: Player, stoway: StowayApi, args: { string })
+	local team = normalizeTeam(args[2])
+	if not team then
+		print("Usage: /set_team [criminal|cop|prison]")
+		return
+	end
+	local state = requireState(player, stoway)
+	if not state then return end
+	local count = 0
+	for uuid in state.Items do
+		local res = stoway.UpdateMetadata(player, uuid, { Team = team }, true)
+		if res.ok then count += 1 end
+	end
+	print(("[Settings] Team set to %s (%d items)"):format(team, count))
 end
 
 local function cmdToggleSort(player: Player, stoway: StowayApi, args: { string })
@@ -499,8 +541,9 @@ local function cmdHelp(player: Player, stoway: StowayApi, args: { string })
 	print("/set_max_stack [n]              - Set max stack size")
 	print("/set_hotbar_slots [n]           - Set hotbar slot count")
 	print("/set_hotbar_type [Static|Dynamic] - Switch hotbar type (auto-compacts)")
-	print("/set_skin [Default|Modern|Metal]  - Switch the UI skin")
-	print("/set_layout StandardHotbarStorage [skin] - Switch layout and skin")
+	print("/set_skin [Default|Modern|Metal|Jailbreak] - Switch the UI skin (Jailbreak pairs with JailbreakHotbar)")
+	print("/set_layout [StandardHotbarStorage|JailbreakHotbar] [skin] - Switch layout and skin")
+	print("/set_team [criminal|cop|prison] - Tint all slot rings to the team color")
 	print("/toggle_sort                    - Toggle auto-sort on/off")
 	print("═══════════════════════════════════════════════════════════════")
 end
@@ -529,6 +572,7 @@ local commands: { [string]: (Player, StowayApi, { string }) -> () } = {
 	set_hotbar_type = cmdSetHotbarType,
 	set_skin = cmdSetSkin,
 	set_layout = cmdSetLayout,
+	set_team = cmdSetTeam,
 	toggle_sort = cmdToggleSort,
 	help = cmdHelp,
 }

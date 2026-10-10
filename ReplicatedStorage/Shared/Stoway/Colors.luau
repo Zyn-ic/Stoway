@@ -26,6 +26,14 @@ Colors.RarityColors = {
 	Special = Color3.fromRGB(240, 240, 240),
 }
 
+-- Team ring colors for Jailbreak-style layouts. Slot tint reads
+-- Metadata.Team (case-insensitive, "Cop"/"Prison" accepted as aliases).
+Colors.TeamColors = {
+	Criminal = Color3.fromRGB(220, 70, 60),
+	Prisoner = Color3.fromRGB(235, 150, 50),
+	Police = Color3.fromRGB(70, 130, 235),
+}
+
 -- Ascending rank for Settings.SortOrder == "Rarity". Unknown/nil rarities
 -- rank 0, sorting after every known tier.
 Colors.RarityOrder = {
@@ -61,6 +69,22 @@ end
 function Colors.getTypeColor(itemType: string?): Color3
 	-- Neutral fallback; StorageView prefers Settings.Categories colors.
 	return Color3.fromRGB(100, 100, 110)
+end
+
+local TeamAliases: { [string]: string } = {
+	criminal = "Criminal",
+	prison = "Prisoner",
+	prisoner = "Prisoner",
+	cop = "Police",
+	police = "Police",
+}
+
+function Colors.getTeamColor(team: string?): Color3
+	if not team then
+		return Color3.fromRGB(80, 80, 80)
+	end
+	local key = TeamAliases[string.lower(team)] or (team:sub(1, 1):upper() .. team:sub(2):lower())
+	return Colors.TeamColors[key] or Color3.fromRGB(80, 80, 80)
 end
 
 -----------------------------

@@ -20,6 +20,7 @@ local LayoutManager = {}
 
 local Layouts = {
 	StandardHotbarStorage = require(script.Parent.Parent.Layouts.StandardHotbarStorage),
+	JailbreakHotbar = require(script.Parent.Parent.Layouts.JailbreakHotbar),
 }
 
 -- 1:1 contract: each UiSkin key mounts ONLY its own
@@ -33,6 +34,9 @@ local Skins = {
 	Default = require(script.Parent.Parent.Skins.Default),
 	Modern = require(script.Parent.Parent.Skins.Modern),
 	Metal = require(script.Parent.Parent.Skins.Metal),
+	-- Code-built: ignores the asset name, builds the UI in Lua. No
+	-- ReplicatedStorage.Stoway.GUI.Jailbreak folder required.
+	Jailbreak = require(script.Parent.Parent.Skins.Jailbreak),
 }
 
 local currentLayoutScope: Fusion.Scope<typeof(Fusion)>? = nil

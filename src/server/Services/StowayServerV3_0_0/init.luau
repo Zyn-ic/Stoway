@@ -22,6 +22,7 @@ local CollectionService = game:GetService("CollectionService")
 local STOWAY_DROP_TAG = "Stoway"
 
 local Types = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
+local SharedSettings = require(ReplicatedStorage.Shared.Stoway.Settings)
 
 local Protocol = require(script.Protocol)
 local Communications = require(script.Communications)
@@ -241,9 +242,32 @@ end
 
 -- Player lifecycle
 
+-- Designer-facing defaults live in Shared/Stoway/Settings (the module
+-- edited in Studio). CoreStore.new only knows engine fields, so map the
+-- applicable subset explicitly: engine stays pure, designers keep one
+-- source of truth, and the FullSync backstop pushes THESE values (not
+-- raw engine defaults) to the client. Explicit caller overrides win.
+local function defaultOverrides(): Types.SettingsOverrides
+	local d = SharedSettings.getDefault()
+	return {
+		HotbarType = d.HotbarType,
+		MaxHotbarSlots = d.MaxHotbarSlots,
+		Limit = d.Limit,
+		CanStack = d.CanStack,
+		MaxStackSize = d.MaxStackSize,
+		BackpackEnabled = d.BackpackEnabled,
+		Sorting = d.Sorting,
+		SortOrder = d.SortOrder,
+		StackOnSwap = d.StackOnSwap,
+		StackRequiredFields = table.clone(d.StackRequiredFields),
+		StackBlacklist = table.clone(d.StackBlacklist),
+		DefaultDroppable = d.DefaultDroppable,
+	}
+end
+
 function Stoway.createPlayer(player: Player, settingsOverrides: Types.SettingsOverrides?): Types.InventoryState
 	local cs = CoreStore :: CoreStoreApi
-	local state = cs.new(settingsOverrides)
+	local state = cs.new(if settingsOverrides then settingsOverrides else defaultOverrides())
 	_store[player] = state
 	return state
 end

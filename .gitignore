@@ -4,6 +4,8 @@
 # Roblox Studio lock files
 /*.rbxlx.lock
 /*.rbxl.lock
-Packages/
+# Wally install output at the repo root only. Vendored copies under
+# ReplicatedStorage/Packages/ are tracked (Rojo-managed, committed).
+/Packages/
 sourcemap.json
 wally.lock

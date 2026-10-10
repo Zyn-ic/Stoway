@@ -258,7 +258,8 @@ rebuild comes in two phases:
 
 One observer-only LocalScript per area (NotifyExample pattern): subscribes to
 the bus, peeks live store state, prints structured data lines to Output, then
-disables itself. A human evaluates pass/fail from the data. Proven workable:
+disables itself — main thread only, observers stay rooted in live state (see
+TestingRules). A human evaluates pass/fail from the data. Proven workable:
 in-game requires DO reach live modules (the late `LockedSlotsVerify` printed
 live token metadata + verdicts) — the no-table-access limit applies to MCP
 executes, not to in-game scripts. Prefer direct store peeks over GUI scraping:

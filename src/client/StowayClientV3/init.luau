@@ -4,9 +4,8 @@
 --@date: 2026-08-19
 --[[@description:
 	Client entry point. Boots from the server snapshot (FullSync pushed
-	on join, requested as backup) and mounts the StandardHotbarStorage
-	layout with the settings UiSkin. No mock data: without a snapshot
-	the UI mounts empty.
+	on join, requested as backup) and mounts the settings Layout /
+	UiSkin pair. No mock data: without a snapshot the UI mounts empty.
 ]]
 -----------------------------
 -- VARIABLES --
@@ -130,13 +129,15 @@ function StowayClient.Init()
 		ClientController.ApplyServerSettings(bootSnap.Settings)
 	end
 
-	-- Single source of truth: Settings.UiSkin selects both the loader key
-	-- and the GUI asset folder (1:1 contract in LayoutManager).
+	-- Single source of truth: Settings.Layout selects the HotbarType
+	-- engine, Settings.UiSkin the loader key (1:1 asset contract for
+	-- prefab skins in LayoutManager; code-built skins ignore the name).
 	local settings = ClientStore.GetSettings()
+	local layoutKey: string = (settings and settings.Layout) or "StandardHotbarStorage"
 	local uiSkin: string = (settings and settings.UiSkin) or "Default"
-	LayoutManager.SetLayout(ClientStore.RootScope, playerGui, ClientStore, "StandardHotbarStorage", uiSkin)
+	LayoutManager.SetLayout(ClientStore.RootScope, playerGui, ClientStore, layoutKey, uiSkin)
 
-	print(`[StowayClientV3] core initialized (server snapshot, StandardHotbarStorage / {uiSkin}) — Signals bound`)
+	print(`[StowayClientV3] core initialized (server snapshot, {layoutKey} / {uiSkin}) — Signals bound`)
 end
 
 function StowayClient.GetSignals()

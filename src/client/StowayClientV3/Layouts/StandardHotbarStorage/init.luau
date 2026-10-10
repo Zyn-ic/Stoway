@@ -52,20 +52,20 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 		end
 	end
 
-	local function handleSwap(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
+	local function handleSwap(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef): boolean
 		local res = ClientController.Swap(from, to)
 		if not res.ok then
 			warn("[StandardHotbarStorage] Swap rejected", res.error and res.error.message or tostring(res))
 		end
-		return res
+		return res.ok
 	end
 
-	local function handleMove(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
+	local function handleMove(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef): boolean
 		local res = ClientController.Move(from, to)
 		if not res.ok then
 			warn("[StandardHotbarStorage] Move rejected", res.error and res.error.message or tostring(res))
 		end
-		return res
+		return res.ok
 	end
 
 	local dragService = PointerDragService.new(
@@ -78,26 +78,30 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 
 			-- Guard: storage-involved drags when backpack disabled
 			if not backpackEnabled then
-				if from.Type == "Storage" then return end
-				if to and to.Type == "Storage" then return end
-				if context.overBackpack then return end
+				if from.Type == "Storage" then return false end
+				if to and to.Type == "Storage" then return false end
+				if context.overBackpack then return false end
 			end
 
 			if to then
-				if from.Type == to.Type and from.Slot == to.Slot then return end
+				if from.Type == to.Type and from.Slot == to.Slot then return false end
 				local destHasItem = hasDestItem(to)
 				if destHasItem then
 					-- Occupied -> Swap (StackOnSwap can stack; Move would reject DESTINATION_OCCUPIED)
-					handleSwap(from, to)
+					return handleSwap(from, to)
 				else
 					-- Empty slot -> Move (never stacks). Fallback to Swap if Move rejects (e.g. Static HH empty via Move is allowed but keep fallback)
-					local res = handleMove(from, to)
-					if not res.ok and res.error and res.error.message == "DESTINATION_UNAVAILABLE" then
-						-- Dynamic hotbar empty-hole guard already handled by Operations; try Swap as fallback only for Static
-						if hotbarType == "Static" then handleSwap(from, to) end
+					local res = ClientController.Move(from, to)
+					if not res.ok then
+						warn("[StandardHotbarStorage] Move rejected", res.error and res.error.message or tostring(res))
+						if res.error and res.error.message == "DESTINATION_UNAVAILABLE" then
+							-- Dynamic hotbar empty-hole guard already handled by Operations; try Swap as fallback only for Static
+							if hotbarType == "Static" then return handleSwap(from, to) end
+						end
+						return false
 					end
+					return true
 				end
-				return
 			end
 
 			-- No slot hit: empty-area vs outside
@@ -105,8 +109,7 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 				-- AddToBackpack: Hotbar -> Storage append (Move HS path ignores dest slot and appends)
 				local storage: { string } = Fusion.peek(store.Storage)
 				local appendSlot = #storage + 1
-				handleMove(from, { Type = "Storage", Slot = appendSlot })
-				return
+				return handleMove(from, { Type = "Storage", Slot = appendSlot })
 			end
 
 			if context.overHotbar and from.Type == "Storage" and hotbarType == "Dynamic" then
@@ -120,8 +123,8 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 						break
 					end
 				end
-				if appendSlot then handleSwap(from, { Type = "Hotbar", Slot = appendSlot }) end
-				return
+				if appendSlot then return handleSwap(from, { Type = "Hotbar", Slot = appendSlot }) end
+				return false
 			end
 
 			if not context.overBackpack and not context.overHotbar then
@@ -138,8 +141,9 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 				if uuid then
 					ClientController.RequestDrop(uuid)
 				end
-				return
+				return true
 			end
+			return false
 		end,
 		skin.SlotTemplate,
 		skin.BackpackFrame,

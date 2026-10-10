@@ -31,19 +31,20 @@ local DEFAULT_CATEGORIES: { [string]: Types.CategoryDef } = {
 }
 
 local DEFAULT_SETTINGS: Types.Settings = {
-	HotbarType = "Static",
+	HotbarType = "Dynamic",
 	MaxHotbarSlots = 10,
 	Limit = 15,
-	CanStack = true,
+	CanStack = false,
 	MaxStackSize = 5,
-	BackpackEnabled = true,
+	BackpackEnabled = false,
 	Sorting = false,
 	SortOrder = "None",
 	StackOnSwap = false,
 	StackRequiredFields = { "Rarity", "Type" },
 	StackBlacklist = { Legendary = true, Mythic = true, Special = true },
 	DefaultDroppable = true,
-	UiSkin = "Default",
+	UiSkin = "Jailbreak",
+	Layout = "JailbreakHotbar",
 	Categories = DEFAULT_CATEGORIES,
 	-- Demo toggle (see Types.luau) — on by default so the grouped/collapsible
 	-- storage view is what you see out of the box; flip to false to render
