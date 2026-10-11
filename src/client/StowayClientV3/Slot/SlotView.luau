@@ -16,6 +16,7 @@ local Colors = require(ReplicatedStorage.Shared.Stoway.Colors)
 
 local CoreTypes = require(script.Parent.Parent.CoreStore.Types)
 local Query = require(script.Parent.Parent.CoreStore.Query)
+local CooldownService = require(script.Parent.Parent.Interactions.CooldownService)
 local ClientStore = require(script.Parent.Parent.Controller.ClientStore)
 local ClientController = require(script.Parent.Parent.Controller.ClientController)
 local ClientEvents = require(script.Parent.Parent.Controller.ClientEvents)
@@ -191,6 +192,9 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 				if not uuid then return end
 				local has: boolean = Fusion.peek(hasItem)
 				if not has then return end
+				-- Cooling slots are dead: no click (rearrange via sweep
+				-- only). The veil is the feedback; nothing fires.
+				if CooldownService.IsOnCooldown(uuid) then return end
 				ClientEvents.SlotClicked:Fire(props.SlotType, props.SlotIndex, uuid)
 				ClientEvents.CallHook(props.Hooks, "OnSlotClick", props.SlotType, props.SlotIndex, uuid)
 				local equipped: string? = Fusion.peek(store.EquippedItemUUID)

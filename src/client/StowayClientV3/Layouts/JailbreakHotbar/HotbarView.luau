@@ -21,6 +21,7 @@ local State = require(script.Parent.Parent.Parent.CoreStore.State)
 local Query = require(script.Parent.Parent.Parent.CoreStore.Query)
 local ClientStore = require(script.Parent.Parent.Parent.Controller.ClientStore)
 local SlotView = require(script.Parent.Parent.Parent.Slot.SlotView)
+local CooldownService = require(script.Parent.Parent.Parent.Interactions.CooldownService)
 local PointerDragService = require(script.Parent.Parent.Parent.Interactions.PointerDragService)
 
 local HotbarView = {}
@@ -182,6 +183,54 @@ function HotbarView.Create(
 			Scale = 1,
 			Parent = slotFrame,
 		}
+
+		-- Cooldown veil + countdown, derived from the shared Tick clock.
+		-- Jailbreak template nodes only; other skins lack them (nil-safe).
+		local slotUUID = slotScope:Computed(function(use: Fusion.Use): string?
+			local hotbar: { [number]: string? } = use(store.Hotbar)
+			return hotbar[slotIndex]
+		end)
+		local coolingLeft = slotScope:Computed(function(use: Fusion.Use): number
+			use(CooldownService.Tick)
+			local uuid: string? = use(slotUUID)
+			if not uuid then return 0 end
+			return CooldownService.Remaining(uuid)
+		end)
+		local coolingFrac = slotScope:Computed(function(use: Fusion.Use): number
+			local left: number = use(coolingLeft)
+			if left <= 0 then return 0 end
+			local items: { [string]: CoreTypes.Item } = use(store.Items)
+			local uuid: string? = use(slotUUID)
+			local item: CoreTypes.Item? = if uuid then items[uuid] else nil
+			local dur = 0
+			if item and item.Metadata then
+				local raw = item.Metadata.Cooldown
+				if typeof(raw) == "number" and raw > 0 then dur = raw end
+			end
+			if dur <= 0 then return 0 end
+			return math.clamp(left / dur, 0, 1)
+		end)
+		local isCooling = slotScope:Computed(function(use: Fusion.Use): boolean
+			return use(coolingLeft) > 0
+		end)
+		local veil = slotFrame:FindFirstChild("cooldown") :: Frame?
+		if veil then
+			slotScope:Hydrate(veil) {
+				Visible = isCooling,
+				BackgroundTransparency = slotScope:Computed(function(use: Fusion.Use): number
+					return 0.75 - 0.45 * use(coolingFrac)
+				end),
+			}
+		end
+		local veilText = slotFrame:FindFirstChild("cooldowntext") :: TextLabel?
+		if veilText then
+			slotScope:Hydrate(veilText) {
+				Visible = isCooling,
+				Text = slotScope:Computed(function(use: Fusion.Use): string
+					return tostring(math.ceil(use(coolingLeft)))
+				end),
+			}
+		end
 
 		-- White equip ring on the circular button. SlotView's selecticon
 		-- is absent from this template, so the layout owns the indicator.

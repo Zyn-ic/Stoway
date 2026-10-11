@@ -11,7 +11,6 @@
 -- SERVICES --
 -----------------------------
 
-local Players = game:GetService("Players")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 -----------------------------
@@ -20,19 +19,14 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local PlayerServiceSignals = require(ServerScriptService.Libraries.PlayerServiceSignals)
 local Stoway = require(ServerScriptService.Services.StowayServerV3_0_0)
 local CoreStore = require(ReplicatedStorage.Shared.Stoway.CoreStore)
 local Communications = require(ServerScriptService.Services.StowayServerV3_0_0.Communications)
-local ChatCommands = require(ServerScriptService.Services.StowayServerV3_0_0.Debug.ChatCommands)
+local ConchCommands = require(ServerScriptService.Services.StowayServerV3_0_0.Debug.ConchCommands)
 
 -----------------------------
 -- PRIVATE FUNCTIONS --
 -----------------------------
-
-local function registerChatCommands(player: Player)
-	ChatCommands.Register(player, Stoway)
-end
 
 -----------------------------
 -- MAIN --
@@ -40,12 +34,9 @@ end
 
 Stoway.Init(CoreStore)
 Communications.Init(Stoway)
+-- Conch console owner (server): lifecycle -> role -> commands -> grants.
+ConchCommands.RegisterAll(Stoway)
 Communications.Start()
 Stoway.Start()
-
-PlayerServiceSignals.BindToPlrAdded:Connect(registerChatCommands)
-for _, player in Players:GetPlayers() do
-	registerChatCommands(player)
-end
 
 print("[Stoway] server bootstrap online")

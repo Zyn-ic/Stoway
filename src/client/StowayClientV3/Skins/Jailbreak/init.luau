@@ -96,6 +96,37 @@ local function buildSlotTemplate(scope: Fusion.Scope<typeof(Fusion)>): Frame
 		Parent = slotbutton,
 	}
 
+	-- Cooldown veil (example branch): dark face + countdown, driven by
+	-- the views from CooldownService. Hidden unless cooling.
+	local veil = scope:New("Frame") {
+		Name = "cooldown",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.new(1, -8, 1, -8),
+		BackgroundColor3 = Color3.new(0, 0, 0),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		Visible = false,
+		ZIndex = 3,
+		Parent = template,
+	} :: Frame
+	circle(veil, scope)
+	scope:New("TextLabel") {
+		Name = "cooldowntext",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromOffset(44, 26),
+		BackgroundTransparency = 1,
+		Font = Enum.Font.GothamBold,
+		TextSize = 18,
+		TextColor3 = Color3.new(1, 1, 1),
+		TextStrokeTransparency = 0.3,
+		TextStrokeColor3 = Color3.new(0, 0, 0),
+		Visible = false,
+		ZIndex = 5,
+		Parent = template,
+	}
+
 	scope:New("TextLabel") {
 		Name = "stackcount",
 		BackgroundTransparency = 1,
