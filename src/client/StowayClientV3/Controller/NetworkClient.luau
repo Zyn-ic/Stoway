@@ -148,6 +148,7 @@ function NetworkClient.SendUpdateMetadata(uuid: string, updates: CoreTypes.Metad
 	end)
 end
 
+
 function NetworkClient.SendSort()
 	send("Sort", function()
 		R.Sort:FireServer()
