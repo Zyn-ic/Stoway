@@ -18,7 +18,6 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ServerStorage = game:GetService("ServerStorage")
 local CoreStore = require(ReplicatedStorage.Shared.Stoway.CoreStore)
 local Types = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
 local Remotes = require(ReplicatedStorage.Shared.Stoway.StowayRemotes)
@@ -155,23 +154,6 @@ local function normalizeTeam(raw: unknown): string?
 		return "Prisoner"
 	end
 	return nil
-end
-
--- Template ids are exact-match (ServerStorage.Tools); resolve
--- case-insensitively so `pickaxe` finds "Pickaxe".
-local function resolveToolId(raw: unknown): string?
-	if typeof(raw) ~= "string" or (raw :: string) == "" then return nil end
-	local name = raw :: string
-	local toolsFolder = ServerStorage:FindFirstChild("Tools")
-	if not toolsFolder then return name end
-	if toolsFolder:FindFirstChild(name) then return name end
-	local lowered = string.lower(name)
-	for _, child in toolsFolder:GetChildren() do
-		if string.lower(child.Name) == lowered then
-			return child.Name
-		end
-	end
-	return name
 end
 
 local function logAddResult(label: string, target: string, result: any)
@@ -730,44 +712,6 @@ local function registerAll(stoway: StowayApi)
 		end,
 	})
 
-	conch.register("cooldown-demo", {
-		description = "Grant a cooldown skill: cooldown-demo <id> [a|b] [seconds]",
-		permissions = P,
-		arguments = function()
-			return conch.args.string("id", "Tool template id"),
-				conch.args.opt(conch.args.static_enum_from_array({ "a", "b" })("kind", "a = fire-on-equip, b = use-after-equip")),
-				conch.args.opt(conch.args.number("seconds", "Cooldown length"))
-		end,
-		callback = function(rawId: unknown, rawKind: unknown, rawSeconds: unknown)
-			withCaller(stoway, function(player: Player)
-				local id = resolveToolId(rawId)
-				local kindRaw = if typeof(rawKind) == "string" then string.lower(rawKind :: string) else "a"
-				if kindRaw ~= "a" and kindRaw ~= "b" then kindRaw = "a" end
-				local seconds = if typeof(rawSeconds) == "number"
-					then rawSeconds :: number
-					else if kindRaw == "b" then 8 else 5
-				if not id or seconds <= 0 then
-					conch.log("error", "Usage: cooldown-demo <id> [a|b] [seconds]")
-					return
-				end
-				local fire = kindRaw ~= "b"
-				-- any-typed intermediate: the old solver rejects fresh
-				-- literals with fields outside ItemMetadata's known list.
-				local metadata: { [string]: any } = { Cooldown = seconds, FireOnEquip = fire }
-				local res = stoway.AddToHotbar(player, {
-					Id = id,
-					Amount = 1,
-					Metadata = metadata,
-				}, nil, true)
-				if res.ok then
-					conch.log("success", ("[CooldownDemo] %s as %s (%ds)"):format(id, if fire then "fire-on-equip" else "use-after-equip", seconds))
-				else
-					conch.log("error", ("[CooldownDemo] add failed: %s"):format(res.error.message))
-				end
-			end)
-		end,
-	})
-
 	conch.register("toggle-sort", {
 		description = "Toggle auto-sort on/off",
 		permissions = P,
@@ -792,7 +736,7 @@ local function registerAll(stoway: StowayApi)
 			conch.log("info", "swap | move | split | equip | equip-slot | unequip | sort | clear-inv")
 			conch.log("info", "toggle-stack | toggle-limit | toggle-sort")
 			conch.log("info", "set-limit | set-max-stack | set-hotbar-slots | set-hotbar-type")
-			conch.log("info", "set-skin | set-layout | set-team | cooldown-demo")
+			conch.log("info", "set-skin | set-layout | set-team")
 		end,
 	})
 end

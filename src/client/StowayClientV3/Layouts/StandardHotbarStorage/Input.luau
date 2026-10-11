@@ -34,7 +34,6 @@ local IllusionIAS = require(ReplicatedStorage.Packages.IllusionIAS)
 local Binds = require(script.Parent.Binds)
 local ClientStore = require(script.Parent.Parent.Parent.Controller.ClientStore)
 local ClientController = require(script.Parent.Parent.Parent.Controller.ClientController)
-local CooldownService = require(script.Parent.Parent.Parent.Interactions.CooldownService)
 local PreferredInput = require(script.Parent.Parent.Parent.Interactions.PreferredInput)
 local State = require(script.Parent.Parent.Parent.CoreStore.State)
 local Query = require(script.Parent.Parent.Parent.CoreStore.Query)
@@ -83,8 +82,6 @@ local function doEquipSlot(store: typeof(ClientStore), visibleIndex: number)
 		end
 		return
 	end
-	-- Cooling slots have no bind: silent dead (veil is the feedback).
-	if CooldownService.IsOnCooldown(uuid) then return end
 	local equipped: string? = Fusion.peek(store.EquippedItemUUID)
 	if equipped == uuid then
 		ClientController.Unequip()

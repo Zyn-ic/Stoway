@@ -56,11 +56,6 @@ local function resolveReplicate(replicate: boolean?): boolean
 end
 
 local _store: { [Player]: Types.InventoryState } = {}
--- Kind-A/B skill-use tracking (example branch): server-owned Tool event
--- connections per player, on the equipped cooldown Tool. No external
--- scripts needed. FireOnEquip tools write on Equipped, all others on
--- Activated; equip/leave/new-equip/unequip disconnects.
-local _activatedConns: { [Player]: { RBXScriptConnection } } = {}
 local _locks: { [Player]: number } = {}
 local _adapters: { Adapter } = {}
 
@@ -281,70 +276,11 @@ function Stoway.get(player: Player): Types.InventoryState?
 	return _store[player]
 end
 
-local function disconnectActivator(player: Player)
-	local conns = _activatedConns[player]
-	if conns then
-		for _, conn in conns do
-			conn:Disconnect()
-		end
-	end
-	_activatedConns[player] = nil
-end
-
 function Stoway.removePlayer(player: Player): Types.InventoryState?
 	unlockPlayer(player)
-	disconnectActivator(player)
 	local state = _store[player]
 	_store[player] = nil
 	return state
-end
-
--- Cooldown duration from Metadata.Cooldown (seconds), or nil when the
--- item has none. Open metadata dict, so narrow by type.
-local function getCooldownDuration(item: Types.Item): number?
-	local raw = item.Metadata.Cooldown
-	if typeof(raw) == "number" and raw > 0 then
-		return raw
-	end
-	return nil
-end
-
--- Kind-A fire: the Tool entering the hand spends the cooldown. Writes
--- CooldownEnd (replicates -> veils); the client unarms itself on fire.
-function Stoway.OnToolEquippedForFire(player: Player, tool: Tool)
-	local state = _store[player]
-	if not state then return end
-	local uuid = tool:GetAttribute("UUID")
-	if typeof(uuid) ~= "string" then return end
-	local item = state.Items[uuid]
-	if not item then return end
-	if state.EquippedItemUUID ~= uuid then return end
-	if item.Metadata.FireOnEquip ~= true then return end
-	local duration = getCooldownDuration(item)
-	if not duration then return end
-	local endRaw = item.Metadata.CooldownEnd
-	if typeof(endRaw) == "number" and endRaw > os.clock() then return end
-	Stoway.UpdateMetadata(player, uuid, { CooldownEnd = os.clock() + duration }, true)
-end
-
--- World-click fire for kind-B tools: armed + off-cooldown only, then
--- CooldownEnd is written (replicates -> veils) and the hand emptied.
-function Stoway.OnToolActivated(player: Player, tool: Tool)
-	local state = _store[player]
-	if not state then return end
-	local uuid = tool:GetAttribute("UUID")
-	if typeof(uuid) ~= "string" then return end
-	local item = state.Items[uuid]
-	if not item then return end
-	if state.EquippedItemUUID ~= uuid then return end
-	local duration = getCooldownDuration(item)
-	if not duration then return end
-	local endRaw = item.Metadata.CooldownEnd
-	if typeof(endRaw) == "number" and endRaw > os.clock() then return end
-	local res = Stoway.UpdateMetadata(player, uuid, { CooldownEnd = os.clock() + duration }, true)
-	if res.ok then
-		Stoway.UnequipSlot(player, true)
-	end
 end
 
 function Stoway.getAll(): { [Player]: Types.InventoryState }
@@ -459,15 +395,6 @@ function Stoway.EquipSlot(player: Player, uuid: string, replicate: boolean?): Ty
 			return Result.Err({ kind = EK.NotFound, message = "ITEM_NOT_FOUND" })
 		end
 
-		-- Cooldown authority reads the item itself: CooldownEnd is a
-		-- server os.clock timestamp written through updateMetadata
-		-- (external Tool scripts on world activation, or the kind-A
-		-- stamp below). Cooling tools cannot be (re)equipped.
-		local endRaw = item.Metadata.CooldownEnd
-		if typeof(endRaw) == "number" and endRaw > os.clock() then
-			return Result.Err({ kind = EK.NotAvailable, message = "ON_COOLDOWN" })
-		end
-
 		-- Update CoreStore state first
 		local result = cs.equip(state, uuid)
 		if not result.ok then return result end
@@ -477,7 +404,6 @@ function Stoway.EquipSlot(player: Player, uuid: string, replicate: boolean?): Ty
 		if character then
 			clearCharacterTools(character)
 		end
-		disconnectActivator(player)
 		local template = getToolTemplate(item.Id)
 		if character and template then
 			local tool = template:Clone()
@@ -486,22 +412,6 @@ function Stoway.EquipSlot(player: Player, uuid: string, replicate: boolean?): Ty
 			-- carry stale CollectionService state, so never equip that tag.
 			CollectionService:RemoveTag(tool, STOWAY_DROP_TAG)
 			tool.Parent = character  -- parenting a Tool to the Character equips it in Roblox
-			-- Skill-use tracking on cooldown Tools: FireOnEquip writes on
-			-- Equipped, all other kinds on Activated (each gated inside).
-			-- Plain tools are never touched.
-			if tool:IsA("Tool") and getCooldownDuration(item) ~= nil then
-				local conns: { RBXScriptConnection } = {}
-				if item.Metadata.FireOnEquip == true then
-					table.insert(conns, tool.Equipped:Connect(function()
-						Stoway.OnToolEquippedForFire(player, tool)
-					end))
-				else
-					table.insert(conns, tool.Activated:Connect(function()
-						Stoway.OnToolActivated(player, tool)
-					end))
-				end
-				_activatedConns[player] = conns
-			end
 		end
 
 		return result
@@ -522,7 +432,6 @@ function Stoway.UnequipSlot(player: Player, replicate: boolean?): Types.UnequipR
 		if character then
 			clearCharacterTools(character)
 		end
-		disconnectActivator(player)
 
 		return result
 	end)

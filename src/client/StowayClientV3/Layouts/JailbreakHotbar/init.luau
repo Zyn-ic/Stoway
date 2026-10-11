@@ -35,9 +35,6 @@ local JailbreakHotbar = {}
 local POP_UP = TweenInfo.new(0.12, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 local POP_DOWN = TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 local POP_SCALE = 1.22
-local DENY_DOWN = TweenInfo.new(0.07, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-local DENY_UP = TweenInfo.new(0.12, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-local DENY_SCALE = 0.88
 
 -- Little jump on swap: punch the slot's UIScale up and back. Plain
 -- TweenService (no Fusion objects per event, nothing to leak); the
@@ -54,29 +51,6 @@ local function popSlot(container: Instance?, slotType: CoreTypes.SlotType, slot:
 			TweenService:Create(uiScale, POP_DOWN, { Scale = 1 }):Play()
 		end
 	end)
-end
-
--- Denied shake: quick duck-and-recover on the same UIScale. Fired by
--- CooldownDenied when an equip/use hits a live cooldown.
-local function shakeSlot(container: Instance?, slotType: CoreTypes.SlotType, slot: number)
-	if not container then return end
-	local frame = container:FindFirstChild(slotType .. "-" .. tostring(slot)) :: Frame?
-	local uiScale = frame and frame:FindFirstChildOfClass("UIScale") :: UIScale?
-	if not uiScale then return end
-	uiScale.Scale = 1
-	TweenService:Create(uiScale, DENY_DOWN, { Scale = DENY_SCALE }):Play()
-	task.delay(0.07, function()
-		if uiScale.Parent then
-			TweenService:Create(uiScale, DENY_UP, { Scale = 1 }):Play()
-		end
-	end)
-end
-
-local function containerForSkin(skin: CoreTypes.SkinHandle, slotType: CoreTypes.SlotType): Instance?
-	if slotType == "Hotbar" then
-		return skin.HotbarFrame
-	end
-	return skin.ScrollingFrame
 end
 
 -----------------------------
@@ -184,19 +158,6 @@ function JailbreakHotbar.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: CoreTy
 	end)
 	table.insert(scope, function()
 		if swapConn and swapConn.Disconnect then swapConn:Disconnect() end
-	end)
-
-	-- SkillFired stays on the bus for game VFX, but the layout no longer
-	-- pops on fire: kind-A fires on equip, so every bind press jumped.
-	-- The veil is the fire feedback; pops are swaps only.
-	local deniedConn = ClientEvents.CooldownDenied:Connect(function(
-		slotType: CoreTypes.SlotType,
-		slot: number
-	)
-		shakeSlot(containerForSkin(skin, slotType), slotType, slot)
-	end)
-	table.insert(scope, function()
-		if deniedConn and deniedConn.Disconnect then deniedConn:Disconnect() end
 	end)
 
 	HotbarView.Create(scope, skin, store, dragService)

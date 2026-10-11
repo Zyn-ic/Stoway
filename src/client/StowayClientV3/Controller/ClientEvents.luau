@@ -37,11 +37,6 @@ ClientEvents.ItemRemoved = SignalPlus() :: SignalPlus.Signal<CoreTypes.SlotType,
 ClientEvents.Swapped = SignalPlus() :: SignalPlus.Signal<CoreTypes.SlotType, number, CoreTypes.SlotType, number>
 ClientEvents.Selected = SignalPlus() :: SignalPlus.Signal<CoreTypes.SlotType, number>
 ClientEvents.Deselected = SignalPlus() :: SignalPlus.Signal<CoreTypes.SlotType, number>
--- Example branch (cooldowns): a skill went off (kind-A equip-fire or
--- server-confirmed kind-B use). Subscribers resolve visuals themselves.
-ClientEvents.SkillFired = SignalPlus() :: SignalPlus.Signal<CoreTypes.SlotType, number, string>
--- An equip/use was denied by cooldown. Layouts flash the slot.
-ClientEvents.CooldownDenied = SignalPlus() :: SignalPlus.Signal<CoreTypes.SlotType, number>
 
 -----------------------------
 -- PUBLIC FUNCTIONS --
@@ -79,8 +74,6 @@ function ClientEvents.Destroy()
 	ClientEvents.Swapped:DisconnectAll()
 	ClientEvents.Selected:DisconnectAll()
 	ClientEvents.Deselected:DisconnectAll()
-	ClientEvents.SkillFired:DisconnectAll()
-	ClientEvents.CooldownDenied:DisconnectAll()
 end
 
 -----------------------------

@@ -17,7 +17,6 @@ local SignalPlus = require(ReplicatedStorage.Packages.SignalPlus)
 
 local CoreStore = require(ReplicatedStorage.Shared.Stoway.CoreStore)
 local Result = require(ReplicatedStorage.Shared.Stoway.Result)
-local CooldownService = require(script.Parent.Parent.Interactions.CooldownService)
 local ClientStore = require(script.Parent.ClientStore)
 local CoreTypes = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
 local ClientTypes = require(script.Parent.Parent.CoreStore.Types)
@@ -103,30 +102,6 @@ local function lookupSlot(uuid: string): CoreTypes.SlotRef?
 	return _state.LocationByUUID[uuid]
 end
 
--- Cooldown duration from Metadata.Cooldown (seconds), or nil.
-local function getCooldownDuration(item: CoreTypes.Item): number?
-	local raw = item.Metadata.Cooldown
-	if typeof(raw) == "number" and raw > 0 then
-		return raw
-	end
-	return nil
-end
-
-local function isFireOnEquip(item: CoreTypes.Item): boolean
-	return item.Metadata.FireOnEquip == true
-end
-
--- Kind-A fire: cooldown starts, visuals pop via SkillFired. The server
--- stamps its own authority when the echoed EquipSlot lands.
-local function fireSkill(uuid: string, item: CoreTypes.Item, ref: CoreTypes.SlotRef?)
-	local duration = getCooldownDuration(item)
-	if not duration then return end
-	CooldownService.StartCooldown(uuid, duration)
-	if ref ~= nil then
-		ClientEvents.SkillFired:Fire(ref.Type, ref.Slot, uuid)
-	end
-end
-
 local function unequipOp(): CoreTypes.UnequipResult
 	if not _state then return noState() end
 	hydrateIfNeeded(_state)
@@ -149,18 +124,6 @@ end
 
 local function equipAndClearNew(uuid: string): CoreTypes.EquipResult
 	if not _state then return noState() end
-	local item = _state.Items[uuid]
-	-- Cooling tools cannot be (re)equipped: kinds A and B alike. Denial
-	-- is central here so binds and taps share one flash event.
-	if item then
-		if getCooldownDuration(item) ~= nil and CooldownService.IsOnCooldown(uuid) then
-			local ref = lookupSlot(uuid)
-			if ref ~= nil then
-				ClientEvents.CooldownDenied:Fire(ref.Type, ref.Slot)
-			end
-			return Result.Err({ kind = Result.ErrorKind.NotAvailable, message = "ON_COOLDOWN" })
-		end
-	end
 	local res = CoreStore.equip(_state, uuid)
 	if res.ok then
 		sync()
@@ -171,13 +134,6 @@ local function equipAndClearNew(uuid: string): CoreTypes.EquipResult
 			ClientEvents.CallHook(_hooks, "OnEquip", ref.Type, ref.Slot)
 		end
 		NetworkClient.SendEquip(uuid)
-		if item and isFireOnEquip(item) then
-			fireSkill(uuid, item, ref)
-			-- Fire-on-equip spends itself: leave the hand empty. The
-			-- cooldown (not the equip) is what blocks the next press.
-			-- unequipOp sends SendUnequip after the Equip above.
-			unequipOp()
-		end
 	end
 	return res
 end
@@ -426,34 +382,6 @@ function ClientController.ApplyServerEquipped(uuid: string)
 	end
 end
 
--- Metadata-pure cooldown observe: a fresh CooldownEnd on an item means
--- the skill went off elsewhere (external Tool script -> updateMetadata
--- -> FullSync). Anchor a local veil off our own clock; duration from our
--- mirror. Server epochs are unreadable here, so rejoins anchor full
--- length (server gate stays exact).
-local _lastSeenEnd: { [string]: number? } = {}
-
-local function observeCooldownEnds()
-	if not _state then return end
-	for uuid, item in _state.Items do
-		local raw = item.Metadata and item.Metadata.CooldownEnd
-		local newEnd: number? = if typeof(raw) == "number" then raw else nil
-		if newEnd ~= _lastSeenEnd[uuid] then
-			_lastSeenEnd[uuid] = newEnd
-			if newEnd ~= nil and not CooldownService.IsOnCooldown(uuid) then
-				local duration = getCooldownDuration(item)
-				if duration then
-					CooldownService.StartCooldown(uuid, duration)
-				end
-				local ref = lookupSlot(uuid)
-				if ref ~= nil then
-					ClientEvents.SkillFired:Fire(ref.Type, ref.Slot, uuid)
-				end
-			end
-		end
-	end
-end
-
 -- Wholesale replace from a FullSync push. Indexes are rebuilt from the
 -- slot tables; Settings stay local (not covered). Silent: no per-item events.
 function ClientController.ApplyServerFullSync(payload: CoreTypes.FullSyncPayload)
@@ -491,9 +419,6 @@ function ClientController.ApplyServerFullSync(payload: CoreTypes.FullSyncPayload
 	_state.ItemsByID = {}
 	_state.MetadataIndex = {}
 	hydrateIfNeeded(_state)
-	-- Wholesale item replace orphans cooldowns for vanished uuids.
-	CooldownService.Prune(_state.Items)
-	observeCooldownEnds()
 	sync()
 end
 
