@@ -47,6 +47,18 @@ local _Stoway: StowayApi? = nil
 -- PRIVATE FUNCTIONS --
 -----------------------------
 
+-- Metadata key policy (cooldown example): Cooldown/CooldownEnd/FireOnEquip
+-- are server-written (Tool events) or designer-set (debug commands). A
+-- client writing its own CooldownEnd would defeat the EquipSlot gate, so
+-- client-originated writes to these keys are stripped here. Direct
+-- Stoway.UpdateMetadata calls (server systems, debug commands) bypass
+-- this — the policy guards the wire, not the route.
+local COOLDOWN_KEYS: { [string]: boolean } = {
+	Cooldown = true,
+	CooldownEnd = true,
+	FireOnEquip = true,
+}
+
 -- Full-state push, shared by the adapter, join, sync requests, and
 -- failure corrections. Projects to the wire shape (drops engine extras).
 local function pushFullSync(player: Player)
@@ -296,6 +308,23 @@ function Communications.Start()
 			return stoway.UnequipSlot(p, false).ok
 		end },
 		{ event = Remotes.UpdateMetadata, run = function(p: Player, d: Payload): boolean
+			local raw: any = d.updates
+			if typeof(raw) == "table" then
+				local updates = raw :: { [string]: any }
+				local stripped: { string } = {}
+				for key in updates do
+					if COOLDOWN_KEYS[key] then
+						table.insert(stripped, key)
+					end
+				end
+				for _, key in stripped do
+					updates[key] = nil
+				end
+				if #stripped > 0 then
+					warn(("[Communications] stripped reserved metadata keys from %s: %s"):format(p.Name, table.concat(stripped, ", ")))
+				end
+				if next(updates) == nil then return true end
+			end
 			return stoway.UpdateMetadata(p, d.uuid, d.updates, false).ok
 		end },
 		{ event = Remotes.Sort, run = function(p: Player, d: Payload): boolean

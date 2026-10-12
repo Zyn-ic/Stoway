@@ -309,24 +309,6 @@ local function getCooldownDuration(item: Types.Item): number?
 	return nil
 end
 
--- Kind-A fire: the Tool entering the hand spends the cooldown. Writes
--- CooldownEnd (replicates -> veils); the client unarms itself on fire.
-function Stoway.OnToolEquippedForFire(player: Player, tool: Tool)
-	local state = _store[player]
-	if not state then return end
-	local uuid = tool:GetAttribute("UUID")
-	if typeof(uuid) ~= "string" then return end
-	local item = state.Items[uuid]
-	if not item then return end
-	if state.EquippedItemUUID ~= uuid then return end
-	if item.Metadata.FireOnEquip ~= true then return end
-	local duration = getCooldownDuration(item)
-	if not duration then return end
-	local endRaw = item.Metadata.CooldownEnd
-	if typeof(endRaw) == "number" and endRaw > os.clock() then return end
-	Stoway.UpdateMetadata(player, uuid, { CooldownEnd = os.clock() + duration }, true)
-end
-
 -- World-click fire for kind-B tools: armed + off-cooldown only, then
 -- CooldownEnd is written (replicates -> veils) and the hand emptied.
 function Stoway.OnToolActivated(player: Player, tool: Tool)
@@ -472,6 +454,17 @@ function Stoway.EquipSlot(player: Player, uuid: string, replicate: boolean?): Ty
 		local result = cs.equip(state, uuid)
 		if not result.ok then return result end
 
+		-- Kind-A skills spend their cooldown on equip, stamped inline:
+		-- the Tool.Equipped event fires deferred, by which time the
+		-- client's back-to-back Unequip may have disconnected the
+		-- watcher and destroyed the tool (stamp silently lost).
+		if item.Metadata.FireOnEquip == true then
+			local duration = getCooldownDuration(item)
+			if duration then
+				cs.updateMetadata(state, uuid, { CooldownEnd = os.clock() + duration })
+			end
+		end
+
 		-- Equip Roblox-side: clear stale tools, then clone the template into the character
 		local character = player.Character
 		if character then
@@ -486,21 +479,14 @@ function Stoway.EquipSlot(player: Player, uuid: string, replicate: boolean?): Ty
 			-- carry stale CollectionService state, so never equip that tag.
 			CollectionService:RemoveTag(tool, STOWAY_DROP_TAG)
 			tool.Parent = character  -- parenting a Tool to the Character equips it in Roblox
-			-- Skill-use tracking on cooldown Tools: FireOnEquip writes on
-			-- Equipped, all other kinds on Activated (each gated inside).
-			-- Plain tools are never touched.
-			if tool:IsA("Tool") and getCooldownDuration(item) ~= nil then
-				local conns: { RBXScriptConnection } = {}
-				if item.Metadata.FireOnEquip == true then
-					table.insert(conns, tool.Equipped:Connect(function()
-						Stoway.OnToolEquippedForFire(player, tool)
-					end))
-				else
-					table.insert(conns, tool.Activated:Connect(function()
-						Stoway.OnToolActivated(player, tool)
-					end))
-				end
-				_activatedConns[player] = conns
+			-- Kind-B skill-use tracking: world clicks write CooldownEnd +
+			-- unarm (gated inside). Kind-A stamps inline above (the
+			-- Equipped event is too late vs instant unarms). Plain tools
+			-- are never touched.
+			if tool:IsA("Tool") and getCooldownDuration(item) ~= nil and item.Metadata.FireOnEquip ~= true then
+				_activatedConns[player] = { tool.Activated:Connect(function()
+					Stoway.OnToolActivated(player, tool)
+				end) }
 			end
 		end
 
