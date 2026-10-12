@@ -19,7 +19,7 @@ The layers talk to each other in one direction:
 Client Layer → Network Layer → CoreStore ← World Layer
 ```
 
-<i>CoreStore owns the inventory truth. Everything else reads from it or writes to it through its public API.</i> <br>
+*CoreStore owns the inventory truth. Everything else reads from it or writes to it through its public API.* <br>
 Download the latest packaged release from <a href="https://github.com/Zyn-ic/Stoway/releases">Releases</a>.
 </p>
 </div>
