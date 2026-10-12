@@ -40,7 +40,12 @@ local DEFAULT_SETTINGS: Types.Settings = {
 	Sorting = false,
 	SortOrder = "None",
 	StackOnSwap = false,
-	StackRequiredFields = { "Rarity", "Type" },
+	-- Cooldown adoption (example branch): a live CooldownEnd blocks
+	-- merging, so firing a stack can't be washed by absorbing it into a
+	-- fresh one (or vice versa). nil == nil keeps non-cooldown stacking
+	-- exactly as before; spent stacks restack once the gate wipes the
+	-- expired end (see server EquipSlot / OnToolActivated).
+	StackRequiredFields = { "Rarity", "Type", "CooldownEnd" },
 	StackBlacklist = { Legendary = true, Mythic = true, Special = true },
 	DefaultDroppable = true,
 	UiSkin = "Jailbreak",

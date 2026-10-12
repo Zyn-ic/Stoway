@@ -57,6 +57,7 @@ export type CoreStoreApi = {
 	unequip: (Types.InventoryState) -> Types.UnequipResult,
 	updateMetadata: (Types.InventoryState, string, { [string]: any }) -> Types.MetadataUpdateResult,
 	sort: (Types.InventoryState) -> Types.SortResult,
+	METADATA_DELETE: string,
 }
 
 export type StowayApi = {

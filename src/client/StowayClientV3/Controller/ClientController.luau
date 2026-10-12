@@ -13,6 +13,7 @@
 -----------------------------
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 local SignalPlus = require(ReplicatedStorage.Packages.SignalPlus)
 
 local CoreStore = require(ReplicatedStorage.Shared.Stoway.CoreStore)
@@ -441,9 +442,8 @@ end
 
 -- Metadata-pure cooldown observe: a fresh CooldownEnd on an item means
 -- the skill went off elsewhere (external Tool script -> updateMetadata
--- -> FullSync). Anchor a local veil off our own clock; duration from our
--- mirror. Server epochs are unreadable here, so rejoins anchor full
--- length (server gate stays exact).
+-- -> FullSync). Ends live in the shared server-time domain, so the local
+-- veil anchors off true remaining (rejoins included, never over-veiled).
 local _lastSeenEnd: { [string]: number? } = {}
 
 local function observeCooldownEnds()
@@ -463,9 +463,9 @@ local function observeCooldownEnds()
 					-- Own kind-A stamp arriving late: record, don't refire.
 					_expectEcho[uuid] = nil
 				elseif not CooldownService.IsOnCooldown(uuid) then
-					local duration = getCooldownDuration(item)
-					if duration then
-						CooldownService.StartCooldown(uuid, duration)
+					local remaining = newEnd - Workspace:GetServerTimeNow()
+					if remaining > 0 then
+						CooldownService.StartCooldown(uuid, remaining)
 					end
 					local ref = lookupSlot(uuid)
 					if ref ~= nil then

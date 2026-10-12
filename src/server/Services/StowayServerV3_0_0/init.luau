@@ -296,6 +296,13 @@ local function getCooldownDuration(item: Types.Item): number?
 	return nil
 end
 
+-- Shared clock domain (example branch): CooldownEnd is stamped in
+-- Workspace server-time so clients read true remaining off the same
+-- epoch. os.clock is per-machine and meaningless across the wire.
+local function serverNow(): number
+	return Workspace:GetServerTimeNow()
+end
+
 -- World-click fire for kind-B tools: armed + off-cooldown only, then
 -- CooldownEnd is written (replicates -> veils) and the hand emptied.
 function Stoway.OnToolActivated(player: Player, tool: Tool)
@@ -309,8 +316,17 @@ function Stoway.OnToolActivated(player: Player, tool: Tool)
 	local duration = getCooldownDuration(item)
 	if not duration then return end
 	local endRaw = item.Metadata.CooldownEnd
-	if typeof(endRaw) == "number" and endRaw > os.clock() then return end
-	local res = Stoway.UpdateMetadata(player, uuid, { CooldownEnd = os.clock() + duration }, true)
+	if typeof(endRaw) == "number" then
+		if endRaw > serverNow() then return end
+		-- Expired ends linger as plain keys and would block restacking
+		-- forever (CooldownEnd gates stacking): wipe so the spent item
+		-- merges fresh again. Unreplicated; the stamp below carries it.
+		local mod = CoreStore
+		if mod ~= nil then
+			Stoway.UpdateMetadata(player, uuid, { CooldownEnd = mod.METADATA_DELETE }, false)
+		end
+	end
+	local res = Stoway.UpdateMetadata(player, uuid, { CooldownEnd = serverNow() + duration }, true)
 	if res.ok then
 		Stoway.UnequipSlot(player, true)
 	end
@@ -429,12 +445,16 @@ function Stoway.EquipSlot(player: Player, uuid: string, replicate: boolean?): Ty
 		end
 
 		-- Cooldown authority reads the item itself: CooldownEnd is a
-		-- server os.clock timestamp written through updateMetadata
-		-- (external Tool scripts on world activation, or the kind-A
-		-- stamp below). Cooling tools cannot be (re)equipped.
+		-- server-time timestamp (see serverNow) written through
+		-- updateMetadata (world activation, or the kind-A stamp below).
+		-- Cooling tools cannot be (re)equipped. Expired ends are wiped
+		-- so spent stacks restack (CooldownEnd gates stacking).
 		local endRaw = item.Metadata.CooldownEnd
-		if typeof(endRaw) == "number" and endRaw > os.clock() then
-			return Result.Err({ kind = EK.NotAvailable, message = "ON_COOLDOWN" })
+		if typeof(endRaw) == "number" then
+			if endRaw > serverNow() then
+				return Result.Err({ kind = EK.NotAvailable, message = "ON_COOLDOWN" })
+			end
+			cs.updateMetadata(state, uuid, { CooldownEnd = cs.METADATA_DELETE })
 		end
 
 		-- Update CoreStore state first
@@ -448,7 +468,7 @@ function Stoway.EquipSlot(player: Player, uuid: string, replicate: boolean?): Ty
 		if item.Metadata.FireOnEquip == true then
 			local duration = getCooldownDuration(item)
 			if duration then
-				cs.updateMetadata(state, uuid, { CooldownEnd = os.clock() + duration })
+				cs.updateMetadata(state, uuid, { CooldownEnd = serverNow() + duration })
 			end
 		end
 
