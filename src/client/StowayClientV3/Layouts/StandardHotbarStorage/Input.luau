@@ -32,9 +32,9 @@ local Fusion = require(ReplicatedStorage.Packages.fusion)
 local IllusionIAS = require(ReplicatedStorage.Packages.IllusionIAS)
 
 local Binds = require(script.Parent.Binds)
+local Shared = require(script.Parent.Parent.Shared)
 local ClientStore = require(script.Parent.Parent.Parent.Controller.ClientStore)
 local ClientController = require(script.Parent.Parent.Parent.Controller.ClientController)
-local CooldownService = require(script.Parent.Parent.Parent.Interactions.CooldownService)
 local PreferredInput = require(script.Parent.Parent.Parent.Interactions.PreferredInput)
 local State = require(script.Parent.Parent.Parent.CoreStore.State)
 local Query = require(script.Parent.Parent.Parent.CoreStore.Query)
@@ -44,54 +44,6 @@ local PointerDragService = require(script.Parent.Parent.Parent.Interactions.Poin
 local Input = {}
 
 local LONG_PRESS_SEC = 0.5
-
-local function getMaxSlots(store: typeof(ClientStore)): number
-	local settings: CoreTypes.Settings? = Fusion.peek(store.Settings)
-	return State.getMaxHotbarSlots(settings)
-end
-
-local function isBackpackEnabled(store: typeof(ClientStore)): boolean
-	local s: CoreTypes.Settings? = Fusion.peek(store.Settings)
-	return s == nil or s.BackpackEnabled ~= false
-end
-
-local function resolveHotbarUUID(store: typeof(ClientStore), visibleIndex: number): string?
-	local settings: CoreTypes.Settings? = Fusion.peek(store.Settings)
-	local hotbar: { [number]: string? } = Fusion.peek(store.Hotbar)
-	local items: { [string]: CoreTypes.Item } = Fusion.peek(store.Items)
-	local hotbarType = if settings then settings.HotbarType else "Static"
-	if hotbarType == "Dynamic" then
-		-- visibleIndex 1.. is packOrder; map to actual slot uuid
-		local maxSlots: number = getMaxSlots(store)
-		for slot = 1, maxSlots do
-			local order = Query.packedHotbarOrder(hotbar, items, slot, true)
-			if order == visibleIndex then
-				return hotbar[slot]
-			end
-		end
-		return nil
-	end
-	return hotbar[visibleIndex]
-end
-
-local function doEquipSlot(store: typeof(ClientStore), visibleIndex: number)
-	local uuid = resolveHotbarUUID(store, visibleIndex)
-	if not uuid then
-		-- Empty slot bind deselects whatever is equipped.
-		if Fusion.peek(store.EquippedItemUUID) ~= nil then
-			ClientController.Unequip()
-		end
-		return
-	end
-	-- Cooling slots have no bind: silent dead (veil is the feedback).
-	if CooldownService.IsOnCooldown(uuid) then return end
-	local equipped: string? = Fusion.peek(store.EquippedItemUUID)
-	if equipped == uuid then
-		ClientController.Unequip()
-	else
-		ClientController.Equip(uuid)
-	end
-end
 
 local function parseSelected(sel: GuiObject?): CoreTypes.SlotRef?
 	if not sel then return nil end
@@ -150,11 +102,14 @@ function Input.Mount(
 		end
 		table.clear(inventoryActions)
 
-		if backpackAction == nil then return end
-		if switchAction == nil then return end
-
-		backpackAction:Destroy(); backpackAction = nil
-		switchAction:Destroy(); switchAction = nil
+		-- No early return: PC/touch builds never set switchAction, and
+		-- the actions below still need cleanup on every rebuild.
+		if backpackAction ~= nil then
+			backpackAction:Destroy(); backpackAction = nil
+		end
+		if switchAction ~= nil then
+			switchAction:Destroy(); switchAction = nil
+		end
 
 		if switchHoldThread ~= nil then task.cancel(switchHoldThread); switchHoldThread = nil end
 
@@ -171,7 +126,7 @@ function Input.Mount(
 	if skin.BackpackStuff then
 		local btn = skin.BackpackStuff
 		local conn = btn.Activated:Connect(function()
-			if not isBackpackEnabled(store) then return end
+			if not Shared.isBackpackEnabled(store) then return end
 			local bf = skin.BackpackFrame
 			if bf then bf.Visible = not bf.Visible end
 		end)
@@ -200,7 +155,7 @@ function Input.Mount(
 		applyTo(scrolling)
 	end
 	local function toggleBackpackVisible()
-		if not isBackpackEnabled(store) then return end
+		if not Shared.isBackpackEnabled(store) then return end
 		local bf = skin.BackpackFrame
 		if bf then bf.Visible = not bf.Visible end
 	end
@@ -276,7 +231,7 @@ function Input.Mount(
 			-- Global backpack (gamepad DPadLeft)
 			do
 				local cfg = Binds.Global.Backpack
-				if isBackpackEnabled(store) then
+				if Shared.isBackpackEnabled(store) then
 					local a: BindingObject = IllusionIAS.new("StowayBackpack")
 					Binds.ApplyToAction(a, cfg, "Console")
 					a.Activated:Connect(function(_active: IllusionIAS.variant, pressed: boolean?)
@@ -309,7 +264,7 @@ function Input.Mount(
 			end
 			-- Hotbar direct binds (console combos)
 			do
-				local maxSlots = getMaxSlots(store)
+				local maxSlots = Shared.getMaxSlots(store)
 				for i = 1, maxSlots do
 					local cfg = Binds.HotbarSlots[i]
 					if cfg == nil then continue end
@@ -319,8 +274,8 @@ function Input.Mount(
 				a.Activated:Connect(function(_active: IllusionIAS.variant, pressed: boolean?)
 					if not pressed then return end
 					if consoleMode ~= "Hotbar" then return end
-					if i > getMaxSlots(store) then return end
-					doEquipSlot(store, i)
+					if i > Shared.getMaxSlots(store) then return end
+					Shared.doEquipSlot(store, i)
 				end)
 					IllusionIAS.addContext("StowayHotbar", a)
 					table.insert(actions, a)
@@ -368,14 +323,14 @@ function Input.Mount(
 					local uuid = getSelectedUUID(store, cur)
 					if not cur or not uuid then return end
 					if cur.Type == "Hotbar" then
-						if not isBackpackEnabled(store) then return end
+						if not Shared.isBackpackEnabled(store) then return end
 						local storage: { string } = Fusion.peek(store.Storage)
 						local dest = #storage + 1
 						local to: CoreTypes.SlotRef = { Type = "Storage", Slot = dest }
 						ClientController.Move(cur, to)
 					else
 						local hotbar: { [number]: string? } = Fusion.peek(store.Hotbar)
-						local maxSlots2 = getMaxSlots(store)
+						local maxSlots2 = Shared.getMaxSlots(store)
 						local dest: number? = nil
 						for s = 1, maxSlots2 do if hotbar[s] == nil then dest = s; break end end
 						if dest ~= nil then
@@ -401,7 +356,7 @@ function Input.Mount(
 			GuiService.SelectedObject = nil
 		elseif isTouch then
 			-- Touch: only backpack (UIButton), no hotbar actions
-			if isBackpackEnabled(store) and skin.BackpackStuff then
+			if Shared.isBackpackEnabled(store) and skin.BackpackStuff then
 				local cfg = Binds.Global.Backpack
 				-- Mobile uses UIButton path via SetUIButton (IllusionIAS supports it)
 				-- Keep IAS for backpack toggle so gamepad/touch switch cleans,
@@ -428,7 +383,7 @@ function Input.Mount(
 			-- KeyboardAndMouse PC: direct 1..0 + Tab+B
 			IllusionIAS.newContext("StowayGlobal")
 			IllusionIAS.newContext("StowayHotbar")
-			if isBackpackEnabled(store) then
+			if Shared.isBackpackEnabled(store) then
 				local cfg = Binds.Global.Backpack
 				local a: BindingObject = IllusionIAS.new("StowayBackpack")
 				Binds.ApplyToAction(a, cfg, "PC")
@@ -441,7 +396,7 @@ function Input.Mount(
 				table.insert(actions, a)
 				-- Also allow console backpack DPadLeft? Not on PC per spec, keep PC only.
 			end
-			local maxSlots = getMaxSlots(store)
+			local maxSlots = Shared.getMaxSlots(store)
 			for i = 1, maxSlots do
 				local cfg = Binds.HotbarSlots[i]
 				if cfg == nil then continue end
@@ -450,8 +405,8 @@ function Input.Mount(
 				Binds.ApplyToAction(a, cfg, "PC")
 				 a.Activated:Connect(function(_active: IllusionIAS.variant, pressed: boolean?)
 					if not pressed then return end
-					if i > getMaxSlots(store) then return end
-					doEquipSlot(store, i)
+					if i > Shared.getMaxSlots(store) then return end
+					Shared.doEquipSlot(store, i)
 				end)
 				IllusionIAS.addContext("StowayHotbar", a)
 				table.insert(actions, a)

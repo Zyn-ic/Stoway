@@ -29,22 +29,9 @@ local Communications = require(script.Communications)
 
 local Result = require(ReplicatedStorage.Shared.Stoway.Result)
 
--- Minimal contract for the injected CoreStore module.
-type CoreStoreApi = {
-	new: (Types.SettingsOverrides?) -> Types.InventoryState,
-	add: (Types.InventoryState, Types.ItemInput, Types.AddOptions?) -> Types.AddResult,
-	addToBackpack: (Types.InventoryState, Types.ItemInput, Types.AddOptions?) -> Types.AddResult,
-	addToHotbar: (Types.InventoryState, Types.ItemInput, number?) -> Types.AddResult,
-	remove: (Types.InventoryState, string, number?) -> Types.RemoveResult,
-	swap: (Types.InventoryState, Types.SlotRef, Types.SlotRef) -> Types.SwapResult,
-	swapStack: (Types.InventoryState, Types.SlotRef, Types.SlotRef) -> Types.SwapResult,
-	move: (Types.InventoryState, Types.SlotRef, Types.SlotRef) -> Types.MoveResult,
-	split: (Types.InventoryState, string, number, Types.SlotRef?) -> Types.SplitResult,
-	equip: (Types.InventoryState, string) -> Types.EquipResult,
-	unequip: (Types.InventoryState) -> Types.UnequipResult,
-	updateMetadata: (Types.InventoryState, string, { [string]: any }) -> Types.MetadataUpdateResult,
-	sort: (Types.InventoryState) -> Types.SortResult,
-}
+-- Minimal contract for the injected CoreStore module (single surface:
+-- Protocol.CoreStoreApi; the hand-copy here drifted before).
+type CoreStoreApi = Protocol.CoreStoreApi
 
 type Adapter = Protocol.Adapter
 

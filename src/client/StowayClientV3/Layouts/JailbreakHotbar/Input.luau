@@ -15,57 +15,14 @@ local Fusion = require(ReplicatedStorage.Packages.fusion)
 local IllusionIAS = require(ReplicatedStorage.Packages.IllusionIAS)
 
 local Binds = require(script.Parent.Binds)
+local Shared = require(script.Parent.Parent.Shared)
 local ClientStore = require(script.Parent.Parent.Parent.Controller.ClientStore)
 local ClientController = require(script.Parent.Parent.Parent.Controller.ClientController)
-local CooldownService = require(script.Parent.Parent.Parent.Interactions.CooldownService)
 local State = require(script.Parent.Parent.Parent.CoreStore.State)
 local Query = require(script.Parent.Parent.Parent.CoreStore.Query)
 local CoreTypes = require(script.Parent.Parent.Parent.CoreStore.Types)
 
 local Input = {}
-
-local function getMaxSlots(store: typeof(ClientStore)): number
-	local settings: CoreTypes.Settings? = Fusion.peek(store.Settings)
-	return State.getMaxHotbarSlots(settings)
-end
-
-local function isBackpackEnabled(store: typeof(ClientStore)): boolean
-	local s: CoreTypes.Settings? = Fusion.peek(store.Settings)
-	return s == nil or s.BackpackEnabled ~= false
-end
-
-local function doEquipSlot(store: typeof(ClientStore), visibleIndex: number)
-	local settings: CoreTypes.Settings? = Fusion.peek(store.Settings)
-	local hotbar: { [number]: string? } = Fusion.peek(store.Hotbar)
-	local items: { [string]: CoreTypes.Item } = Fusion.peek(store.Items)
-	local hotbarType = if settings then settings.HotbarType else "Static"
-	local uuid: string?
-	if hotbarType == "Dynamic" then
-		-- visibleIndex 1.. is packOrder; map to actual slot uuid
-		for slot = 1, getMaxSlots(store) do
-			if Query.packedHotbarOrder(hotbar, items, slot, true) == visibleIndex then
-				uuid = hotbar[slot]
-				break
-			end
-		end
-	else
-		uuid = hotbar[visibleIndex]
-	end
-	if not uuid then
-		if Fusion.peek(store.EquippedItemUUID) ~= nil then
-			ClientController.Unequip()
-		end
-		return
-	end
-	-- Cooling slots have no bind: silent dead (veil is the feedback).
-	if CooldownService.IsOnCooldown(uuid) then return end
-	local equipped: string? = Fusion.peek(store.EquippedItemUUID)
-	if equipped == uuid then
-		ClientController.Unequip()
-	else
-		ClientController.Equip(uuid)
-	end
-end
 
 type BindingObject = Binds.BindingAction
 
@@ -87,7 +44,7 @@ function Input.Mount(
 	table.insert(scope, cleanupActions)
 
 	local function toggleStorage()
-		if not isBackpackEnabled(store) then return end
+		if not Shared.isBackpackEnabled(store) then return end
 		storageOpen:set(not Fusion.peek(storageOpen))
 	end
 
@@ -123,7 +80,7 @@ function Input.Mount(
 			table.insert(actions, a)
 		end
 
-		local maxSlots = getMaxSlots(store)
+		local maxSlots = Shared.getMaxSlots(store)
 		for i = 1, maxSlots do
 			local cfg = Binds.HotbarSlots[i]
 			if cfg == nil then continue end
@@ -131,8 +88,8 @@ function Input.Mount(
 			Binds.ApplyToAction(a, cfg)
 			a.Activated:Connect(function(_active: IllusionIAS.variant, pressed: boolean?)
 				if not pressed then return end
-				if i > getMaxSlots(store) then return end
-				doEquipSlot(store, i)
+				if i > Shared.getMaxSlots(store) then return end
+				Shared.doEquipSlot(store, i)
 			end)
 			IllusionIAS.addContext("StowayJailbreak", a)
 			table.insert(actions, a)

@@ -49,7 +49,13 @@ end
 
 local function hydrateIfNeeded(state: CoreTypes.InventoryState)
 	if not state then return end
-	if state.LocationByUUID ~= nil and state.ItemsByID ~= nil and state.MetadataIndex ~= nil then return end
+	-- Rebuild on empty, not just nil: emptyState/snapshotState/FullSync
+	-- all reset these to {}, and an empty LocationByUUID orphans slots
+	-- on remove (ghost slots) and blinds lookupSlot. Each table below
+	-- refills only when itself empty, so populated tables are kept.
+	if next(state.LocationByUUID or {}) ~= nil
+		and next(state.ItemsByID or {}) ~= nil
+		and next(state.MetadataIndex or {}) ~= nil then return end
 	state.LocationByUUID = state.LocationByUUID or {}
 	state.ItemsByID = state.ItemsByID or {}
 	state.MetadataIndex = state.MetadataIndex or {}
@@ -537,7 +543,7 @@ end
 -- instead of clobbering atoms with the boot snapshot, then syncs once
 -- (single atomic atoms update via SetEngineSettings). Unknown keys are
 -- ignored by construction. Engine fields only.
-function ClientController.ApplyServerSettings(patch: { [string]: any })
+function ClientController.ApplyServerSettings(patch: CoreTypes.SettingsOverrides)
 	if not _state then return end
 	local s = _state.Settings
 	if patch.HotbarType ~= nil then s.HotbarType = patch.HotbarType end
@@ -563,9 +569,8 @@ local function bindSignals(signals: typeof(Signals))
 		if not _state then return end
 		hydrateIfNeeded(_state)
 		local ok, res = pcall(swapOp, from, to)
-		if ok and res and res.ok then
-			sync()
-		elseif ok and res and not res.ok then
+		-- No second sync(): swapOp already synced on success.
+		if ok and res and not res.ok then
 			warn("[ClientController] Swap rejected", res.error and res.error.message or tostring(res))
 		elseif not ok then
 			warn("[ClientController] Swap error", res)
@@ -596,14 +601,14 @@ local function bindSignals(signals: typeof(Signals))
 		if not _state then return end
 		hydrateIfNeeded(_state)
 		local ok, res = pcall(removeOp, uuid, amount)
-		if ok and res and res.ok then sync() elseif not ok then warn("[ClientController] Remove error", res) end
+		if not ok then warn("[ClientController] Remove error", res) end
 	end))
 
 	table.insert(_connections, signals.Add:Connect(function(itemInput: CoreTypes.ItemInput, opts: CoreTypes.AddOptions?)
 		if not _state then return end
 		hydrateIfNeeded(_state)
 		local ok, res = pcall(addOp, itemInput, opts)
-		if ok and res and res.ok then sync() elseif not ok then warn("[ClientController] Add error", res) end
+		if not ok then warn("[ClientController] Add error", res) end
 	end))
 
 	table.insert(_connections, signals.Split:Connect(function(uuid: string, amount: number, dest: CoreTypes.SlotRef?)
@@ -633,7 +638,7 @@ local function bindSignals(signals: typeof(Signals))
 		if not _state then return end
 		hydrateIfNeeded(_state)
 		local ok, res = pcall(unequipOp)
-		if ok and res and res.ok then sync() elseif not ok then warn("[ClientController] Unequip error", res) end
+		if not ok then warn("[ClientController] Unequip error", res) end
 	end))
 end
 

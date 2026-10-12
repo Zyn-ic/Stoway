@@ -19,6 +19,7 @@ local PointerDragService = require(script.Parent.Parent.Interactions.PointerDrag
 local HotbarView = require(script.HotbarView)
 local StorageView = require(script.StorageView)
 local LayoutInput = require(script.Input)
+local Shared = require(script.Parent.Shared)
 
 local StandardHotbarStorage = {}
 
@@ -27,46 +28,7 @@ local StandardHotbarStorage = {}
 -----------------------------
 
 function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: CoreTypes.SkinHandle, store: typeof(ClientStore))
-	local existingDragging = skin.DraggingGui
-		or (skin.Gui and (skin.Gui:FindFirstChild("DraggingGui") :: ScreenGui?))
-	local draggingGui: ScreenGui
-	if existingDragging then
-		existingDragging.IgnoreGuiInset = false
-		draggingGui = existingDragging
-	else
-		local created = Instance.new("ScreenGui")
-		created.Name = "DraggingGui"
-		created.DisplayOrder = 100
-		created.IgnoreGuiInset = false
-		created.Parent = skin.Gui and skin.Gui.Parent or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
-		table.insert(scope, created)
-		draggingGui = created
-	end
-	local function hasDestItem(target: CoreTypes.SlotRef): boolean
-		if target.Type == "Hotbar" then
-			local hotbar: { [number]: string? } = Fusion.peek(store.Hotbar)
-			return hotbar[target.Slot] ~= nil
-		else
-			local storage: { string } = Fusion.peek(store.Storage)
-			return storage[target.Slot] ~= nil
-		end
-	end
-
-	local function handleSwap(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef): boolean
-		local res = ClientController.Swap(from, to)
-		if not res.ok then
-			warn("[StandardHotbarStorage] Swap rejected", res.error and res.error.message or tostring(res))
-		end
-		return res.ok
-	end
-
-	local function handleMove(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef): boolean
-		local res = ClientController.Move(from, to)
-		if not res.ok then
-			warn("[StandardHotbarStorage] Move rejected", res.error and res.error.message or tostring(res))
-		end
-		return res.ok
-	end
+	local draggingGui = Shared.ensureDraggingGui(scope, skin)
 
 	local dragService = PointerDragService.new(
 		scope,
@@ -85,10 +47,10 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 
 			if to then
 				if from.Type == to.Type and from.Slot == to.Slot then return false end
-				local destHasItem = hasDestItem(to)
+				local destHasItem = Shared.hasDestItem(store, to)
 				if destHasItem then
 					-- Occupied -> Swap (StackOnSwap can stack; Move would reject DESTINATION_OCCUPIED)
-					return handleSwap(from, to)
+					return Shared.handleSwap(from, to)
 				else
 					-- Empty slot -> Move (never stacks). Fallback to Swap if Move rejects (e.g. Static HH empty via Move is allowed but keep fallback)
 					local res = ClientController.Move(from, to)
@@ -96,7 +58,7 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 						warn("[StandardHotbarStorage] Move rejected", res.error and res.error.message or tostring(res))
 						if res.error and res.error.message == "DESTINATION_UNAVAILABLE" then
 							-- Dynamic hotbar empty-hole guard already handled by Operations; try Swap as fallback only for Static
-							if hotbarType == "Static" then return handleSwap(from, to) end
+							if hotbarType == "Static" then return Shared.handleSwap(from, to) end
 						end
 						return false
 					end
@@ -109,7 +71,7 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 				-- AddToBackpack: Hotbar -> Storage append (Move HS path ignores dest slot and appends)
 				local storage: { string } = Fusion.peek(store.Storage)
 				local appendSlot = #storage + 1
-				return handleMove(from, { Type = "Storage", Slot = appendSlot })
+				return Shared.handleMove(from, { Type = "Storage", Slot = appendSlot })
 			end
 
 			if context.overHotbar and from.Type == "Storage" and hotbarType == "Dynamic" then
@@ -123,7 +85,7 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 						break
 					end
 				end
-				if appendSlot then return handleSwap(from, { Type = "Hotbar", Slot = appendSlot }) end
+				if appendSlot then return Shared.handleSwap(from, { Type = "Hotbar", Slot = appendSlot }) end
 				return false
 			end
 
