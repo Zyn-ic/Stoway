@@ -7,10 +7,10 @@ is a full inventory system split into independent layers. Each layer is built in
 
 ```
 Stoway
-├── CoreStore          ← pure Luau inventory engine (this branch)
-├── Network Layer      ← delta replication, anti-exploit locking
-├── World Layer        ← Tool spawning, equipping, dropping
-└── Client Layer       ← UI rendering, drag-and-drop, hotbar visuals
+├── master             ← integration branch
+├── corestore          ← pure Luau inventory engine
+├── server             ← orchestration, networking, world
+└── client             ← UI rendering, drag-and-drop (this branch forks it)
 ```
 
 The layers talk to each other in one direction:
