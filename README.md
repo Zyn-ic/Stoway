@@ -1,5 +1,5 @@
-# Stoway - CoreStore
-<img src="pics/Logo.png" alt="Stoway Logo" width="120" align="left" style="margin-right:15px"/>
+# Stoway - Cooldown Metadata
+<img src="pics/testgif1.gif" alt="Stoway chest" width="240" align="left" style="margin-right:15px"/>
 
 <div style="display:flex; flex-direction:column; gap:2px;">
 <p><strong>Stoway</strong> 
@@ -26,130 +26,25 @@ Download the latest packaged release from <a href="https://github.com/Zyn-ic/Sto
 
 <br>
 
-## What This Branch Focuses On
+## This Branch: Cooldown Metadata
 
-This branch builds **CoreStore** the pure Luau inventory engine.
+`example/cooldowns` is ABOUT THE COOLDOWN METADATA — skill cooldowns built
+purely on item metadata, zero engine changes. Designers set `Cooldown`
+(seconds) + `FireOnEquip` (kind); the server stamps `CooldownEnd` and gates
+re-equips; the client veils cooling slots until it lifts.
 
-CoreStore is:
-
-- **Pure Luau** &rarr; no Roblox types, no `Instance`, no `Player`, no `RemoteEvent`
-- **Fast lookups** &rarr; O(1) item access by UUID, by ItemId, by slot, by metadata
-- **Testable outside Roblox** &rarr; runs in Lune, Luau CLI, or any Luau environment
-- **Framework-agnostic** &rarr; works with any networking, any UI, any tool system
-
-CoreStore is **not**:
-
-- A networking layer
-- A client UI
-- A drag-and-drop system
-- A Tool spawner
-- A DataStore adapter
-
-Those are separate layers. They will live in their own branches.
-
-## CoreStore API
-
-```luau
-local state = CoreStore.new(settings)
-
--- Add items
-CoreStore.add(state, { Id = "Sword", Amount = 1, Metadata = { Rarity = "Common" } })
-CoreStore.addToBackpack(state, itemData)
-CoreStore.addToHotbar(state, itemData, slot)
-CoreStore.addToSlot(state, itemData, { Type = "Hotbar", Slot = 3 })
-
--- Remove items
-CoreStore.remove(state, uuid, amount)
-CoreStore.removeBySlot(state, "Hotbar", 1, amount)
-
--- Move items
-CoreStore.swap(state, fromRef, toRef)
-CoreStore.swapStack(state, fromRef, toRef)
-CoreStore.move(state, fromRef, toRef)
-CoreStore.split(state, uuid, amount, destination)
-
--- Query items
-CoreStore.getItem(state, uuid)
-CoreStore.find(state, { Id = "Sword", Metadata = { Rarity = "Legendary" } })
-CoreStore.filter(state, predicate)
-CoreStore.findById(state, "Sword")
-CoreStore.getAllItems(state)
-
--- Metadata
-CoreStore.updateMetadata(state, uuid, { Rarity = "Legendary", Damage = 50 })
-
--- Sorting
-CoreStore.sort(state)
-
--- Settings
-CoreStore.setHotbarType(state, "Dynamic")
-CoreStore.setSettings(state, overrides)
+```mermaid
+flowchart TD
+    A[Item metadata: Cooldown + FireOnEquip] --> B{Kind?}
+    B -->|A: fire-on-equip| C[Equip stamps CooldownEnd]
+    B -->|B: use-after-equip| D[Tool click stamps CooldownEnd]
+    C --> E[CooldownEnd gates re-equip]
+    D --> E
+    E --> F[Client veils the slot until it lifts]
 ```
 
-Every operation returns a result object with `success`, `error` (if failed), and operation-specific data (items added, amount removed, overflow, etc).
-
-## State Shape
-
-```luau
-{
-    Items = { [uuid] = Item },              -- O(1): UUID → Item
-    ItemsByID = { [id] = { uuid } },       -- O(1): ItemId → all UUIDs
-    Hotbar = { uuid?, ... },                -- fixed slots (Static) or packed (Dynamic)
-    Storage = { uuid, ... },                -- packed array, no holes
-    LocationByUUID = { [uuid] = SlotRef },  -- O(1): UUID → slot position
-    MetadataIndex = {                       -- O(1): metadata field → value → UUIDs
-        Rarity = { Common = { uuid }, ... },
-        Type = { Weapon = { uuid }, ... },
-    },
-    EquippedItemUUID = uuid?,
-    Weight = number,
-    Settings = { ... },
-}
-```
-
-## Key Behaviors
-
-- **Stacking** &rarr; via `add` (always), `swap`, or `swapStack` with `StackOnSwap = true`. Move and split never stack.
-- **Capacity** &rarr; `Limit = 0` means infinite. `Weight` = sum of all item Amounts.
-- **Sorting** &rarr; auto-sorts Storage when `Settings.Sorting = true`. Hotbar is never sorted.
-- **Dynamic Hotbar** &rarr; packed array, no holes. Operations targeting non-append slots are rejected.
-- **MetadataIndex** &rarr; O(1) bucket lookups for `find()` by Rarity or Type.
-- **MaxStackSize** &rarr; enforced unconditionally. No item Amount may exceed it after any operation.
-
-## Branch Layout
-
-- `client` (this branch): bare-bones canon — client UI, server orchestration, CoreStore.
-- `example/*`: small branches demonstrating what the bare bones make possible
-  (e.g. `example/locked-slots`: metadata-keyed hotbar slot unlocks).
-  See `BRANCH_PLAN.md`. Example branches are never merged; canon stays minimal.
-
-## Client Robustness
-
-- Ghost-slot healing: if an `Added` push arrives for an occupied hotbar slot
-  whose occupant has no item entry (a removal that never landed), the client
-  evicts the ghost and lands the push instead of diverging. Conflicts with a
-  real item still warn + skip.
-- Studio data specs (current): `require(game.ReplicatedStorage.Tests.Runner).run()`
-  in the Studio Command Bar. The Lune suites below are retired.
-
-## Running Tests
-
-### Luau (primary)
-
-```
-luau.exe "src/server/tests/corestore_operations_test.luau"
-luau.exe "src/server/tests/corestore_addtest.luau"
-```
-
-### Lune (REPL-style)
-
-```
-lune.exe "src/server/tests/manual_test.luau"
-```
-
-### Web Test Tool
-
-Open `src/server/tests/web/index.html` in a browser. Full JS port of CoreStore with 12 test scenarios and drag-and-drop.
+Try it in Studio play: open Conch (Backquote), `cooldown-demo Pickaxe a 5`,
+press the hotbar bind. Details in `AGENTS.md` ([showcase section](AGENTS.md#cooldown-metadata-showcase-this-branch)).
 
 ## Credits
 

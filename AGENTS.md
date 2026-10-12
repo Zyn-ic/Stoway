@@ -2,6 +2,10 @@
 
 This file helps AI agents understand the Stoway project. Read this before making changes.
 
+> **Branch:** `example/cooldowns` — the cooldown-metadata showcase. Everything
+> below describes the shared canon (identical to `client` unless noted); the
+> showcase delta lives in [Cooldown Metadata Showcase](#cooldown-metadata-showcase-this-branch).
+
 ---
 
 ## Project Overview
@@ -135,9 +139,9 @@ return ModuleName
 
 | File | Purpose | Public API |
 |------|---------|-----------|
-| `init.luau` | Orchestration facade | Init, createPlayer, get, removePlayer, getAll, registerAdapter, 12 operation routes |
-| `Communications.luau` | Network adapter + gatekeeper | Init(Stoway, NetworkService, folder), QuickNet handlers, validation, replicate decisions, Stoway adapter |
-| `Debug/ChatCommands.luau` | Chat debug commands; settings mutators push sparse `SettingsChanged` | cmd* |
+| `init.luau` | Orchestration facade (+ cooldown gates/stamps on this branch) | Init, createPlayer, get, removePlayer, getAll, registerAdapter, 13 operation routes |
+| `Communications.luau` | Network adapter + gatekeeper (+ cooldown wire key policy on this branch) | Init(Stoway, NetworkService, folder), QuickNet handlers, validation, replicate decisions, Stoway adapter |
+| `Debug/ConchCommands.luau` | Conch debug console (Studio-gated); inventory/settings/team/`cooldown-demo` commands | RegisterAll |
 
 ### StowayClient (Client Layer, branch `client`)
 
@@ -152,6 +156,11 @@ return ModuleName
 | `Controller/ClientController.luau` | Signals bus -> atoms; server-apply paths, ghost-slot healing, ApplyServerSettings funnel | swapOp/moveOp/addOp/removeOp/equipAndClearNew, ApplyServer* |
 | `Controller/NetworkClient.luau` | QuickNet sends (one FireServer per op) + push subscriptions; revert triggers resync | Send*, RequestSnapshot, Connect |
 | `Controller/LayoutManager.luau` | Mounts a `Layouts[]` engine against a `Skins[]` loader; owns LayoutScope lifecycle | SetLayout, Teardown, GetCurrentLayout |
+| `Layouts/Shared/init.luau` | Shared layout helpers (both engines: DraggingGui, hasDestItem, handleSwap/Move, doEquipSlot + cooldown bind-deny) | getMaxSlots, isBackpackEnabled, hasDestItem, handleSwap, handleMove, doEquipSlot, ensureDraggingGui |
+| `Layouts/JailbreakHotbar/init.luau` | Jailbreak engine: hotbar + centered popup, sweep paint-to-move, swap-pop, cooldown deny-shake | Mount(scope, skin, store) |
+| `Layouts/JailbreakHotbar/HotbarView.luau` | Jailbreak hotbar slots + cooldown veils | Create(scope, skin, store, dragService) |
+| `Layouts/JailbreakHotbar/StorageView.luau` | Jailbreak popup slots + cooldown veils | Create(scope, skin, store, storageOpen, dragService) |
+| `Interactions/CooldownService.luau` | Client cooldown state (this branch): uuid → end, shared Tick clock | StartCooldown, Remaining, IsOnCooldown, Clear, Prune |
 | `Layouts/StandardHotbarStorage/init.luau` | HotbarType engine: Static/Dynamic hotbar + sectioned storage | Mount(scope, skin, store) |
 | `Layouts/StandardHotbarStorage/HotbarView.luau` | Hotbar 1..MaxHotbarSlots, Static holes / Dynamic packing | Create(scope, skin, store) |
 | `Layouts/StandardHotbarStorage/StorageView.luau` | Sectioned storage: type groups + collapse headers + weight label | Create(scope, skin, store) |
@@ -219,7 +228,7 @@ BackpackEnabled = true
 StackOnSwap = false       -- system-level, default off
 Sorting = false
 SortOrder = "None"        -- "None" | "Name" | "Rarity" | "ItemType"
-StackRequiredFields = { "Rarity", "Type" }
+StackRequiredFields = { "Rarity", "Type" } -- + "CooldownEnd" on this branch (launder)
 StackBlacklist = { Legendary = true, Mythic = true, Special = true }
 ```
 
@@ -246,6 +255,28 @@ StackBlacklist = { Legendary = true, Mythic = true, Special = true }
 - **Settings replication:** engine settings push sparsely per change (`SettingsChanged`); `FullSync` carries the full snapshot as backstop. Client overlays onto `_state`, never atoms directly.
 - **Optimistic ops + revert:** client applies drags locally; server rejects arrive as revert + resync (no silent forks).
 - **Ghost healing:** an `Added` push for an occupied hotbar slot whose occupant has no item entry is evicted, not skipped. Real-item conflicts still warn + skip.
+- **Cooldowns (this branch):** see [Cooldown Metadata Showcase](#cooldown-metadata-showcase-this-branch).
+
+### Cooldown Metadata Showcase (this branch)
+
+Skill cooldowns with zero engine changes — three metadata keys, server
+authority, client veils. Canon engine behavior above is untouched.
+
+| Key | Writer | Meaning |
+|-----|--------|---------|
+| `Cooldown` | designer / `cooldown-demo` | duration, seconds |
+| `FireOnEquip` | designer / `cooldown-demo` | `true` = kind-A (fire on equip); else kind-B (fire on world click) |
+| `CooldownEnd` | server only | `GetServerTimeNow()` epoch when the lock lifts |
+
+- **Kind-A:** `EquipSlot` stamps `CooldownEnd` inline, then auto-unequips. The client fires optimistically (`fireSkill`) and marks `_expectEcho`, so the silent server stamp never double-fires the veil.
+- **Kind-B:** server-owned `Tool.Activated` connections (`_activatedConns`, disconnected on equip/unequip/leave) stamp the end and unarm. Plain tools are never touched.
+- **Gates:** server `EquipSlot` returns `ON_COOLDOWN` while locked; client `equipAndClearNew` flashes `CooldownDenied` (layout shake); binds/clicks on cooling slots are silent-dead — the veil is the feedback.
+- **Wire key policy** (`Communications.luau`): client-originated writes to the three keys are stripped. Direct server `UpdateMetadata` calls bypass it.
+- **Clock domain:** stamps, gates, and the `observeCooldownEnds` FullSync observer all use `Workspace:GetServerTimeNow()` — `os.clock()` is per-machine. The observer anchors true remaining, never full-length.
+- **Stacking launder:** `CooldownEnd` is a required stack field here, so cooling↔fresh stacks can't merge (swap-absorb falls back to positional). Gates wipe expired ends (`METADATA_DELETE`) so spent stacks restack.
+- **Veils:** `CooldownService` (uuid → end, single RenderStepped Tick) + `cooldown`/`cooldowntext` nodes in the Jailbreak skin prefab, hydrated by both views (nil-safe for other skins).
+- **Try it:** Studio play, Conch (Backquote): `cooldown-demo <id> [a|b] [seconds]` (e.g. `cooldown-demo Pickaxe a 5`).
+- **Delta vs `client`:** `Interactions/CooldownService.luau`, bind-deny in `Layouts/Shared`, veil blocks in `JailbreakHotbar/*` + `Skins/Jailbreak`, gates/stamps in server `init.luau`, observer in `ClientController.luau`, key policy in `Communications.luau`, `cooldown-demo` in `Debug/ConchCommands.luau`, `CooldownEnd` in shared `Settings.luau` defaults.
 
 ---
 
@@ -304,7 +335,7 @@ docs/
 5. **Static hotbar preserves holes** — `compactHotbar` is a no-op. Only Dynamic compacts.
 6. **Sort is descending for rarity** — Special > Mythic > Legendary > ... > Common.
 7. **`StackOnSwap` does NOT stack during move** — it applies to swap and swapStack only. This is a common misconception.
-8. **Nil values in `updateMetadata`** — In Luau, `{ Key = nil }` creates empty table. Nil values are silently ignored.
+8. **Nil values in `updateMetadata`** — In Luau, `{ Key = nil }` creates empty table. Nil values are silently ignored. To delete a key, use the sentinel: `updateMetadata(state, uuid, { Key = CoreStore.METADATA_DELETE })`.
 9. **MetadataIndex maintenance** — every `createItem`, `destroyUnplacedItem`, `remove`, and `updateMetadata` must update MetadataIndex.
 10. **Dynamic Hotbar slot availability** — The only available slot is the append position (`findEmptyHotbarSlot`). Operations targeting non-append slots are rejected with `DESTINATION_UNAVAILABLE`. Preferred slot is ignored in Dynamic mode. Use `CoreStore.setHotbarType(state, "Dynamic")` to switch types — it auto-compacts the hotbar.
 11. **`Fusion.Scope<any>` has no `Hydrate`/`ForPairs`** — `Types.Scope<Constructors> = {Task} & Constructors`, so `Scope<any>` is `any & {Task}` with no Fusion members. Use `Fusion.Scope<typeof(Fusion)>` (as in `HotbarView`, `StorageView`, `SlotView`, `LayoutManager`, `PointerDragService`). Zed `enable_new_solver:true` surfaces this.
