@@ -45,7 +45,13 @@ end
 
 local function hydrateIfNeeded(state: CoreTypes.InventoryState)
 	if not state then return end
-	if state.LocationByUUID ~= nil and state.ItemsByID ~= nil and state.MetadataIndex ~= nil then return end
+	-- Rebuild on empty, not just nil: emptyState/snapshotState/FullSync
+	-- all reset these to {}, and an empty LocationByUUID orphans slots
+	-- on remove (ghost slots) and blinds lookupSlot. Each table below
+	-- refills only when itself empty, so populated tables are kept.
+	if next(state.LocationByUUID or {}) ~= nil
+		and next(state.ItemsByID or {}) ~= nil
+		and next(state.MetadataIndex or {}) ~= nil then return end
 	state.LocationByUUID = state.LocationByUUID or {}
 	state.ItemsByID = state.ItemsByID or {}
 	state.MetadataIndex = state.MetadataIndex or {}

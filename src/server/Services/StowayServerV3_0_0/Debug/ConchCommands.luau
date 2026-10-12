@@ -745,9 +745,17 @@ end
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
+-- Dev console gate: Studio only. Production gets no remotes, no role,
+-- no commands. (Per-player allowlist later: grant in `grant` below.)
+local function consoleEnabled(): boolean
+	return game:GetService("RunService"):IsStudio()
+end
+
 -- Server conch owner: lifecycle first (net must exist before roles),
 -- then one debug role, then every command, then grants per join.
+-- No-op outside Studio (see consoleEnabled).
 function ConchCommands.RegisterAll(stoway: StowayApi)
+	if not consoleEnabled() then return end
 	conch.initiate_default_lifecycle()
 	conch.set_role_permissions(DEBUG_ROLE, DEBUG_PERM)
 	registerAll(stoway)
