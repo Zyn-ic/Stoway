@@ -44,6 +44,13 @@ type Payload = { [string]: any }
 
 local _Stoway: StowayApi? = nil
 
+-- Full-sync requests carry a fat per-player cooldown: full state is
+-- expensive, and routers correct failures with FullSync on their own.
+-- Stamped on EVERY push (not just requests) so a boot request racing a
+-- just-sent join push throttles instead of doubling the join.
+local SYNC_COOLDOWN = 15
+local _lastSyncRequest: { [Player]: number } = {}
+
 -- PRIVATE FUNCTIONS --
 -----------------------------
 
@@ -92,6 +99,9 @@ local function pushFullSync(player: Player)
 			DefaultDroppable = s.DefaultDroppable,
 		},
 	})
+	-- Every push counts for the request cooldown: a boot request racing
+	-- a just-sent join push is throttled instead of doubling the join.
+	_lastSyncRequest[player] = os.clock()
 end
 
 local function adapter(player: Player, signal: Protocol.Signal)
@@ -225,11 +235,6 @@ local function handle(player: Player, payload: Payload?, run: (Player, Payload) 
 		pushFullSync(player)
 	end
 end
-
--- Full-sync requests carry a fat per-player cooldown: full state is
--- expensive, and routers correct failures with FullSync on their own.
-local SYNC_COOLDOWN = 15
-local _lastSyncRequest: { [Player]: number } = {}
 
 local function requestSync(player: Player)
 	local now = os.clock()

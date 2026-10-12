@@ -79,7 +79,10 @@ function StowayClient.Init()
 	local playerGui = player:WaitForChild("PlayerGui") :: PlayerGui
 
 	-- Network first: subscriptions before anything can push, then ask
-	-- for a snapshot to cover a missed join push.
+	-- for a snapshot to cover a missed join push. Always request: if
+	-- the join push already went out, the server's per-player cooldown
+	-- throttles this into a no-op instead of doubling the join.
+	NetworkClient.RequestSnapshot()
 	NetworkClient.Connect({
 		Added = ClientController.ApplyServerAdded,
 		Updated = ClientController.ApplyServerUpdated,
@@ -107,7 +110,6 @@ function StowayClient.Init()
 			print("[StowayClientV3] settings updated from server")
 		end,
 	})
-	NetworkClient.RequestSnapshot()
 
 	-- Boot from the server snapshot. The join push usually lands before
 	-- this runs; the request covers the race. Empty (never mock) when

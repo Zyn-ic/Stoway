@@ -211,9 +211,9 @@ function NetworkClient.Connect(applies: ApplyHandlers)
 	end)
 	_conns[#_conns + 1] = R.InventoryRevert.OnClientEvent:Connect(function(payload)
 		warn(`[NetworkClient] server revert (log-only): {tostring(payload.fromSlot)}`)
-		-- A revert means the optimistic local op forked from server truth.
-		-- Resync wholesale (cooldown-gated server-side) to heal any drift.
-		NetworkClient.RequestSnapshot()
+		-- Log-only by design: the server's handle() already pushes a
+		-- FullSync behind every failed op, so requesting another snapshot
+		-- here would triple-send (revert + handle push + requested push).
 	end)
 	_conns[#_conns + 1] = R.InventoryFullSync.OnClientEvent:Connect(function(payload: CoreTypes.FullSyncPayload)
 		_lastFullSync = payload
