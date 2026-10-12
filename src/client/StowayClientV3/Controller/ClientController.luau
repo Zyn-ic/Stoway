@@ -28,6 +28,9 @@ local NetworkClient = require(script.Parent.NetworkClient)
 local ClientController = {}
 
 local _state: CoreTypes.InventoryState? = nil
+-- Kind-A fires stamp server-side silently; the observer treats that
+-- value as expected-echo (record, never refire) on first sighting.
+local _expectEcho: { [string]: boolean } = {}
 local _connections: { SignalPlus.Connection } = {}
 local _signals: typeof(Signals)? = nil
 -- Skin hook table (Layer 2), set per mount by the layout. Nil = no hooks.
@@ -122,6 +125,10 @@ local function fireSkill(uuid: string, item: CoreTypes.Item, ref: CoreTypes.Slot
 	local duration = getCooldownDuration(item)
 	if not duration then return end
 	CooldownService.StartCooldown(uuid, duration)
+	-- The server stamp travels silently (no push), so the observer would
+	-- meet it as "fresh" on the next FullSync from anywhere and start a
+	-- phantom veil. Expect it: first sighting only records, never fires.
+	_expectEcho[uuid] = true
 	if ref ~= nil then
 		ClientEvents.SkillFired:Fire(ref.Type, ref.Slot, uuid)
 	end
@@ -435,19 +442,29 @@ local _lastSeenEnd: { [string]: number? } = {}
 
 local function observeCooldownEnds()
 	if not _state then return end
+	for uuid in _expectEcho do
+		if _state.Items[uuid] == nil then
+			_expectEcho[uuid] = nil
+		end
+	end
 	for uuid, item in _state.Items do
 		local raw = item.Metadata and item.Metadata.CooldownEnd
 		local newEnd: number? = if typeof(raw) == "number" then raw else nil
 		if newEnd ~= _lastSeenEnd[uuid] then
 			_lastSeenEnd[uuid] = newEnd
-			if newEnd ~= nil and not CooldownService.IsOnCooldown(uuid) then
-				local duration = getCooldownDuration(item)
-				if duration then
-					CooldownService.StartCooldown(uuid, duration)
-				end
-				local ref = lookupSlot(uuid)
-				if ref ~= nil then
-					ClientEvents.SkillFired:Fire(ref.Type, ref.Slot, uuid)
+			if newEnd ~= nil then
+				if _expectEcho[uuid] then
+					-- Own kind-A stamp arriving late: record, don't refire.
+					_expectEcho[uuid] = nil
+				elseif not CooldownService.IsOnCooldown(uuid) then
+					local duration = getCooldownDuration(item)
+					if duration then
+						CooldownService.StartCooldown(uuid, duration)
+					end
+					local ref = lookupSlot(uuid)
+					if ref ~= nil then
+						ClientEvents.SkillFired:Fire(ref.Type, ref.Slot, uuid)
+					end
 				end
 			end
 		end
