@@ -451,7 +451,7 @@ end
 -- instead of clobbering atoms with the boot snapshot, then syncs once
 -- (single atomic atoms update via SetEngineSettings). Unknown keys are
 -- ignored by construction. Engine fields only.
-function ClientController.ApplyServerSettings(patch: { [string]: any })
+function ClientController.ApplyServerSettings(patch: CoreTypes.SettingsOverrides)
 	if not _state then return end
 	local s = _state.Settings
 	if patch.HotbarType ~= nil then s.HotbarType = patch.HotbarType end

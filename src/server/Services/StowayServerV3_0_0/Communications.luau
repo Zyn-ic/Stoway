@@ -20,23 +20,8 @@ local _Types = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
 
 local Communications = {}
 
-type StowayApi = {
-	registerAdapter: (Protocol.Adapter) -> (),
-	get: (Player) -> _Types.InventoryState?,
-	AddItem: (Player, _Types.ItemInput, _Types.AddOptions?, boolean?) -> _Types.AddResult,
-	AddToBackpack: (Player, _Types.ItemInput, _Types.AddOptions?, boolean?) -> _Types.AddResult,
-	AddToHotbar: (Player, _Types.ItemInput, number?, boolean?) -> _Types.AddResult,
-	RemoveItem: (Player, string, number?, boolean?) -> _Types.RemoveResult,
-	SwapSlots: (Player, _Types.SlotRef, _Types.SlotRef, boolean?) -> _Types.SwapResult,
-	SwapStack: (Player, _Types.SlotRef, _Types.SlotRef, boolean?) -> _Types.SwapResult,
-	Move: (Player, _Types.SlotRef, _Types.SlotRef, boolean?) -> _Types.MoveResult,
-	Split: (Player, string, number, _Types.SlotRef?, boolean?) -> _Types.SplitResult,
-	EquipSlot: (Player, string, boolean?) -> _Types.EquipResult,
-	UnequipSlot: (Player, boolean?) -> _Types.UnequipResult,
-	UpdateMetadata: (Player, string, { [string]: any }, boolean?) -> _Types.MetadataUpdateResult,
-	Sort: (Player, boolean?) -> _Types.SortResult,
-	Drop: (Player, string, number?, boolean?) -> _Types.DropResult,
-}
+-- Single surface: Protocol.StowayApi (the hand-copy here drifted before).
+type StowayApi = Protocol.StowayApi
 
 -- Wire payloads are plain tables; the router trusts shapes and lets
 -- CoreStore validation decide. Only table-ness is checked up front.

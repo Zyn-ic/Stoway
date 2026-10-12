@@ -31,23 +31,9 @@ local conch: any = require(ReplicatedStorage.Packages.conch)
 -- VARIABLES --
 -----------------------------
 
-type StowayApi = {
-	get: (Player) -> Types.InventoryState?,
-	createPlayer: (Player, Types.SettingsOverrides?) -> Types.InventoryState,
-	removePlayer: (Player) -> Types.InventoryState?,
-	AddItem: (Player, Types.ItemInput, Types.AddOptions?, boolean?) -> Types.AddResult,
-	AddToBackpack: (Player, Types.ItemInput, Types.AddOptions?, boolean?) -> Types.AddResult,
-	AddToHotbar: (Player, Types.ItemInput, number?, boolean?) -> Types.AddResult,
-	RemoveItem: (Player, string, number?, boolean?) -> Types.RemoveResult,
-	SwapSlots: (Player, Types.SlotRef, Types.SlotRef, boolean?) -> Types.SwapResult,
-	Move: (Player, Types.SlotRef, Types.SlotRef, boolean?) -> Types.MoveResult,
-	Split: (Player, string, number, Types.SlotRef?, boolean?) -> Types.SplitResult,
-	EquipSlot: (Player, string, boolean?) -> Types.EquipResult,
-	UnequipSlot: (Player, boolean?) -> Types.UnequipResult,
-	UpdateMetadata: (Player, string, { [string]: any }, boolean?) -> Types.MetadataUpdateResult,
-	Sort: (Player, boolean?) -> Types.SortResult,
-	Drop: (Player, string, number?, boolean?) -> Types.DropResult,
-}
+-- Single surface: Protocol.StowayApi (this copy was missing SwapStack).
+local Protocol = require(script.Parent.Parent.Protocol)
+type StowayApi = Protocol.StowayApi
 
 -- Single debug role/permission (dev console parity with legacy chat:
 -- everyone who joins can use it). Lock down by granting selectively.

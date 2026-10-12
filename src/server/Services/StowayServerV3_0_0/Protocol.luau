@@ -39,6 +39,46 @@ export type Signal =
 
 export type Adapter = (player: Player, signal: Signal) -> ()
 
+-- Single surface for the two hand-copied API shapes (previously
+-- triplicated across init/Communications/ConchCommands and already
+-- drifted once). Both use CoreStore nominals so the identities match
+-- every consumer exactly.
+export type CoreStoreApi = {
+	new: (Types.SettingsOverrides?) -> Types.InventoryState,
+	add: (Types.InventoryState, Types.ItemInput, Types.AddOptions?) -> Types.AddResult,
+	addToBackpack: (Types.InventoryState, Types.ItemInput, Types.AddOptions?) -> Types.AddResult,
+	addToHotbar: (Types.InventoryState, Types.ItemInput, number?) -> Types.AddResult,
+	remove: (Types.InventoryState, string, number?) -> Types.RemoveResult,
+	swap: (Types.InventoryState, Types.SlotRef, Types.SlotRef) -> Types.SwapResult,
+	swapStack: (Types.InventoryState, Types.SlotRef, Types.SlotRef) -> Types.SwapResult,
+	move: (Types.InventoryState, Types.SlotRef, Types.SlotRef) -> Types.MoveResult,
+	split: (Types.InventoryState, string, number, Types.SlotRef?) -> Types.SplitResult,
+	equip: (Types.InventoryState, string) -> Types.EquipResult,
+	unequip: (Types.InventoryState) -> Types.UnequipResult,
+	updateMetadata: (Types.InventoryState, string, { [string]: any }) -> Types.MetadataUpdateResult,
+	sort: (Types.InventoryState) -> Types.SortResult,
+}
+
+export type StowayApi = {
+	registerAdapter: (Adapter) -> (),
+	get: (Player) -> Types.InventoryState?,
+	createPlayer: (Player, Types.SettingsOverrides?) -> Types.InventoryState,
+	removePlayer: (Player) -> Types.InventoryState?,
+	AddItem: (Player, Types.ItemInput, Types.AddOptions?, boolean?) -> Types.AddResult,
+	AddToBackpack: (Player, Types.ItemInput, Types.AddOptions?, boolean?) -> Types.AddResult,
+	AddToHotbar: (Player, Types.ItemInput, number?, boolean?) -> Types.AddResult,
+	RemoveItem: (Player, string, number?, boolean?) -> Types.RemoveResult,
+	SwapSlots: (Player, Types.SlotRef, Types.SlotRef, boolean?) -> Types.SwapResult,
+	SwapStack: (Player, Types.SlotRef, Types.SlotRef, boolean?) -> Types.SwapResult,
+	Move: (Player, Types.SlotRef, Types.SlotRef, boolean?) -> Types.MoveResult,
+	Split: (Player, string, number, Types.SlotRef?, boolean?) -> Types.SplitResult,
+	EquipSlot: (Player, string, boolean?) -> Types.EquipResult,
+	UnequipSlot: (Player, boolean?) -> Types.UnequipResult,
+	UpdateMetadata: (Player, string, { [string]: any }, boolean?) -> Types.MetadataUpdateResult,
+	Sort: (Player, boolean?) -> Types.SortResult,
+	Drop: (Player, string, number?, boolean?) -> Types.DropResult,
+}
+
 -----------------------------
 -- PRIVATE FUNCTIONS --
 -----------------------------

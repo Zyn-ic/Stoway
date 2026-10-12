@@ -42,7 +42,7 @@ export type ApplyHandlers = {
 	Unequipped: () -> (),
 	FullSync: (payload: CoreTypes.FullSyncPayload) -> (),
 	LayoutChanged: (hotbarTypeKey: string, skinKey: string) -> (),
-	SettingsChanged: (patch: { [string]: any }) -> (),
+	SettingsChanged: (patch: SharedCoreTypes.SettingsOverrides) -> (),
 }
 
 local _applies: ApplyHandlers? = nil
