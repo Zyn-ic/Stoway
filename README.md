@@ -1,4 +1,4 @@
-# Stoway - CoreStore
+# Stoway - New-Item Glow
 <img src="pics/Logo.png" alt="Stoway Logo" width="120" align="left" style="margin-right:15px"/>
 
 <div style="display:flex; flex-direction:column; gap:2px;">
@@ -7,10 +7,10 @@ is a full inventory system split into independent layers. Each layer is built in
 
 ```
 Stoway
-├── CoreStore          ← pure Luau inventory engine (this branch)
-├── Network Layer      ← delta replication, anti-exploit locking
-├── World Layer        ← Tool spawning, equipping, dropping
-└── Client Layer       ← UI rendering, drag-and-drop, hotbar visuals
+├── master             ← integration branch
+├── corestore          ← pure Luau inventory engine
+├── server             ← orchestration, networking, world
+└── client             ← UI rendering, drag-and-drop (this branch forks it)
 ```
 
 The layers talk to each other in one direction:
@@ -19,154 +19,34 @@ The layers talk to each other in one direction:
 Client Layer → Network Layer → CoreStore ← World Layer
 ```
 
-<i>CoreStore owns the inventory truth. Everything else reads from it or writes to it through its public API.</i> <br>
+*CoreStore owns the inventory truth. Everything else reads from it or writes to it through its public API.* <br>
 Download the latest packaged release from <a href="https://github.com/Zyn-ic/Stoway/releases">Releases</a>.
 </p>
 </div>
 
 <br>
 
-## What This Branch Focuses On
+## This Branch: New-Item Glow
 
-This branch builds **CoreStore** the pure Luau inventory engine.
+`example/new-item-glow` is ABOUT FIRST-SEEN GLOW — new items shine until
+seen, built on one metadata flag with zero engine changes. `IsNew` is
+client-ephemera, never server truth: game code grants with the flag
+(replicate on, the client glows), then the server strips it silently
+(replicate off, so FullSync can never resurrect it). The `NewGlow` instance
+exists only while the flag is present — created on demand, destroyed on
+clear. Equipping clears it locally, never sent back.
 
-CoreStore is:
-
-- **Pure Luau** &rarr; no Roblox types, no `Instance`, no `Player`, no `RemoteEvent`
-- **Fast lookups** &rarr; O(1) item access by UUID, by ItemId, by slot, by metadata
-- **Testable outside Roblox** &rarr; runs in Lune, Luau CLI, or any Luau environment
-- **Framework-agnostic** &rarr; works with any networking, any UI, any tool system
-
-CoreStore is **not**:
-
-- A networking layer
-- A client UI
-- A drag-and-drop system
-- A Tool spawner
-- A DataStore adapter
-
-Those are separate layers. They will live in their own branches.
-
-## CoreStore API
-
-```luau
-local state = CoreStore.new(settings)
-
--- Add items
-CoreStore.add(state, { Id = "Sword", Amount = 1, Metadata = { Rarity = "Common" } })
-CoreStore.addToBackpack(state, itemData)
-CoreStore.addToHotbar(state, itemData, slot)
-CoreStore.addToSlot(state, itemData, { Type = "Hotbar", Slot = 3 })
-
--- Remove items
-CoreStore.remove(state, uuid, amount)
-CoreStore.removeBySlot(state, "Hotbar", 1, amount)
-
--- Move items
-CoreStore.swap(state, fromRef, toRef)
-CoreStore.swapStack(state, fromRef, toRef)
-CoreStore.move(state, fromRef, toRef)
-CoreStore.split(state, uuid, amount, destination)
-
--- Query items
-CoreStore.getItem(state, uuid)
-CoreStore.find(state, { Id = "Sword", Metadata = { Rarity = "Legendary" } })
-CoreStore.filter(state, predicate)
-CoreStore.findById(state, "Sword")
-CoreStore.getAllItems(state)
-
--- Metadata
-CoreStore.updateMetadata(state, uuid, { Rarity = "Legendary", Damage = 50 })
-
--- Sorting
-CoreStore.sort(state)
-
--- Settings
-CoreStore.setHotbarType(state, "Dynamic")
-CoreStore.setSettings(state, overrides)
+```mermaid
+flowchart TD
+    A[Add with IsNew, replicate on] --> B[Client glows the slot]
+    A --> C[Server strips the flag silently]
+    B --> D[Seen: equip clears it locally]
+    C --> E[FullSync wipes stragglers]
 ```
 
-Every operation returns a result object with `success`, `error` (if failed), and operation-specific data (items added, amount removed, overflow, etc).
-
-## State Shape
-
-```luau
-{
-    Items = { [uuid] = Item },              -- O(1): UUID → Item
-    ItemsByID = { [id] = { uuid } },       -- O(1): ItemId → all UUIDs
-    Hotbar = { uuid?, ... },                -- fixed slots (Static) or packed (Dynamic)
-    Storage = { uuid, ... },                -- packed array, no holes
-    LocationByUUID = { [uuid] = SlotRef },  -- O(1): UUID → slot position
-    MetadataIndex = {                       -- O(1): metadata field → value → UUIDs
-        Rarity = { Common = { uuid }, ... },
-        Type = { Weapon = { uuid }, ... },
-    },
-    EquippedItemUUID = uuid?,
-    Weight = number,
-    Settings = { ... },
-}
-```
-
-## Key Behaviors
-
-- **Stacking** &rarr; via `add` (always), `swap`, or `swapStack` with `StackOnSwap = true`. Move and split never stack.
-- **Capacity** &rarr; `Limit = 0` means infinite. `Weight` = sum of all item Amounts.
-- **Sorting** &rarr; auto-sorts Storage when `Settings.Sorting = true`. Hotbar is never sorted.
-- **Dynamic Hotbar** &rarr; packed array, no holes. Operations targeting non-append slots are rejected.
-- **MetadataIndex** &rarr; O(1) bucket lookups for `find()` by Rarity or Type.
-- **MaxStackSize** &rarr; enforced unconditionally. No item Amount may exceed it after any operation.
-
-## Branch Layout
-
-- `client` (this branch): bare-bones canon — client UI, server orchestration, CoreStore.
-- `example/*`: small branches demonstrating what the bare bones make possible
-  (e.g. `example/locked-slots`: metadata-keyed hotbar slot unlocks).
-  See `BRANCH_PLAN.md`. Example branches are never merged; canon stays minimal.
-
-## First-Seen Glow (`IsNew`)
-
-`IsNew` is client-ephemera, never server truth:
-
-- Game code grants with the flag (`AddItem` with `IsNew` in metadata, replicate on),
-  then strips it silently (metadata delete, replicate off).
-- The client renders the glow purely from metadata (add, sync, metadata update)
-  and clears it locally on equip via `updateMetadata` — never sent back.
-- Invariants: server state must never hold `IsNew` (else `FullSync` resurrects
-  cleared glows); any `FullSync` wipes lingering glows (implicit mark-all-seen).
-- The `NewGlow` instance exists only while the flag is present (created on
-  demand, destroyed on clear).
-
-## Debug Chat Commands (added)
-
-- `/addnew [id] [amount?]` — add-with-`IsNew` + silent server strip (demo above).
-
-## Client Robustness
-
-- Ghost-slot healing: if an `Added` push arrives for an occupied hotbar slot
-  whose occupant has no item entry (a removal that never landed), the client
-  evicts the ghost and lands the push instead of diverging. Conflicts with a
-  real item still warn + skip.
-- Studio data specs (current): `require(game.ReplicatedStorage.Tests.Runner).run()`
-  in the Studio Command Bar. The Lune suites below are retired.
-
-## Running Tests
-
-### Luau (primary)
-
-```
-luau.exe "src/server/tests/corestore_operations_test.luau"
-luau.exe "src/server/tests/corestore_addtest.luau"
-```
-
-### Lune (REPL-style)
-
-```
-lune.exe "src/server/tests/manual_test.luau"
-```
-
-### Web Test Tool
-
-Open `src/server/tests/web/index.html` in a browser. Full JS port of CoreStore with 12 test scenarios and drag-and-drop.
+Try it in Studio play (chat commands): `/addnew sword` — the new stack
+glows, the server copy is already clean. Details in `AGENTS.md`
+([showcase section](AGENTS.md#new-item-glow-showcase-this-branch)).
 
 ## Credits
 
@@ -174,3 +54,4 @@ Open `src/server/tests/web/index.html` in a browser. Full JS port of CoreStore w
 2. [**Knineteen19**](https://www.youtube.com/watch?v=d2tdaRmqGXI&list=WL&index=8) - series on inventory/hotbar, persistence, and stacking.
 3. [**Avafe**](https://devforum.roblox.com/t/neohotbar-a-modern-customizable-backpack/2738850) - learned about Fusion and reactive UI patterns.
 4. [**Illusion**](https://devforum.roblox.com/t/illusions-inputactionsystem-currently-the-best-input-manager/4071242) - InputActionSystem module.
+5. [**breadboardengineer1234**](https://github.com/breadboardengineer1234/QuickNet) - QuickNet, the drop-in networking library behind Stoway's client/server wire.

@@ -2,6 +2,10 @@
 
 This file helps AI agents understand the Stoway project. Read this before making changes.
 
+> **Branch:** `example/new-item-glow` — the new-item-glow showcase. Everything
+> below describes the shared canon; the showcase delta (first-seen `IsNew`
+> flag, silent server strip) is in [New-Item Glow Showcase](#new-item-glow-showcase-this-branch).
+
 ---
 
 ## Project Overview
@@ -251,6 +255,23 @@ StackBlacklist = { Legendary = true, Mythic = true, Special = true }
 - **Dynamic hotbar:** Compacts after remove/swap/move. Static preserves holes. Use `CoreStore.setHotbarType(state, "Dynamic")` to switch types — it auto-compacts.
 - **Auto-sort:** Triggers after any mutating operation when `Sorting = true`. Sorts Storage only. Hotbar is never sorted (user-controlled).
 - **MetadataIndex:** Indexed fields: Rarity, Type. O(1) bucket lookups for find().
+- **New-item glow (this branch):** see [New-Item Glow Showcase](#new-item-glow-showcase-this-branch).
+
+### New-Item Glow Showcase (this branch)
+
+First-seen glow on one metadata flag with zero engine changes. Canon engine
+behavior above is untouched.
+
+| Key | Writer | Meaning |
+|-----|--------|---------|
+| `IsNew` | game code (grant) | client-ephemera: slot glows while present, never server truth |
+
+- **Grant flow:** `AddItem` with `IsNew` in metadata, replicate on — the client renders the glow purely from metadata (add, sync, metadata update).
+- **Silent strip:** the server deletes the flag right after granting (`CoreStore.METADATA_DELETE`, replicate off), so server state stays clean and FullSync can never resurrect the glow. New stacks only; pre-existing stacks keep whatever they had.
+- **Seen locally:** equipping clears the flag via client-side `updateMetadata` — never sent back. Any FullSync wipes lingering glows (implicit mark-all-seen).
+- **Lifecycle:** the `NewGlow` instance exists only while the flag is present — created on demand, destroyed on clear. No pre-created halos on unflagged slots.
+- **Try it:** Studio play (chat commands): `/addnew [id] [amount?]` — add-with-`IsNew` + silent server strip.
+- **Delta vs canon:** `NewGlow` handling in `Slot/SlotView.luau`, `/addnew` in `Debug/ChatCommands.luau`.
 
 ---
 
