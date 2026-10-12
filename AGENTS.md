@@ -2,6 +2,10 @@
 
 This file helps AI agents understand the Stoway project. Read this before making changes.
 
+> **Branch:** `example/locked-slots` — the locked-slots showcase. Everything
+> below describes the shared canon; the showcase delta (lock settings, token
+> metadata, consume-on-use unlock) is in [Locked Slots Showcase](#locked-slots-showcase-this-branch).
+
 ---
 
 ## Project Overview
@@ -148,8 +152,9 @@ return ModuleName
 
 | File | Purpose | Public API |
 |------|---------|-----------|
-| `init.luau` | Orchestration facade | Init, createPlayer, get, removePlayer, getAll, registerAdapter, 12 operation routes |
+| `init.luau` | Orchestration facade (+ locked-slot placement guard on this branch) | Init, createPlayer, get, removePlayer, getAll, registerAdapter, operation routes |
 | `Communications.luau` | Network adapter + gatekeeper | Init(Stoway, NetworkService, folder), QuickNet handlers, validation, replicate decisions, Stoway adapter |
+| `../SlotUnlockExample.server.luau` | Consume-on-use unlock (this branch): tag-watched Activated handler, atomic check-consume-flip-sync | (server script, no API) |
 
 ### StowayClient (Client Layer, branch `client-v3-sonnet`)
 
@@ -178,6 +183,7 @@ return ModuleName
 | `Colors.luau` | Rarity accent colors | getRarityColor, getTypeColor |
 | `Result.luau` | Result type shared with server | Result |
 | `StowayRemotes.luau` | Remote event definitions (wire) | Wire |
+| `SlotLocks.luau` | Lock rules (this branch, pure Luau): `UNLOCK_FIELD`, `isUnlocked` over `Settings.LockedHotbarSlots` | UNLOCK_FIELD, isUnlocked |
 
 ### CoreStore (Pure Luau Engine) — now at `ReplicatedStorage/Shared/Stoway/CoreStore/`
 
@@ -251,6 +257,23 @@ StackBlacklist = { Legendary = true, Mythic = true, Special = true }
 - **Dynamic hotbar:** Compacts after remove/swap/move. Static preserves holes. Use `CoreStore.setHotbarType(state, "Dynamic")` to switch types — it auto-compacts.
 - **Auto-sort:** Triggers after any mutating operation when `Sorting = true`. Sorts Storage only. Hotbar is never sorted (user-controlled).
 - **MetadataIndex:** Indexed fields: Rarity, Type. O(1) bucket lookups for find().
+- **Locked slots (this branch):** see [Locked Slots Showcase](#locked-slots-showcase-this-branch).
+
+### Locked Slots Showcase (this branch)
+
+Metadata-keyed hotbar slot unlocks through USE, not possession. Canon engine
+behavior above is untouched.
+
+| Key | Writer | Meaning |
+|-----|--------|---------|
+| `UnlocksHotbarSlot` | designer (Tool attribute → item metadata) | numeric hotbar slot this token unlocks when USED |
+| `Settings.LockedHotbarSlots` | server only | `{ [slot] = true }` set; default locks slot 9 |
+
+- **Use flow:** equip a token Tool tagged `UnlockToken` (e.g. PouchToken) and click. The server finds the first token unit, no-ops if the slot is already unlocked, else consumes one unit, flips the slot out of `LockedHotbarSlots`, and pushes FullSync. `route()` is synchronous, so check-consume-flip is atomic per tick — rapid double-clicks can't double-consume.
+- **Enforcement:** `SlotLocks.isUnlocked` (pure Luau, shared) backs the server placement guard and `Query.isHotbarSlotUnlocked` on the client. Locks live in Settings; inventory presence unlocks nothing. Nil set fails open.
+- **Relock:** `/relock` re-locks slot 9, evacuating occupants to the nearest free hotbar slot (`Slots.findNearestEmptyHotbarSlot`).
+- **Try it:** Studio play (chat commands): `/addhot PouchToken`, equip, click → slot 9 unlocks. `/locks` shows per-slot verdicts, `/meta` shows token metadata.
+- **Delta vs canon:** `Shared/Stoway/SlotLocks.luau`, `src/server/SlotUnlockExample.server.luau`, placement guard in server `init.luau`, `Query.isHotbarSlotUnlocked` + Input/badge guards on the client, `/locks` + `/meta` + `/relock` in `Debug/ChatCommands.luau`.
 
 ---
 
