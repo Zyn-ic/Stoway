@@ -477,9 +477,8 @@ local function bindSignals(signals: typeof(Signals))
 		if not _state then return end
 		hydrateIfNeeded(_state)
 		local ok, res = pcall(swapOp, from, to)
-		if ok and res and res.ok then
-			sync()
-		elseif ok and res and not res.ok then
+		-- No second sync(): swapOp already synced on success.
+		if ok and res and not res.ok then
 			warn("[ClientController] Swap rejected", res.error and res.error.message or tostring(res))
 		elseif not ok then
 			warn("[ClientController] Swap error", res)
@@ -510,14 +509,14 @@ local function bindSignals(signals: typeof(Signals))
 		if not _state then return end
 		hydrateIfNeeded(_state)
 		local ok, res = pcall(removeOp, uuid, amount)
-		if ok and res and res.ok then sync() elseif not ok then warn("[ClientController] Remove error", res) end
+		if not ok then warn("[ClientController] Remove error", res) end
 	end))
 
 	table.insert(_connections, signals.Add:Connect(function(itemInput: CoreTypes.ItemInput, opts: CoreTypes.AddOptions?)
 		if not _state then return end
 		hydrateIfNeeded(_state)
 		local ok, res = pcall(addOp, itemInput, opts)
-		if ok and res and res.ok then sync() elseif not ok then warn("[ClientController] Add error", res) end
+		if not ok then warn("[ClientController] Add error", res) end
 	end))
 
 	table.insert(_connections, signals.Split:Connect(function(uuid: string, amount: number, dest: CoreTypes.SlotRef?)
@@ -547,7 +546,7 @@ local function bindSignals(signals: typeof(Signals))
 		if not _state then return end
 		hydrateIfNeeded(_state)
 		local ok, res = pcall(unequipOp)
-		if ok and res and res.ok then sync() elseif not ok then warn("[ClientController] Unequip error", res) end
+		if not ok then warn("[ClientController] Unequip error", res) end
 	end))
 end
 
