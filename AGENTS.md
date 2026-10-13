@@ -135,9 +135,9 @@ return ModuleName
 
 | File | Purpose | Public API |
 |------|---------|-----------|
-| `init.luau` | Orchestration facade | Init, createPlayer, get, removePlayer, getAll, registerAdapter, 12 operation routes |
+| `init.luau` | Orchestration facade | Init, createPlayer, get, removePlayer, getAll, registerAdapter, 13 operation routes |
 | `Communications.luau` | Network adapter + gatekeeper | Init(Stoway, NetworkService, folder), QuickNet handlers, validation, replicate decisions, Stoway adapter |
-| `Debug/ChatCommands.luau` | Chat debug commands; settings mutators push sparse `SettingsChanged` | cmd* |
+| `Debug/ConchCommands.luau` | Conch debug console (Studio-gated); inventory/settings/team commands | RegisterAll |
 
 ### StowayClient (Client Layer, branch `client`)
 
@@ -150,8 +150,12 @@ return ModuleName
 | `CoreStore/Query.luau` | Pure lookups/derivations (no Fusion/Instances) | getItem, findSlotByUUID, packedHotbarOrder, isHotbarSlotVisible, groupStorageByType, orderedGroupKeys, formatWeight |
 | `Controller/ClientStore.luau` | Fusion RootScope + reactive atoms (Items/Hotbar/Storage/Weight/Settings) | RootScope, Value atoms, Init, GetSnapshot, GetSettings, GetItem, GetSlotOf |
 | `Controller/ClientController.luau` | Signals bus -> atoms; server-apply paths, ghost-slot healing, ApplyServerSettings funnel | swapOp/moveOp/addOp/removeOp/equipAndClearNew, ApplyServer* |
-| `Controller/NetworkClient.luau` | QuickNet sends (one FireServer per op) + push subscriptions; revert triggers resync | Send*, RequestSnapshot, Connect |
+| `Controller/NetworkClient.luau` | QuickNet sends (one FireServer per op) + push subscriptions; revert is log-only (server corrects via FullSync) | Send*, RequestSnapshot, Connect |
 | `Controller/LayoutManager.luau` | Mounts a `Layouts[]` engine against a `Skins[]` loader; owns LayoutScope lifecycle | SetLayout, Teardown, GetCurrentLayout |
+| `Layouts/Shared/init.luau` | Shared layout helpers (both engines: DraggingGui, hasDestItem, handleSwap/Move, doEquipSlot) | getMaxSlots, isBackpackEnabled, hasDestItem, handleSwap, handleMove, doEquipSlot, ensureDraggingGui |
+| `Layouts/JailbreakHotbar/init.luau` | Jailbreak engine: hotbar + centered popup, sweep paint-to-move, swap-pop | Mount(scope, skin, store) |
+| `Layouts/JailbreakHotbar/HotbarView.luau` | Jailbreak hotbar slots, team ring + digits | Create(scope, skin, store, dragService) |
+| `Layouts/JailbreakHotbar/StorageView.luau` | Jailbreak popup slots, sectioned + weight | Create(scope, skin, store, storageOpen, dragService) |
 | `Layouts/StandardHotbarStorage/init.luau` | HotbarType engine: Static/Dynamic hotbar + sectioned storage | Mount(scope, skin, store) |
 | `Layouts/StandardHotbarStorage/HotbarView.luau` | Hotbar 1..MaxHotbarSlots, Static holes / Dynamic packing | Create(scope, skin, store) |
 | `Layouts/StandardHotbarStorage/StorageView.luau` | Sectioned storage: type groups + collapse headers + weight label | Create(scope, skin, store) |
@@ -244,7 +248,8 @@ StackBlacklist = { Legendary = true, Mythic = true, Special = true }
 - **Auto-sort:** Triggers after any mutating operation when `Sorting = true`. Sorts Storage only. Hotbar is never sorted (user-controlled).
 - **MetadataIndex:** Indexed fields: Rarity, Type. O(1) bucket lookups for find().
 - **Settings replication:** engine settings push sparsely per change (`SettingsChanged`); `FullSync` carries the full snapshot as backstop. Client overlays onto `_state`, never atoms directly.
-- **Optimistic ops + revert:** client applies drags locally; server rejects arrive as revert + resync (no silent forks).
+- **Optimistic ops + revert:** client applies drags locally; server rejects arrive as revert + FullSync (no silent forks). Revert is log-only — never re-request (no triple-send). Boot always requests one snapshot; the server's per-player 15s throttle absorbs races with the join push.
+- **Single-sync:** op bodies (`swapOp` etc.) sync atoms on success; signal handlers never sync twice.
 - **Ghost healing:** an `Added` push for an occupied hotbar slot whose occupant has no item entry is evicted, not skipped. Real-item conflicts still warn + skip.
 
 ---

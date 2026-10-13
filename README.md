@@ -1,5 +1,5 @@
-# Stoway - CoreStore
-<img src="pics/Logo.png" alt="Stoway Logo" width="120" align="left" style="margin-right:15px"/>
+# Stoway
+<img src="pics/testgif1.gif" alt="Stoway chest" width="240" align="left" style="margin-right:15px"/>
 
 <div style="display:flex; flex-direction:column; gap:2px;">
 <p><strong>Stoway</strong> 
@@ -7,10 +7,10 @@ is a full inventory system split into independent layers. Each layer is built in
 
 ```
 Stoway
-├── CoreStore          ← pure Luau inventory engine (this branch)
-├── Network Layer      ← delta replication, anti-exploit locking
-├── World Layer        ← Tool spawning, equipping, dropping
-└── Client Layer       ← UI rendering, drag-and-drop, hotbar visuals
+├── master             ← integration branch
+├── corestore          ← pure Luau inventory engine
+├── server             ← orchestration, networking, world
+└── client             ← UI rendering, drag-and-drop (this branch)
 ```
 
 The layers talk to each other in one direction:
@@ -19,137 +19,72 @@ The layers talk to each other in one direction:
 Client Layer → Network Layer → CoreStore ← World Layer
 ```
 
-<i>CoreStore owns the inventory truth. Everything else reads from it or writes to it through its public API.</i> <br>
+*CoreStore owns the inventory truth. Everything else reads from it or writes to it through its public API.* <br>
 Download the latest packaged release from <a href="https://github.com/Zyn-ic/Stoway/releases">Releases</a>.
 </p>
 </div>
 
 <br>
 
-## What This Branch Focuses On
+## This Branch: Bare-Bones Canon
 
-This branch builds **CoreStore** the pure Luau inventory engine.
+`client` holds the whole playable skeleton with nothing extra: the pure-Luau
+`CoreStore` engine, the `StowayServerV3_0_0` orchestration layer, and the
+Fusion `StowayClientV3` UI. Example branches (`example/*`) fork this to demo
+one idea each; canon stays minimal and they are never merged back.
 
-CoreStore is:
+What's in the skeleton:
 
-- **Pure Luau** &rarr; no Roblox types, no `Instance`, no `Player`, no `RemoteEvent`
-- **Fast lookups** &rarr; O(1) item access by UUID, by ItemId, by slot, by metadata
-- **Testable outside Roblox** &rarr; runs in Lune, Luau CLI, or any Luau environment
-- **Framework-agnostic** &rarr; works with any networking, any UI, any tool system
+- **CoreStore** (`ReplicatedStorage/Shared/Stoway/CoreStore/`) — pure Luau,
+  no Roblox types. Items, hotbar/storage slots, stacking, sorting, weight,
+  metadata index. Every op returns a `Result`.
+- **Server** (`src/server/Services/StowayServerV3_0_0/`) — per-player states,
+  13 operation routes behind a lock, QuickNet replication (sparse
+  `SettingsChanged` + `FullSync` backstop), Tool spawning/equipping, and a
+  Conch debug console (Studio only).
+- **Client** (`src/client/StowayClientV3/`) — Fusion 0.3 UI booted from the
+  server snapshot: settings-driven hotbar + sectioned storage, drag + drop
+  with sweep paint-to-move, per-team tint, multi-platform input. Two layout
+  engines (`StandardHotbarStorage`, `JailbreakHotbar`) share helpers in
+  `Layouts/Shared`; skins are thin prefab loaders.
 
-CoreStore is **not**:
-
-- A networking layer
-- A client UI
-- A drag-and-drop system
-- A Tool spawner
-- A DataStore adapter
-
-Those are separate layers. They will live in their own branches.
-
-## CoreStore API
-
-```luau
-local state = CoreStore.new(settings)
-
--- Add items
-CoreStore.add(state, { Id = "Sword", Amount = 1, Metadata = { Rarity = "Common" } })
-CoreStore.addToBackpack(state, itemData)
-CoreStore.addToHotbar(state, itemData, slot)
-CoreStore.addToSlot(state, itemData, { Type = "Hotbar", Slot = 3 })
-
--- Remove items
-CoreStore.remove(state, uuid, amount)
-CoreStore.removeBySlot(state, "Hotbar", 1, amount)
-
--- Move items
-CoreStore.swap(state, fromRef, toRef)
-CoreStore.swapStack(state, fromRef, toRef)
-CoreStore.move(state, fromRef, toRef)
-CoreStore.split(state, uuid, amount, destination)
-
--- Query items
-CoreStore.getItem(state, uuid)
-CoreStore.find(state, { Id = "Sword", Metadata = { Rarity = "Legendary" } })
-CoreStore.filter(state, predicate)
-CoreStore.findById(state, "Sword")
-CoreStore.getAllItems(state)
-
--- Metadata
-CoreStore.updateMetadata(state, uuid, { Rarity = "Legendary", Damage = 50 })
-
--- Sorting
-CoreStore.sort(state)
-
--- Settings
-CoreStore.setHotbarType(state, "Dynamic")
-CoreStore.setSettings(state, overrides)
+```mermaid
+flowchart LR
+    UI[Player drags / presses bind] --> Opt[Client applies optimistically]
+    Opt --> Net[QuickNet route to server]
+    Net --> SV[Server validates + mutates]
+    SV --> Push[FullSync / delta push back]
+    Push --> UI
 ```
-
-Every operation returns a result object with `success`, `error` (if failed), and operation-specific data (items added, amount removed, overflow, etc).
-
-## State Shape
-
-```luau
-{
-    Items = { [uuid] = Item },              -- O(1): UUID → Item
-    ItemsByID = { [id] = { uuid } },       -- O(1): ItemId → all UUIDs
-    Hotbar = { uuid?, ... },                -- fixed slots (Static) or packed (Dynamic)
-    Storage = { uuid, ... },                -- packed array, no holes
-    LocationByUUID = { [uuid] = SlotRef },  -- O(1): UUID → slot position
-    MetadataIndex = {                       -- O(1): metadata field → value → UUIDs
-        Rarity = { Common = { uuid }, ... },
-        Type = { Weapon = { uuid }, ... },
-    },
-    EquippedItemUUID = uuid?,
-    Weight = number,
-    Settings = { ... },
-}
-```
-
-## Key Behaviors
-
-- **Stacking** &rarr; via `add` (always), `swap`, or `swapStack` with `StackOnSwap = true`. Move and split never stack.
-- **Capacity** &rarr; `Limit = 0` means infinite. `Weight` = sum of all item Amounts.
-- **Sorting** &rarr; auto-sorts Storage when `Settings.Sorting = true`. Hotbar is never sorted.
-- **Dynamic Hotbar** &rarr; packed array, no holes. Operations targeting non-append slots are rejected.
-- **MetadataIndex** &rarr; O(1) bucket lookups for `find()` by Rarity or Type.
-- **MaxStackSize** &rarr; enforced unconditionally. No item Amount may exceed it after any operation.
-
-## Branch Layout
-
-- `client` (this branch): bare-bones canon — client UI, server orchestration, CoreStore.
-- `example/*`: small branches demonstrating what the bare bones make possible
-  (e.g. `example/locked-slots`: metadata-keyed hotbar slot unlocks).
-  See `BRANCH_PLAN.md`. Example branches are never merged; canon stays minimal.
-
-## Client Robustness
-
-- Ghost-slot healing: if an `Added` push arrives for an occupied hotbar slot
-  whose occupant has no item entry (a removal that never landed), the client
-  evicts the ghost and lands the push instead of diverging. Conflicts with a
-  real item still warn + skip.
-- Studio data specs (current): `require(game.ReplicatedStorage.Tests.Runner).run()`
-  in the Studio Command Bar. The Lune suites below are retired.
 
 ## Running Tests
 
-### Luau (primary)
+This repo runs in **Roblox Studio only — there is no Lune harness** (legacy
+suites were purged). The standing gate is type checking, run from the repo
+root:
 
 ```
-luau.exe "src/server/tests/corestore_operations_test.luau"
-luau.exe "src/server/tests/corestore_addtest.luau"
+/home/yum/.rokit/bin/luau-lsp analyze --definitions="globalTypes.d.luau" --sourcemap="sourcemap.json" --ignore="**/Packages/**" src
 ```
 
-### Lune (REPL-style)
+Expected: **0 errors**. (`rojo serve` keeps `sourcemap.json` fresh; never
+regenerate it by hand.)
 
-```
-lune.exe "src/server/tests/manual_test.luau"
-```
+Live behavior is verified in Studio playtests with in-game probe scripts — a
+server `Script` / client `LocalScript` that requires the live modules and
+prints verdict lines to Output, then gets deleted before committing. GUI is
+never trusted for functional verification; probes peek store state directly.
 
-### Web Test Tool
+## Try It
 
-Open `src/server/tests/web/index.html` in a browser. Full JS port of CoreStore with 12 test scenarios and drag-and-drop.
+Play solo, open the Conch console (Backquote), and poke the inventory:
+
+- `inv` — dump your current inventory
+- `add sword 2` / `addhot Pickaxe 1 3` / `remove / swap / move / split / equip`
+- `set-layout StandardHotbarStorage` / `set-skin Default` / `set-team cop`
+- `toggle-stack` / `set-max-stack 10` / `help` — full command list
+
+Agent notes live in `AGENTS.md` (module map, settings, invariants, pitfalls).
 
 ## Credits
 
@@ -157,3 +92,4 @@ Open `src/server/tests/web/index.html` in a browser. Full JS port of CoreStore w
 2. [**Knineteen19**](https://www.youtube.com/watch?v=d2tdaRmqGXI&list=WL&index=8) - series on inventory/hotbar, persistence, and stacking.
 3. [**Avafe**](https://devforum.roblox.com/t/neohotbar-a-modern-customizable-backpack/2738850) - learned about Fusion and reactive UI patterns.
 4. [**Illusion**](https://devforum.roblox.com/t/illusions-inputactionsystem-currently-the-best-input-manager/4071242) - InputActionSystem module.
+5. [**breadboardengineer1234**](https://github.com/breadboardengineer1234/QuickNet) - QuickNet, the drop-in networking library behind Stoway's client/server wire.
