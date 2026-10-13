@@ -9,6 +9,8 @@
 
 local Utils = {}
 
+type CopyTable = { [string | number]: unknown }
+
 local uuidCounter = 0
 
 -----------------------------
@@ -22,32 +24,34 @@ local uuidCounter = 0
 -- PUBLIC FUNCTIONS --
 -----------------------------
 
-function Utils.deepCopy(value: any): any
+function Utils.deepCopy<T>(value: T): T
 	if type(value) ~= "table" then
 		return value
 	end
 
-	local copy = {}
+	local source = value :: CopyTable
+	local copy: CopyTable = {}
 
-	for key, child in pairs(value) do
+	for key, child in source do
 		copy[key] = Utils.deepCopy(child)
 	end
 
-	return copy
+	return (copy :: unknown) :: T
 end
 
-function Utils.shallowCopy(value: any): any
+function Utils.shallowCopy<T>(value: T): T
 	if type(value) ~= "table" then
 		return value
 	end
 
-	local copy = {}
+	local source = value :: CopyTable
+	local copy: CopyTable = {}
 
-	for key, child in pairs(value) do
+	for key, child in source do
 		copy[key] = child
 	end
 
-	return copy
+	return (copy :: unknown) :: T
 end
 
 -- Generates a unique ID: core-{timestamp}-{counter}-{random6}
@@ -61,7 +65,7 @@ function Utils.generateUUID(): string
 end
 
 -- Checks if value is a number > 0. value == value catches NaN.
-function Utils.isPositiveNumber(value: any): boolean
+function Utils.isPositiveNumber(value: unknown): boolean
 	return type(value) == "number" and value > 0 and value == value
 end
 

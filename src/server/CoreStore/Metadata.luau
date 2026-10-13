@@ -41,14 +41,24 @@ function Metadata.normalize(itemData: Types.ItemInput): (string?, number?, Types
 		metadata = Utils.shallowCopy(itemData.Metadata) :: Types.ItemMetadata
 	end
 
-	local rawAmount = itemData.Amount
+	local rawAmount: number? = itemData.Amount
 
 	if rawAmount == nil then
-		rawAmount = metadata.Amount
+		local metadataAmount = metadata.Amount
+		if type(metadataAmount) == "number" then
+			rawAmount = metadataAmount
+		elseif type(metadataAmount) == "string" then
+			rawAmount = tonumber(metadataAmount)
+		end
 	end
 
 	if rawAmount == nil then
-		rawAmount = metadata.StackAmount
+		local stackAmount = metadata.StackAmount
+		if type(stackAmount) == "number" then
+			rawAmount = stackAmount
+		elseif type(stackAmount) == "string" then
+			rawAmount = tonumber(stackAmount)
+		end
 	end
 
 	if type(rawAmount) == "string" then
@@ -85,7 +95,7 @@ function Metadata.matchesRequiredFields(
 	return true
 end
 
-function Metadata.isBlacklisted(metadata: Types.ItemMetadata, blacklist: { boolean }): boolean
+function Metadata.isBlacklisted(metadata: Types.ItemMetadata, blacklist: { [string]: boolean }): boolean
 	local rarity = metadata.Rarity
 
 	if rarity ~= nil and blacklist[rarity] then

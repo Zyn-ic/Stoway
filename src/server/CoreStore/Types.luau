@@ -81,7 +81,7 @@ export type InventoryState = {
 	ItemsByID: { [string]: { string } },
 
 	-- Slot -> UUID
-	Hotbar: { string? },
+	Hotbar: { [number]: string? },
 
 	-- Array of UUIDs
 	Storage: { string },
