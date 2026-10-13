@@ -51,8 +51,8 @@ local function mergeSettings(overrides: Types.SettingsOverrides?): Types.Setting
 	local settings = table.clone(DEFAULT_SETTINGS) :: Types.Settings
 
 	if overrides then
-		for key, value in overrides :: any do
-			(settings :: any)[key] = value
+		for key, value in overrides do
+			settings[key] = value
 		end
 	end
 

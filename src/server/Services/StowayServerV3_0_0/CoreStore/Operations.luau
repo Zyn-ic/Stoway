@@ -9,8 +9,7 @@
 -- VARIABLES --
 -----------------------------
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Result = require(ReplicatedStorage.Shared.Types.Result)
+local Result = require("@Result")
 local Types = require("./Types")
 local Metadata = require("./Metadata")
 local Slots = require("./Slots")
@@ -926,7 +925,7 @@ end
 function Operations.updateMetadata(
 	state: Types.InventoryState,
 	uuid: string,
-	updates: { [string]: any }
+	updates: Types.MetadataUpdates
 ): Types.MetadataUpdateResult
 	local item = state.Items[uuid]
 

@@ -1,5 +1,4 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Result = require(ReplicatedStorage.Shared.Types.Result)
+local Result = require("@Result")
 
 local Types = {}
 
@@ -7,6 +6,7 @@ export type HotbarType = "Static" | "Dynamic"
 export type SortOrder = "None" | "Name" | "Rarity" | "ItemType"
 export type SlotType = "Hotbar" | "Storage"
 export type PlacementMode = "Auto" | "Hotbar" | "Backpack" | "Slot"
+export type MetadataValue = string | number | boolean
 
 export type SlotRef = {
     Type: SlotType,
@@ -21,8 +21,10 @@ export type ItemMetadata = {
     Droppable: boolean?,
     Type: string?,
 
-    [string]: any
+    [string]: MetadataValue?
 }
+
+export type MetadataUpdates = { [string]: MetadataValue? }
 
 export type Item = {
     UUID: string,
@@ -84,7 +86,7 @@ export type InventoryState = {
 	ItemsByID: { [string]: { string } },
 
 	-- Slot -> UUID
-	Hotbar: { string? },
+	Hotbar: { [number]: string? },
 
 	-- Array of UUIDs
 	Storage: { string },

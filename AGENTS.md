@@ -20,10 +20,10 @@ Stoway is a Roblox inventory framework. The core is a pure Luau inventory engine
 
 ## Running Tests
 
-Run from the repo root with Lune (supports `.luaurc` aliases; no luau.exe installed on this machine):
+Run from the repo root with Lune (supports `.luaurc` aliases; `lune` is on PATH):
 
 ```
-C:\Users\yum\.bin\lune.exe run "C:\Users\yum\Documents\Stoway\src\server\tests\corestore_operations_test.luau"
+lune run src/server/tests/corestore_operations_test.luau
 ```
 
 ### Suites and expected results
@@ -31,9 +31,9 @@ C:\Users\yum\.bin\lune.exe run "C:\Users\yum\Documents\Stoway\src\server\tests\c
 | Suite | Command suffix | Expected |
 |-------|---------------|----------|
 | CoreStore operations (swap/swapStack/move/split/metadata/sort/index/equip/dynamic) | `corestore_operations_test.luau` | 66 passed, 0 failed |
-| Stoway orchestration | `stoway_server_test.luau` | 21 passed, 0 failed |
+| Stoway orchestration | `stoway_server_test.luau` | dormant — service `init.luau` needs `game`/`script`, so it loads in Studio only, not Lune |
 | Add tests | `corestore_addtest.luau` | 25 passed, 0 failed |
-| Metadata REPL | `corestore_metadata_test.luau` | 12 passed, 0 failed |
+| Metadata REPL | `corestore_metadata_test.luau` | interactive REPL (loads clean; exits on EOF) |
 
 ### Replication default
 
