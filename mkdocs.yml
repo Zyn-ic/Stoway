@@ -74,6 +74,7 @@ nav:
     - Client Events & Hooks: client-surface.md
     - Skins & Layouts: skins-layouts.md
     - Debug Console: conch.md
+    - Production Builds: builds.md
   - Examples:
     - Cooldowns: examples/cooldowns.md
     - Locked Slots: examples/locked-slots.md
