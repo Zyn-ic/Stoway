@@ -1,0 +1,74 @@
+site_name: Stoway
+site_description: A Roblox inventory framework in layers — pure-Luau CoreStore, server orchestration, Fusion client.
+site_author: yyumchi
+site_url: https://zyn-ic.github.io/Stoway/
+repo_url: https://github.com/Zyn-ic/Stoway
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - navigation.sections
+    - navigation.top
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+extra_javascript:
+  - https://unpkg.com/mermaid@10.9.1/dist/mermaid.min.js
+
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - Building on Top: building-on-top.md
+  - Metadata: metadata.md
+  - Skins & Layouts: skins-layouts.md
+  - Debug Console: conch.md
+  - Examples:
+    - Cooldowns: examples/cooldowns.md
+    - Locked Slots: examples/locked-slots.md
+    - New-Item Glow: examples/new-item-glow.md
+  - API Reference:
+    - CoreStore: api/corestore.md
+    - Server Routes & Wire: api/server.md
+  - Deep Dives:
+    - CoreStore Specification: specs/CoreStoreSpecification.md
+    - Invariants: specs/Invariants.md
+    - Swap Rules: specs/SwapRules.md
+    - Move Rules: specs/MoveRules.md
+    - Split Rules: specs/SplitRules.md
+    - Sorting Rules: specs/SortingRules.md
+    - Metadata Update Rules: specs/MetadataUpdateRules.md
+    - Metadata Wire Schema: specs/MetadataWireSchema.md
+    - Network Protocol: specs/NetworkProtocol.md
+    - Replication Rules: specs/ReplicationRules.md
+    - Settings Sync: specs/SettingsSync.md
+    - Testing Rules: specs/TestingRules.md
+    - Client Events: specs/ClientEvents.md
+    - Server Branch Port: specs/ServerBranchPort.md
