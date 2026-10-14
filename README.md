@@ -57,23 +57,15 @@ flowchart LR
     Push --> UI
 ```
 
-## Running Tests
+## Development
 
-This repo runs in **Roblox Studio only — there is no Lune harness** (legacy
-suites were purged). The standing gate is type checking, run from the repo
-root:
+Type checking is the gate, run from the repo root:
 
 ```
-/home/yum/.rokit/bin/luau-lsp analyze --definitions="globalTypes.d.luau" --sourcemap="sourcemap.json" --ignore="**/Packages/**" src
+luau-lsp analyze --definitions="globalTypes.d.luau" --sourcemap="sourcemap.json" --ignore="**/Packages/**" src
 ```
 
-Expected: **0 errors**. (`rojo serve` keeps `sourcemap.json` fresh; never
-regenerate it by hand.)
-
-Live behavior is verified in Studio playtests with in-game probe scripts — a
-server `Script` / client `LocalScript` that requires the live modules and
-prints verdict lines to Output, then gets deleted before committing. GUI is
-never trusted for functional verification; probes peek store state directly.
+Expected: **0 errors**. Full contributor guide: [Contributing](https://zyn-ic.github.io/Stoway/contributing/).
 
 ## Try It
 

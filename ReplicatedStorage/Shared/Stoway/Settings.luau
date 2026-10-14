@@ -3,8 +3,11 @@
 --@author: yyumchi
 --@date: 2026-08-19
 --[[@description:
-	Shared settings defaults mirroring CoreStore State.luau. Categories drive
-	the storage type-grouping order and group header styling on the client.
+	Shared settings defaults: the player-facing set that seeds every state
+	via defaultOverrides (Dynamic hotbar, stacking off, backpack off). This
+	deliberately differs from the engine fallbacks in CoreStore State.luau
+	(Static, stacking on, backpack on). Categories drive the storage
+	type-grouping order and group header styling on the client.
 ]]
 -----------------------------
 -- VARIABLES --

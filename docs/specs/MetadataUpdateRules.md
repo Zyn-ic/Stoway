@@ -30,15 +30,10 @@ CoreStore.updateMetadata(state, uuid, { Enchant = CoreStore.METADATA_DELETE })
 
 ### Result Shape
 
-```luau
-{
-    success: boolean,
-    reason: string?,
-    updatedFields: { string }?,  -- List of fields that changed
-    reStacked: boolean?,         -- True if stacking state changed
-    unStacked: boolean?,         -- True if item was split from stack
-}
-```
+Every mutation returns a `Result`: `{ ok = true, value = … }` or
+`{ ok = false, error = { kind, message } }`. Update succeeds with
+`Ok({ updatedFields })` — the list of fields that changed. Metadata changes
+never re-stack or split anything.
 
 ---
 
@@ -55,12 +50,7 @@ CoreStore.updateMetadata(state, uuid, { Enchant = CoreStore.METADATA_DELETE })
      - If value is the `METADATA_DELETE` sentinel: remove key from metadata
        (note: `{ Key = nil }` is an empty table in Lua and deletes nothing)
 
-3. Evaluate stacking impact
-   - Check if metadata changes affect stacking eligibility
-   - If item was stackable and now is not: potentially un-stack
-   - If item was not stackable and now is: potentially re-stack
-
-4. Return result
+3. Return result
 ```
 
 ---
@@ -162,7 +152,7 @@ If `Settings.Sorting = true`, auto-sort runs after metadata update. This may reo
 
 | Scenario | Behavior |
 |----------|----------|
-| updates is empty | No change, return success with empty updatedFields |
+| updates is empty | No change, return Ok with empty updatedFields |
 | Key set to `CoreStore.METADATA_DELETE` | Remove key from metadata (and from MetadataIndex if indexed) |
 | Key set to nil (inline) | No-op — `{ Key = nil }` produces an empty table, key untouched |
 | Key set to same value | No change, but listed in updatedFields |

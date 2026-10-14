@@ -22,13 +22,10 @@ CoreStore.swap(state, fromRef, toRef) -> SwapResult
 
 ### Result Shape
 
-```luau
-{
-    success: boolean,
-    reason: string?,              -- Error code if failed
-    hotbarCompacted: boolean?,    -- True if Dynamic hotbar was compacted
-}
-```
+Every mutation returns a `Result`: `{ ok = true, value = … }` or
+`{ ok = false, error = { kind, message } }`. Swap succeeds with
+`Ok({ hotbarCompacted: boolean? })` — `true` when a Dynamic hotbar was
+compacted along the way.
 
 ---
 
@@ -77,7 +74,7 @@ Update LocationByUUID for both UUIDs
 
 ```
 if HotbarType == "Dynamic" and toUUID == nil:
-    return { success = false, reason = "DESTINATION_UNAVAILABLE" }
+    return Err("DESTINATION_UNAVAILABLE")  -- NotAvailable
 ```
 
 ### Storage <-> Storage
@@ -180,7 +177,7 @@ If StackOnSwap AND CanStack:
             remove(fromUUID)
 
         -- No positional swap happens
-        return { success = true, stacked = true }
+        return Ok({})
 ```
 
 When `StackOnSwap = false` (default) OR `CanStack = false`:

@@ -87,30 +87,27 @@ naming convention, not enforced wire fields:
 
 ## Example
 
-A tool in-world carries attributes `Rarity`, `Damage`, `FireDmg`, `Skill`. The
-client reads its attributes and sends an `AddItem` — **no schema edits**:
+A world-drop tool carries attributes `Rarity`, `Damage`, `FireDmg`, `Skill`.
+The server reads them on pickup and grants server-side — clients never mint
+items (see the [trust model](../trust.md)):
 
 ```luau
-local attrs = {}
-for k, v in pairs(tool:GetAttributes()) do
-	attrs[k] = v
-end
-
-StowayRemotes.AddItem:FireServer({
+-- StowayPickup (server): attributes in, AddToBackpack with replicate on
+Stoway.AddToBackpack(player, {
 	Id = "MagicSword",
 	Metadata = attrs,   -- Rarity, Damage, FireDmg, Skill all transmitted
-})
+}, nil, true)
 ```
 
-The server adds it and replicates it back via `InventoryAdded`, with every
-metadata key intact:
+The server replicates it back via `InventoryAdded`, with every metadata key
+intact:
 
 ```luau
 Remotes.InventoryAdded:FireClient(player, {
 	uuid = added.uuid,
 	slotType = added.slotType,
 	slot = added.slot,
-	Metadata = item.Metadata,
+	item = { UUID = item.UUID, Id = item.Id, Amount = item.Amount, Metadata = item.Metadata },
 })
 ```
 
@@ -126,10 +123,10 @@ table and deletes nothing. Setting a metadata key to the `"__STOWAY_DELETE__"`
 sentinel removes it on the server.
 
 ```luau
-StowayRemotes.UpdateMetadata:FireServer(
-	uuid,
-	{ Enchant = StowayRemotes.METADATA_DELETE }
-)
+StowayRemotes.UpdateMetadata:FireServer({
+	uuid = uuid,
+	updates = { Enchant = StowayRemotes.METADATA_DELETE },
+})
 -- Server: CoreStore.updateMetadata(state, uuid, { Enchant = METADATA_DELETE })
 -- -> item.Metadata.Enchant == nil
 ```
@@ -189,7 +186,7 @@ end)
 
 | Layer | Changed? |
 |---|---|
-| `ReplicatedStorage/StowayRemotes.luau` (wire schema) | Yes — open dict |
+| `Shared/Stoway/StowayRemotes.luau` (wire schema) | Yes — open dict |
 | `CoreStore/Types.luau` (`ItemMetadata`) | No — already `[string]: any` |
 | CoreStore storage / communication adapter | No |
 | Data persistence surfaces | No |

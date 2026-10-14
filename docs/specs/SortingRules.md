@@ -12,12 +12,9 @@ CoreStore.sort(state) -> SortResult
 
 ### Result Shape
 
-```luau
-{
-    success: boolean,
-    storageOrder: { string }?,   -- New storage UUID order (if changed)
-}
-```
+Every mutation returns a `Result`: `{ ok = true, value = … }` or
+`{ ok = false, error = { kind, message } }`. Sort succeeds with
+`Ok({ storageOrder? })` — the new storage UUID order, only when it changed.
 
 ---
 
@@ -29,13 +26,12 @@ Sorting is automatic. It runs after any operation that mutates slot contents whe
 
 | Operation | Triggers Sort | Scope |
 |-----------|--------------|-------|
-| add | Yes | Storage only |
-| addToBackpack | Yes | Storage only |
-| addToHotbar | Yes | Storage only |
-| remove | Yes | Storage (reorder remaining) |
-| swap | Yes | Storage (if affected) |
+| add (incl. addToBackpack, addToHotbar, addToSlot) | Yes | Storage only |
+| remove (incl. removeBySlot) | Yes | Storage (reorder remaining) |
+| swap (incl. swapStack) | Yes | Storage (if affected) |
 | move | Yes | Storage (if affected) |
 | split | Yes | Storage (if destination) |
+| updateMetadata | Yes | Storage (reorder on criteria change) |
 | sort | No (already sorting) | N/A |
 
 ### Trigger Timing
@@ -44,9 +40,8 @@ Sort runs **after** the primary operation completes and all invariants are satis
 
 ```
 1. Execute primary operation (add, remove, swap, etc.)
-2. Verify invariants
-3. If Settings.Sorting = true: run sort
-4. Return result
+2. If Settings.Sorting = true: run sort
+3. Return result
 ```
 
 ---
@@ -89,7 +84,8 @@ Common = 1 (last)
 
 Unknown rarities sort after all known rarities (equivalent to rank 99).
 
-Ties (same rarity) are broken alphabetically by `item.Id`.
+Ties compare the rarity string itself, so equal rarities keep whatever order
+`table.sort` leaves them in — not guaranteed stable, not alphabetical by id.
 
 ### SortOrder = "ItemType"
 
@@ -107,10 +103,8 @@ No sorting. Default behavior.
 
 ## Sort Stability
 
-When two items have the same sort key, their relative order is preserved (stable sort). This means:
-
-- Two "Potion" items with different Metadata maintain their insertion order
-- Two "Common" rarity items maintain their insertion order
+Sort runs on `table.sort`, which is not stable: equal keys may come out in
+any order. Don't rely on insertion order surviving a sort.
 
 ---
 
@@ -126,7 +120,7 @@ When two items have the same sort key, their relative order is preserved (stable
 ### Storage Sort
 
 ```
-sortedUUIDs = stableSort(Storage, by SortOrder)
+sortedUUIDs = tableSort(Storage, by SortOrder)
 Storage = sortedUUIDs
 Update LocationByUUID for each UUID at new index
 ```

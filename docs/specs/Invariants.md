@@ -123,9 +123,12 @@ state.EquippedItemUUID == nil or Items[state.EquippedItemUUID] ~= nil
 
 ## Settings Invariants
 
-### INV-12: Settings Immutability
+### INV-12: Settings Change Through Defined Paths
 
-Settings are set at construction time via `State.new(overrides?)`. They do not change during the lifetime of an InventoryState. (Future: may add `updateSettings()` but this is not yet implemented.)
+Settings start from construction-time overrides but do change during a
+state's lifetime: `setHotbarType`, sparse `SettingsChanged` pushes, and the
+debug console toggles all mutate them. What never happens is silent drift —
+every change flows through one of those paths and replicates.
 
 ### INV-13: MaxStackSize Positive
 
@@ -204,150 +207,5 @@ Operations that modify state and which invariants they must preserve:
 | sort | No | No | Yes (reorder) | No | No | INV-1,2,3,4,5,9,19 |
 | updateMetadata | Yes (modify) | No | No | No | Yes (update) | ALL |
 
----
-
-## Verification
-
-These invariants can be checked by a debug function:
-
-```luau
-function CoreStore.verifyInvariants(state): { string }
-    local violations = {}
-
-    -- Check INV-1: UUID Ownership
-    for slot, uuid in state.Hotbar do
-        if uuid and not state.Items[uuid] then
-            table.insert(violations, `Hotbar[{slot}] references missing UUID {uuid}`)
-        end
-    end
-
-    for index, uuid in state.Storage do
-        if not state.Items[uuid] then
-            table.insert(violations, `Storage[{index}] references missing UUID {uuid}`)
-        end
-    end
-
-    -- Check INV-2: Single Location
-    local seen = {}
-    for slot, uuid in state.Hotbar do
-        if uuid then
-            if seen[uuid] then
-                table.insert(violations, `UUID {uuid} exists in multiple locations`)
-            end
-            seen[uuid] = true
-        end
-    end
-    for _, uuid in state.Storage do
-        if seen[uuid] then
-            table.insert(violations, `UUID {uuid} exists in both Hotbar and Storage`)
-        end
-        seen[uuid] = true
-    end
-
-    -- Check INV-3: LocationByUUID Accuracy
-    for uuid, loc in state.LocationByUUID do
-        if not state.Items[uuid] then
-            table.insert(violations, `LocationByUUID has stale entry for {uuid}`)
-        elseif loc.Type == "Hotbar" then
-            if state.Hotbar[loc.Slot] ~= uuid then
-                table.insert(violations, `LocationByUUID[{uuid}] says Hotbar[{loc.Slot}] but actual is {tostring(state.Hotbar[loc.Slot])}`)
-            end
-        elseif loc.Type == "Storage" then
-            if state.Storage[loc.Slot] ~= uuid then
-                table.insert(violations, `LocationByUUID[{uuid}] says Storage[{loc.Slot}] but actual is {tostring(state.Storage[loc.Slot])}`)
-            end
-        end
-    end
-
-    -- Check INV-4,5: ItemsByID Consistency
-    for itemId, uuids in state.ItemsByID do
-        for _, uuid in uuids do
-            if not state.Items[uuid] then
-                table.insert(violations, `ItemsByID[{itemId}] has stale UUID {uuid}`)
-            elseif state.Items[uuid].Id ~= itemId then
-                table.insert(violations, `ItemsByID[{itemId}] has UUID {uuid} with wrong Id {state.Items[uuid].Id}`)
-            end
-        end
-    end
-    for uuid, item in state.Items do
-        local idList = state.ItemsByID[item.Id]
-        if not idList then
-            table.insert(violations, `Items[{uuid}] has Id {item.Id} but ItemsByID has no entry`)
-        else
-            local found = false
-            for _, id in idList do
-                if id == uuid then found = true; break end
-            end
-            if not found then
-                table.insert(violations, `Items[{uuid}] has Id {item.Id} but not in ItemsByID list`)
-            end
-        end
-    end
-
-    -- Check INV-6: Weight Accuracy
-    local expectedWeight = 0
-    for _, item in state.Items do
-        expectedWeight += item.Amount
-    end
-    if state.Weight ~= expectedWeight then
-        table.insert(violations, `Weight is {state.Weight} but expected {expectedWeight}`)
-    end
-
-    -- Check INV-11: Equipped Validity
-    if state.EquippedItemUUID and not state.Items[state.EquippedItemUUID] then
-        table.insert(violations, `EquippedItemUUID references missing item {state.EquippedItemUUID}`)
-    end
-
-    -- Check INV-18: MaxStackSize Enforcement
-    for uuid, item in state.Items do
-        if item.Amount > state.Settings.MaxStackSize then
-            table.insert(violations, `Items[{uuid}] has Amount {item.Amount} exceeding MaxStackSize {state.Settings.MaxStackSize}`)
-        end
-    end
-
-    -- Check INV-19: MetadataIndex Consistency
-    for uuid, item in state.Items do
-        if item.Metadata.Rarity ~= nil then
-            local strValue = tostring(item.Metadata.Rarity)
-            local bucket = state.MetadataIndex["Rarity"] and state.MetadataIndex["Rarity"][strValue]
-            if not bucket then
-                table.insert(violations, `Items[{uuid}] has Rarity {strValue} but MetadataIndex["Rarity"] has no bucket`)
-            else
-                local found = false
-                for _, id in bucket do
-                    if id == uuid then found = true; break end
-                end
-                if not found then
-                    table.insert(violations, `Items[{uuid}] has Rarity {strValue} but not in MetadataIndex bucket`)
-                end
-            end
-        end
-        if item.Metadata.Type ~= nil then
-            local strValue = tostring(item.Metadata.Type)
-            local bucket = state.MetadataIndex["Type"] and state.MetadataIndex["Type"][strValue]
-            if not bucket then
-                table.insert(violations, `Items[{uuid}] has Type {strValue} but MetadataIndex["Type"] has no bucket`)
-            else
-                local found = false
-                for _, id in bucket do
-                    if id == uuid then found = true; break end
-                end
-                if not found then
-                    table.insert(violations, `Items[{uuid}] has Type {strValue} but not in MetadataIndex bucket`)
-                end
-            end
-        end
-    end
-    for field, values in state.MetadataIndex do
-        for strValue, uuids in values do
-            for _, uuid in uuids do
-                if not state.Items[uuid] then
-                    table.insert(violations, `MetadataIndex[{field}][{strValue}] has stale UUID {uuid}`)
-                end
-            end
-        end
-    end
-
-    return violations
-end
-```
+The INV list above is the contract. There is no `verifyInvariants` checker in
+the repo — operations preserve these by construction.

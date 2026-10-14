@@ -20,13 +20,9 @@ CoreStore.move(state, fromRef, toRef) -> MoveResult
 
 ### Result Shape
 
-```luau
-{
-    success: boolean,
-    reason: string?,
-    hotbarCompacted: boolean?,
-}
-```
+Every mutation returns a `Result`: `{ ok = true, value = … }` or
+`{ ok = false, error = { kind, message } }`. Move succeeds with
+`Ok({ hotbarCompacted: boolean? })`.
 
 ---
 
@@ -80,7 +76,7 @@ Update LocationByUUID for fromUUID
 
 ```
 if HotbarType == "Dynamic":
-    return { success = false, reason = "DESTINATION_UNAVAILABLE" }
+    return Err("DESTINATION_UNAVAILABLE")  -- NotAvailable
 ```
 
 ### Hotbar -> Storage (append)
@@ -119,7 +115,7 @@ Update LocationByUUID for all shifted storage items
 if HotbarType == "Dynamic":
     appendSlot = findEmptyHotbarSlot(state)
     if toRef.Slot != appendSlot:
-        return { success = false, reason = "DESTINATION_UNAVAILABLE" }
+        return Err("DESTINATION_UNAVAILABLE")  -- NotAvailable
 
 fromUUID = Storage[fromSlot]
 

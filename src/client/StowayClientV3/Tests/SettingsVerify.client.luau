@@ -9,8 +9,7 @@
 	then disables itself (session-only, file untouched). Observer-only: never
 	mutates inventory. A human judges PASS/FAIL from the [SettingsVerify]
 	lines. Guards the sync-clobber class (stale boot snapshot overwriting
-	pushed settings — the set-to-4 bug showed 10 slots). See
-	docs/specs/TestingRules.md.
+	pushed settings — the set-to-4 bug showed 10 slots).
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

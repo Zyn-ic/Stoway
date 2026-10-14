@@ -4,7 +4,7 @@
 --@date: 2026-08-21
 --[[@description:
 	Local SignalPlus bus, one signal per CoreStore operation.
-	No Roblox Remotes – pure in-memory signals for mock-phase client tests.
+	No Roblox Remotes – pure in-memory signals for local ops.
 	ClientController connects these and clone->mutate->sets ClientStore
 	atoms so Fusion recomputes atomically.
 ]]

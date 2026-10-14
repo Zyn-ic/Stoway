@@ -10,8 +10,7 @@
 	Observer-only: never mutates inventory. A human judges PASS/FAIL from
 	the [InventoryVerify] lines. Note: disabling this script halts its main
 	thread but NOT its bus subscriptions (observers stay rooted in live
-	state) — it keeps verifying until play ends. See
-	docs/specs/TestingRules.md.
+	state) — it keeps verifying until play ends.
 ]]
 
 local ClientStore = require(script.Parent.Parent.Controller.ClientStore)

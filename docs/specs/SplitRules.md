@@ -21,18 +21,11 @@ CoreStore.split(state, uuid, amount, destination?) -> SplitResult
 
 ### Result Shape
 
-```luau
-{
-    success: boolean,
-    reason: string?,
-    sourceUUID: string?,          -- UUID of original (reduced) stack
-    newUUID: string?,             -- UUID of new stack
-    sourceAmount: number?,        -- Amount remaining in source
-    newAmount: number?,           -- Amount in new stack
-    newSlotType: SlotType?,       -- Where the new stack was placed
-    newSlot: number?,             -- Slot index of new stack
-    hotbarCompacted: boolean?,
-}
+Every mutation returns a `Result`: `{ ok = true, value = … }` or
+`{ ok = false, error = { kind, message } }`. Split succeeds with
+`Ok({ sourceUUID, newUUID, sourceAmount, newAmount, newSlotType, newSlot,
+hotbarCompacted? })` — the source keeps its UUID, the new stack gets a fresh
+one.
 ```
 
 ---
@@ -97,9 +90,13 @@ When no destination is provided, the new stack follows the standard placement ch
 
 ```
 1. Try empty hotbar slot (first available)
-2. If hotbar full, append to storage
-3. If storage full (Limit reached), fail with NO_SPACE
+2. If hotbar full and backpack enabled, append to storage
+3. If hotbar full and backpack disabled, fail with NO_SPACE
 ```
+
+Split never changes total weight (source loses what the new stack gains),
+so `Limit` is never consulted — `NO_SPACE` only means nowhere to put the
+new stack.
 
 ### With Specific Destination
 
@@ -118,7 +115,8 @@ If destination.Type == "Hotbar":
 
 If destination.Type == "Storage":
     Validate BackpackEnabled
-    Validate destination.Slot bounds: 1 <= destination.Slot <= #Storage + 1
+    Validate destination.Slot bounds: 1 <= destination.Slot <= #Storage
+    (the append position #Storage + 1 is INVALID_STORAGE_SLOT)
     Insert at destination.Slot in Storage
     Shift subsequent items if needed
 ```
@@ -160,7 +158,7 @@ If `Settings.Sorting = true`, auto-sort runs after the split completes. This may
 | Split into max stack | New stack capped at MaxStackSize, excess stays in source. Always enforced, even if CanStack = false. |
 | Split 8 from 10, MaxStackSize = 5 | splitAmount = min(8, 5) = 5. Source keeps 5, new stack gets 5. |
 | Source has amount = 2, split 1 | Source becomes 1, new stack has 1 |
-| No hotbar space, storage full | Fail: NO_SPACE |
+| No hotbar space and backpack disabled | Fail: NO_SPACE |
 | Splitting equipped item | Allowed, source keeps UUID and equipped state |
 
 ---

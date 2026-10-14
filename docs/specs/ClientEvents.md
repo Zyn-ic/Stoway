@@ -94,12 +94,6 @@ stability-locked once external subscribers exist.
   events. `OnSwap` reports the DESTINATION slot. Move/Split/SwapStack
   successes intentionally fire nothing (no signal/hook exists for them).
 
-## Transport Separation
-
-Operation `Signals` (`Add`/`Remove`/`Swap`/…) are the data transport that
-QuickNet eventually replaces. UI events are presentation-only and survive
-that migration untouched. See `NetworkProtocol.md` for the wire.
-
 ## Worked Example — Notification Service
 
 ```luau
@@ -113,4 +107,4 @@ end)
 
 The `New`-item white glow reads `Metadata.IsNew`, not the bus: glow
 while the flag is present, equip deletes the key via `updateMetadata` +
-`METADATA_DELETE`. (`SeenIds`/`SeenState` session set is deleted.)
+`METADATA_DELETE`.

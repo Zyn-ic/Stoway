@@ -79,7 +79,7 @@ export type InventoryState = {
 
 ```
 1. Normalize item data
-   - Read Id or ID (case-insensitive key)
+   - Read Id (exact key)
    - Read Amount, or metadata.Amount, or metadata.StackAmount
    - Parse string amounts to number
    - Remove Amount and StackAmount from metadata
@@ -107,7 +107,7 @@ export type InventoryState = {
      Auto:    Hotbar -> Storage
      Backpack: Storage only
      Hotbar:  Hotbar only (optional slot number)
-     Slot:    Specific SlotRef (future)
+     Slot:    Specific SlotRef (must be empty)
 
    - If no space for next stack: stop, overflow = remaining amount
 
@@ -159,15 +159,10 @@ addedAmount = 10, overflow = 2
 
 ### Result Shape
 
-```luau
-{
-    success: boolean,
-    reason: string?,           -- "FULL", "PARTIAL", "ADD_FAILED", etc.
-    addedItems: { AddedSlot }?, -- { uuid, slotType, slot } for each new stack
-    updatedItems: { number }?,  -- { [uuid]: newAmount } for stacked-into items
-    addedAmount: number?,       -- Total amount actually added
-    overflow: number?,          -- Amount that could not be added
-}
+Every mutation returns a `Result`: `{ ok = true, value = … }` or
+`{ ok = false, error = { kind, message } }`. Add succeeds with `Ok({
+addedItems, updatedItems, addedAmount, overflow })` — per-stack placements,
+per-UUID new amounts, total placed, and the amount that could not be placed.
 ```
 
 ### Side Effects
@@ -211,15 +206,10 @@ addedAmount = 10, overflow = 2
 
 ### Result Shape
 
-```luau
-{
-    success: boolean,
-    reason: string?,            -- "ITEM_NOT_FOUND", "INVALID_AMOUNT"
-    removedItem: Item?,         -- Copy of removed item data
-    remaining: number?,         -- Amount remaining after partial remove
-    slotType: SlotType?,        -- Where the item was
-    slot: number?,              -- Slot index
-}
+Every mutation returns a `Result`: `{ ok = true, value = … }` or
+`{ ok = false, error = { kind, message } }`. Remove succeeds with `Ok({
+removedItem, remaining, slotType, slot })` — a copy of the removed data,
+the amount left after a partial remove, and where it lived.
 ```
 
 ### Side Effects
