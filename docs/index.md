@@ -16,12 +16,17 @@ flowchart LR
 CoreStore owns the inventory truth. Everything else reads from it or writes
 to it through its public API.
 
+![Stoway in action](assets/demo.gif)
+
+New here? [Quickstart](quickstart.md) → [Life of a swap](life-of-a-swap.md)
+→ [Building on top](building-on-top.md).
+
 ## Branches
 
 | Branch | Holds |
 |--------|-------|
 | `master` | Integration branch |
-| `corestore` | Pure Luau engine + Lune suites |
+| `corestore` | Pure Luau engine |
 | `server` | Orchestration, networking, world |
 | `client` | Playable skeleton: engine + server + Fusion UI (this site) |
 | `example/*` | One idea each: `cooldowns`, `locked-slots`, `new-item-glow`. Forks of `client`, never merged |
@@ -31,15 +36,6 @@ to it through its public API.
 1. Open `stoway.rbxl` in Studio, run `rojo serve` from the repo root.
 2. Press Play (solo).
 3. Open the Conch console with Backquote and type `help`, then `inv`.
-
-Type checking is the standing gate:
-
-```
-luau-lsp analyze --definitions="globalTypes.d.luau" --sourcemap="sourcemap.json" --ignore="**/Packages/**" src
-```
-
-Expected: **0 errors**. Live behavior is verified with in-game probe scripts
-(see [Testing](architecture.md#testing) and the Testing Rules spec).
 
 ## Where to go next
 

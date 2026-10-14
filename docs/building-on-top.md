@@ -7,7 +7,9 @@ shipped example follows this recipe.
 ## The rules
 
 1. **Server owns truth.** Only the server writes authoritative state. The
-   client predicts for feel, then converges on pushes.
+   client predicts for feel, then converges on pushes. React to results
+   through [`registerAdapter`](adapters.md) — Communications is just one
+   adapter.
 2. **Metadata is the extension API.** New behavior = new keys on items, not
    new engine branches. Stacking identity, visual contracts, and showcase
    features all ride on metadata (see [Metadata](metadata.md)).
@@ -45,6 +47,6 @@ keys, no per-tool scripts.
 - Writing Fusion atoms directly instead of the mirror state.
 - Reading a live Instance property as a `Computed` fallback (self-perpetuating).
 - `scope:ForPairs` with side effects but no `Observer` (lazy `For` never runs).
-- Double-`sync()` (op bodies already sync; handlers must not sync again).
+- Sync once per mutation; a second sync re-runs every dependent Computed.
 - `{ Key = nil }` deletes nothing — use `CoreStore.METADATA_DELETE`.
 - `Move` never stacks; `StackOnSwap` is swap-only. Design merges accordingly.

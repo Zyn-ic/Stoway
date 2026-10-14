@@ -18,4 +18,5 @@ flowchart TD
 
 Try it (chat commands on this branch): `/addnew sword` — the new stack
 glows while the server copy is already clean. Full write-up in the branch's
-`AGENTS.md` showcase section.
+[`AGENTS.md`](https://github.com/Zyn-ic/Stoway/blob/example/new-item-glow/AGENTS.md)
+showcase section.

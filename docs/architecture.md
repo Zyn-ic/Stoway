@@ -9,8 +9,18 @@
 | Client | `client` | `src/client/StowayClientV3/` | Snapshot boot, hotbar + storage UI, drag + drop, input |
 | Shared | all | `ReplicatedStorage/Shared/Stoway/` | Types, settings defaults, colors, Result, wire schema |
 
-Dependency direction: client → server → CoreStore. CoreStore never imports
-upward — no Roblox types, no UI, no networking.
+## CoreStore runs twice
+
+The same CoreStore module lives in `ReplicatedStorage`, so it runs on the
+**server** (to decide) and on the **client** (to predict). When you drag, your
+client applies the move instantly using the same rules, then asks the server.
+Agree: nothing more is sent. Disagree: the server pushes a FullSync and your
+client snaps back. That is why CoreStore has no Roblox types — and why a
+stale structural setting (`MaxHotbarSlots`, `CanStack`…) forks state.
+
+Dependency direction (client → server → CoreStore) is about authority, not
+imports: the client also runs the shared CoreStore itself. CoreStore never
+imports upward.
 
 Disk maps to Roblox services via `default.project.json`: `ReplicatedStorage`
 → ReplicatedStorage, `src/server` → ServerScriptService,
@@ -38,7 +48,7 @@ the `.rbxl` only (see [Skins & Layouts](skins-layouts.md)).
 
 ```mermaid
 flowchart TD
-    A[Signal or route call] --> B[route: per-player lock]
+    A[Route call] --> B[route: per-player lock]
     B --> C[CoreStore mutation]
     C --> D[dispatch to adapters]
     D --> E{replicate?}
@@ -57,15 +67,19 @@ flowchart TD
 
 ## Key settings
 
-`HotbarType` (`Static` holes vs `Dynamic` packed), `MaxHotbarSlots` (10),
-`Limit` (15, 0 = infinite), `CanStack`, `MaxStackSize` (5),
-`BackpackEnabled`, `StackOnSwap`, `StackRequiredFields` (`Rarity`, `Type`),
-`StackBlacklist` (Legendary/Mythic/Special), `Sorting`/`SortOrder`.
+Players get `Shared/Stoway/Settings.luau`, not engine defaults:
 
-## Testing
+| Setting | Players get | Engine default |
+|---|---|---|
+| `HotbarType` | `Dynamic` | `Static` |
+| `MaxHotbarSlots` | 10 | 10 |
+| `Limit` (0 = infinite) | 15 | 15 |
+| `CanStack` | `false` | `true` |
+| `MaxStackSize` | 5 | 5 |
+| `BackpackEnabled` | `false` | `true` |
+| `StackOnSwap` | `false` | `false` |
+| `StackRequiredFields` | `Rarity`, `Type` | `Rarity`, `Type` |
+| `StackBlacklist` | Legendary/Mythic/Special | same |
+| `Sorting` / `SortOrder` | off / `None` | off / `None` |
 
-Type checking gates everything (0 errors). Behavior is verified in Studio
-playtests with observer-only probe scripts — a server `Script` or client
-`LocalScript` that requires the live modules and prints verdict lines, then
-gets deleted before committing. GUI is never trusted for functional
-verification; probes peek store state directly.
+Full reference: [Settings](settings.md).

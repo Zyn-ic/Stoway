@@ -26,4 +26,5 @@ flowchart TD
   required stack field so cooling stacks can't be washed by merging.
 
 Try it: `cooldown-demo Pickaxe a 5`, press the bind. Full write-up in the
-branch's `AGENTS.md` showcase section.
+branch's [`AGENTS.md`](https://github.com/Zyn-ic/Stoway/blob/example/cooldowns/AGENTS.md)
+showcase section.

@@ -7,6 +7,8 @@ docs_dir: docs
 
 theme:
   name: material
+  logo: assets/logo.png
+  favicon: assets/logo.png
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -24,14 +26,24 @@ theme:
     - search.suggest
     - search.highlight
     - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - navigation.tabs
     - navigation.sections
+    - navigation.indexes
     - navigation.top
+    - navigation.footer
+    - toc.follow
 
 markdown_extensions:
   - admonition
   - attr_list
   - md_in_html
+  - tables
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
   - pymdownx.details
+  - pymdownx.keys
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.superfences:
@@ -45,19 +57,32 @@ extra_javascript:
 
 nav:
   - Home: index.md
-  - Architecture: architecture.md
-  - Building on Top: building-on-top.md
-  - Metadata: metadata.md
-  - Skins & Layouts: skins-layouts.md
-  - Debug Console: conch.md
+  - Start Here:
+    - Quickstart: quickstart.md
+    - Life of a Swap: life-of-a-swap.md
+    - Glossary: glossary.md
+  - Concepts:
+    - Architecture: architecture.md
+    - Metadata: metadata.md
+    - Settings: settings.md
+    - Trust Model: trust.md
+  - Build:
+    - Building on Top: building-on-top.md
+    - Server Routes & Wire: api/server.md
+    - Adapters: adapters.md
+    - Tools & Templates: tools.md
+    - Client Events & Hooks: client-surface.md
+    - Skins & Layouts: skins-layouts.md
+    - Debug Console: conch.md
   - Examples:
     - Cooldowns: examples/cooldowns.md
     - Locked Slots: examples/locked-slots.md
     - New-Item Glow: examples/new-item-glow.md
-  - API Reference:
-    - CoreStore: api/corestore.md
-    - Server Routes & Wire: api/server.md
-  - Deep Dives:
+  - Reference:
+    - CoreStore API: api/corestore.md
+    - Error Codes: errors.md
+    - Wire Reference: wire.md
+  - Engine Rules:
     - CoreStore Specification: specs/CoreStoreSpecification.md
     - Invariants: specs/Invariants.md
     - Swap Rules: specs/SwapRules.md
@@ -66,9 +91,9 @@ nav:
     - Sorting Rules: specs/SortingRules.md
     - Metadata Update Rules: specs/MetadataUpdateRules.md
     - Metadata Wire Schema: specs/MetadataWireSchema.md
-    - Network Protocol: specs/NetworkProtocol.md
-    - Replication Rules: specs/ReplicationRules.md
     - Settings Sync: specs/SettingsSync.md
-    - Testing Rules: specs/TestingRules.md
-    - Client Events: specs/ClientEvents.md
-    - Server Branch Port: specs/ServerBranchPort.md
+  - Help:
+    - Troubleshooting: troubleshooting.md
+    - Contributing: contributing.md
+    - Dependencies & Credits: dependencies.md
+    - Roadmap & Limitations: roadmap.md

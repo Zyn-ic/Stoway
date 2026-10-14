@@ -4,8 +4,11 @@ Conch debug console, Studio only (Backquote to toggle). Client and server
 halves mount gated on `RunService:IsStudio()` — production gets no remotes,
 no role, no commands.
 
-All commands act on the calling player and replicate. UUID arguments must be
-quoted; prefer `equip-slot <Hotbar|Storage> <slot>` over raw UUIDs.
+All commands act on the calling player and replicate. Item ids are
+exact-match names of templates in `ServerStorage.Tools`. UUID arguments must
+be quoted; prefer `equip-slot <Hotbar|Storage> <slot>` over raw UUIDs. There
+is no toggle for `BackpackEnabled`, so `addback` fails with
+`BACKPACK_DISABLED` on defaults.
 
 ## Inspect
 

@@ -16,6 +16,7 @@ extend Stoway without touching the engine.
 | `Description` | string | Storage search only |
 | `Droppable` | boolean | `Drop` route (`false` → `NOT_DROPPABLE`), defaults true |
 | `IsGamepass` | boolean | Reserved open key |
+| `Team` | string | Slot ring + keybind tint (`Colors.getTeamColor`); `set-team` stamps it |
 | `Id` / `Amount` | top-level | Fallback label / stack badge (not metadata) |
 
 Plus two engine-level rules: `updateMetadata` merges keys and never
@@ -35,7 +36,8 @@ add gates, stamps, and reads *around* `Operations`, never inside it.
 
 ## Wire note
 
-Metadata crosses the wire as an open string map. The server may strip
-reserved keys from client-originated writes (cooldowns do); direct server
-calls bypass the policy. FullSync carries full metadata, so anything the
-server stamps eventually converges everywhere.
+Metadata crosses the wire as an open string map. Canon does not filter it:
+client `AddItem` / `AddToBackpack` / `AddToHotbar` / `UpdateMetadata`
+payloads reach the routes unfiltered — see the [trust model](trust.md)
+before relying on any metadata-driven rule. FullSync carries full metadata,
+so anything the server stamps eventually converges everywhere.
