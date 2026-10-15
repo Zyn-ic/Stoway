@@ -60,7 +60,6 @@ nav:
   - Start Here:
     - Quickstart: quickstart.md
     - Life of a Swap: life-of-a-swap.md
-    - Showcase Tour: showcase.md
     - Glossary: glossary.md
   - Concepts:
     - Architecture: architecture.md
