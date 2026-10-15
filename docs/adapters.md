@@ -26,3 +26,8 @@ end)
 The same seam drives persistence (save on `removePlayer`'s returned state),
 analytics, or admin tooling — without touching routes. See
 [Persistence](persistence.md).
+
+!!! warning "Adapters that call routes must defer"
+    Dispatch runs inside the route while it still holds the per-player lock,
+    so a nested route call fails with `OPERATION_IN_PROGRESS`. Wrap follow-up
+    writes in `task.defer` — the lock is free by then.

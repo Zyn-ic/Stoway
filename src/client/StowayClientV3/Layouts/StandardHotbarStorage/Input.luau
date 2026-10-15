@@ -122,9 +122,14 @@ function Input.Mount(
 	end
 	table.insert(scope, cleanupActions)
 
+	PreferredInput.Init(scope)
+
 	-- BackpackStuff tap (works on every input type)
 	if skin.BackpackStuff then
 		local btn = skin.BackpackStuff
+		-- Mobile-only visibility: the prefab ships Visible=false and PC
+		-- toggles with keys, so without this mobile has no way to open it.
+		Shared.bindToggleVisible(scope, btn, store)
 		local conn = btn.Activated:Connect(function()
 			if not Shared.isBackpackEnabled(store) then return end
 			local bf = skin.BackpackFrame
@@ -173,29 +178,30 @@ function Input.Mount(
 		GuiService.GuiNavigationEnabled = true
 		GuiService.SelectedObject = nil
 		task.defer(function()
-			-- pick first selectable slotbutton
-			local hotbarFrame2 = skin.HotbarFrame
-			if hotbarFrame2 then
-				for _, child in hotbarFrame2:GetChildren() do
-					if child:IsA("Frame") then
-						local btn = child:FindFirstChild("slotbutton") :: GuiButton?
-						if btn and btn.Visible and btn.Selectable then
-							GuiService.SelectedObject = btn
-							break
-						end
-					end
-				end
-			end
-			if GuiService.SelectedObject == nil and scrolling then
-				for _, child in scrolling:GetChildren() do
+			-- pick first slotbutton that actually holds an item: selecting
+			-- an empty hotbar slot shows no mode indicator, so fall through
+			-- to storage. Nothing selected at all when both are empty.
+			local function firstFilled(parent: Instance?): GuiButton?
+				if not parent then return nil end
+				for _, child in parent:GetChildren() do
 					if child:IsA("Frame") and child.Visible then
 						local btn = child:FindFirstChild("slotbutton") :: GuiButton?
 						if btn and btn.Visible and btn.Selectable ~= false then
-							GuiService.SelectedObject = btn
-							break
+							local ref = parseSelected(btn)
+							if ref and getSelectedUUID(store, ref) ~= nil then
+								return btn
+							end
 						end
 					end
 				end
+				return nil
+			end
+			local pick = firstFilled(skin.HotbarFrame)
+			if pick == nil and scrolling then
+				pick = firstFilled(scrolling)
+			end
+			if pick ~= nil then
+				GuiService.SelectedObject = pick
 			end
 		end)
 	end
@@ -355,26 +361,9 @@ function Input.Mount(
 			GuiService.GuiNavigationEnabled = false
 			GuiService.SelectedObject = nil
 		elseif isTouch then
-			-- Touch: only backpack (UIButton), no hotbar actions
-			if Shared.isBackpackEnabled(store) and skin.BackpackStuff then
-				local cfg = Binds.Global.Backpack
-				-- Mobile uses UIButton path via SetUIButton (IllusionIAS supports it)
-				-- Keep IAS for backpack toggle so gamepad/touch switch cleans,
-				-- but also rely on direct Activated already wired above.
-				local a: BindingObject = IllusionIAS.new("StowayBackpack")
-				-- Apply PC binds for backpack (Tab/B) not used on touch, but set UIButton
-				a:SetUIButton(skin.BackpackStuff)
-				-- Also apply console backpack for symmetry
-				Binds.ApplyToAction(a, cfg, "Console")
-				a.Activated:Connect(function(_active: IllusionIAS.variant, pressed: boolean?)
-					if not pressed then return end
-					toggleBackpackVisible()
-				end)
-				IllusionIAS.newContext("StowayGlobal")
-				IllusionIAS.addContext("StowayGlobal", a)
-				backpackAction = a
-				table.insert(actions, a)
-			end
+			-- Touch: tap handled by the unconditional btn.Activated connection
+			-- wired before buildForPreferred (raw GuiButton.Activated fires on
+			-- tap, no hold). No IAS UIButton action needed here.
 			GuiService.GuiNavigationEnabled = false
 			GuiService.SelectedObject = nil
 			if skin.HotbarFrame then skin.HotbarFrame.SelectionGroup = false end
@@ -418,19 +407,20 @@ function Input.Mount(
 		end
 	end
 
-	-- Rebuild binds when MaxHotbarSlots changes (settings replicate now):
+	-- Rebuild binds when MaxHotbarSlots or BackpackEnabled changes (settings replicate now):
 	-- actions for slots beyond a shrunk max would otherwise linger and keep
-	-- equipping hidden slots. Runs once per mount; rebuilds are rare.
-	local liveMaxSlots = scope:Computed(function(use: Fusion.Use): number
+	-- equipping hidden slots, and backpack binds must sync dynamically.
+	local liveBindsTrigger = scope:Computed(function(use: Fusion.Use): string
 		local settings: CoreTypes.Settings? = use(store.Settings)
-		return State.getMaxHotbarSlots(settings)
+		local maxSlots = State.getMaxHotbarSlots(settings)
+		local backpack = settings == nil or settings.BackpackEnabled ~= false
+		return `{maxSlots}:{backpack}`
 	end)
-	scope:Observer(liveMaxSlots):onChange(function()
+	scope:Observer(liveBindsTrigger):onChange(function()
 		buildForPreferred(PreferredInput.Get())
 	end)
 
 	-- initial
-	PreferredInput.Init(scope)
 	buildForPreferred(PreferredInput.Get())
 
 	local prefConn = PreferredInput.Changed:Connect(function(newPref: EnumItem)
