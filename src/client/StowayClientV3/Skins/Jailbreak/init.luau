@@ -26,6 +26,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Fusion = require(ReplicatedStorage.Packages.fusion)
 
 local CoreTypes = require(script.Parent.Parent.CoreStore.Types)
+local ClientStore = require(script.Parent.Parent.Controller.ClientStore)
+local Log = require(ReplicatedStorage.Shared.Stoway.Log)
 
 local JailbreakSkin = {}
 
@@ -139,7 +141,7 @@ function JailbreakSkin.Load(
 ): CoreTypes.SkinHandle?
 	local player = Players.LocalPlayer
 	if player == nil then
-		warn("[JailbreakSkin] no LocalPlayer, cannot build UI")
+		Log.warn(ClientStore.GetSettings(), "[JailbreakSkin] no LocalPlayer, cannot build UI")
 		return nil
 	end
 
@@ -231,15 +233,18 @@ function JailbreakSkin.Load(
 		Parent = backpack,
 	} :: TextLabel
 
-	-- Circular toggle button, top-left. ImageButton (empty image) keeps
-	-- the SkinHandle type; the text child is the visible glyph.
+	-- Circular toggle button, bottom-right like the prefab skins (their
+	-- BackpackStuff sits at scale (0.857, 0.863)). ImageButton (empty
+	-- image) keeps the SkinHandle type; the text child is the visible
+	-- glyph. Visibility itself is mobile-only, owned by Input.
 	local toggle = scope:New("ImageButton") {
 		Name = "BackpackStuff",
-		Position = UDim2.fromOffset(12, 12),
+		Position = UDim2.new(0.857, 0, 0.863, 0),
 		Size = UDim2.fromOffset(44, 44),
 		BackgroundColor3 = SLOT_RED,
 		BorderSizePixel = 0,
 		Image = "",
+		Visible = false,
 		AutoButtonColor = true,
 		Parent = gui,
 	} :: ImageButton

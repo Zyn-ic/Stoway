@@ -17,6 +17,7 @@ local Remotes = require(ReplicatedStorage.Shared.Stoway.StowayRemotes)
 local Protocol = require(script.Parent.Protocol)
 
 local _Types = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
+local Log = require(ReplicatedStorage.Shared.Stoway.Log)
 
 local Communications = {}
 
@@ -82,6 +83,7 @@ local function pushFullSync(player: Player)
 			StackRequiredFields = s.StackRequiredFields,
 			StackBlacklist = s.StackBlacklist,
 			DefaultDroppable = s.DefaultDroppable,
+			DebugLogs = s.DebugLogs,
 		},
 	})
 	-- Every push counts for the request cooldown: a boot request racing
@@ -123,7 +125,7 @@ local function adapter(player: Player, signal: Protocol.Signal)
 				-- Full item: the client inserts verbatim (server UUID wins).
 				local item = state and state.Items[added.uuid]
 				if not item then
-					warn(`[Communications] added item {added.uuid} missing from state, skipping push`)
+					Log.warn(state and state.Settings, `[Communications] added item {added.uuid} missing from state, skipping push`)
 				else
 					Remotes.InventoryAdded:FireClient(player, {
 						uuid = added.uuid,
@@ -202,7 +204,7 @@ end
 -- already rendered optimistically. Failures correct via FullSync.
 local function handle(player: Player, payload: Payload?, run: (Player, Payload) -> boolean)
 	if not _Stoway then
-		warn("[Communications] request before Init, ignoring")
+		Log.warn(nil, "[Communications] request before Init, ignoring")
 		return
 	end
 	-- No-schema events (Unequip/Sort) deliver the player alone: nil
@@ -212,7 +214,8 @@ local function handle(player: Player, payload: Payload?, run: (Player, Payload) 
 	local args: Payload = payload or {}
 	local ok, res = pcall(run, player, args)
 	if not ok then
-		warn(`[Communications] route errored: {tostring(res)}`)
+		local state = if _Stoway then _Stoway.get(player) else nil
+		Log.warn(state and state.Settings, `[Communications] route errored: {tostring(res)}`)
 		pushFullSync(player)
 		return
 	end
@@ -248,7 +251,7 @@ end
 function Communications.Start()
 	local stoway = _Stoway
 	if not stoway then
-		warn("[Communications] Start before Init, listeners skipped")
+		Log.warn(nil, "[Communications] Start before Init, listeners skipped")
 		return
 	end
 	-- One any: the 13 events are differently-typed QuickNet objects and

@@ -15,6 +15,7 @@ local Fusion = require(ReplicatedStorage.Packages.fusion)
 
 local ClientStore = require(script.Parent.ClientStore)
 local ClientController = require(script.Parent.ClientController)
+local Log = require(ReplicatedStorage.Shared.Stoway.Log)
 
 local LayoutManager = {}
 
@@ -56,7 +57,7 @@ function LayoutManager.SetLayout(
 )
 	local engine = Layouts[hotbarTypeKey]
 	if not engine then
-		warn(`[LayoutManager] unknown HotbarType layout '{hotbarTypeKey}'`)
+		Log.warn(ClientStore.GetSettings(), `[LayoutManager] unknown HotbarType layout '{hotbarTypeKey}'`)
 		return
 	end
 
@@ -79,7 +80,7 @@ function LayoutManager.SetLayout(
 
 	local skin = skinLoader.Load(layoutScope, playerGui, skinAssetName)
 	if not skin then
-		warn(`[LayoutManager] skin '{skinKey}' failed to load asset '{skinAssetName}' — layout not mounted`)
+		Log.warn(ClientStore.GetSettings(), `[LayoutManager] skin '{skinKey}' failed to load asset '{skinAssetName}' — layout not mounted`)
 		return
 	end
 

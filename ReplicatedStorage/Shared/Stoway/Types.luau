@@ -61,6 +61,7 @@ export type Settings = {
 	StackRequiredFields: { string },
 	StackBlacklist: { [string]: boolean },
 	DefaultDroppable: boolean,
+	DebugLogs: boolean,
 	UiSkin: string,
 	-- HotbarType layout engine key (LayoutManager.Layouts). Boot mounts
 	-- this; runtime switches arrive via the LayoutChanged event.
@@ -88,6 +89,7 @@ export type SettingsOverrides = {
 	StackRequiredFields: { string }?,
 	StackBlacklist: { [string]: boolean }?,
 	DefaultDroppable: boolean?,
+	DebugLogs: boolean?,
 	UiSkin: string?,
 	Layout: string?,
 	Categories: { [string]: CategoryDef }?,

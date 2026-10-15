@@ -9,7 +9,9 @@
 -- VARIABLES --
 -----------------------------
 
-local Fusion = require(game:GetService("ReplicatedStorage").Packages.fusion)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Fusion = require(ReplicatedStorage.Packages.fusion)
+local Log = require(ReplicatedStorage.Shared.Stoway.Log)
 
 local CoreTypes = require(script.Parent.Parent.CoreStore.Types)
 local ClientStore = require(script.Parent.Parent.Controller.ClientStore)
@@ -55,7 +57,7 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 					-- Empty slot -> Move (never stacks). Fallback to Swap if Move rejects (e.g. Static HH empty via Move is allowed but keep fallback)
 					local res = ClientController.Move(from, to)
 					if not res.ok then
-						warn("[StandardHotbarStorage] Move rejected", res.error and res.error.message or tostring(res))
+						Log.warn(store.GetSettings(), "[StandardHotbarStorage] Move rejected", res.error and res.error.message or tostring(res))
 						if res.error and res.error.message == "DESTINATION_UNAVAILABLE" then
 							-- Dynamic hotbar empty-hole guard already handled by Operations; try Swap as fallback only for Static
 							if hotbarType == "Static" then return Shared.handleSwap(from, to) end

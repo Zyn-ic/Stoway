@@ -31,6 +31,7 @@ local SettingsPayload = {
 	StackRequiredFields = data.optional({ data.String }),
 	StackBlacklist = data.optional({ [data.String] = data.Boolean }),
 	DefaultDroppable = data.optional(data.Boolean),
+	DebugLogs = data.optional(data.Boolean),
 }
 
 local SlotRef = { Type = data.String, Slot = data.NumberU8 }
@@ -106,6 +107,7 @@ local FullSyncPayload = {
 		StackRequiredFields = { data.String },
 		StackBlacklist = { [data.String] = data.Boolean },
 		DefaultDroppable = data.Boolean,
+		DebugLogs = data.Boolean,
 	}),
 }
 

@@ -23,6 +23,7 @@ local ClientTypes = require(script.Parent.Parent.CoreStore.Types)
 local Signals = require(script.Parent.Parent.Signals)
 local ClientEvents = require(script.Parent.ClientEvents)
 local NetworkClient = require(script.Parent.NetworkClient)
+local Log = require(ReplicatedStorage.Shared.Stoway.Log)
 
 local ClientController = {}
 
@@ -35,6 +36,10 @@ local _hooks: ClientTypes.HookMap? = nil
 -----------------------------
 -- PRIVATE FUNCTIONS --
 -----------------------------
+
+local function settings(): CoreTypes.Settings?
+	return if _state then _state.Settings else nil
+end
 
 local function noState(): { ok: false, error: Result.Error }
 	return Result.Err({
@@ -298,25 +303,25 @@ function ClientController.ApplyServerAdded(uuid: string, item: CoreTypes.Item, s
 	if not _state then return end
 	hydrateIfNeeded(_state)
 	if _state.Items[uuid] ~= nil then
-		warn(`[ClientController] server add for known uuid {uuid}, skipping`)
+		Log.warn(settings(), `[ClientController] server add for known uuid {uuid}, skipping`)
 		return
 	end
 	if slotType ~= "Hotbar" and slotType ~= "Storage" then
-		warn(`[ClientController] server add with bad slotType {tostring(slotType)}, skipping`)
+		Log.warn(settings(), `[ClientController] server add with bad slotType {tostring(slotType)}, skipping`)
 		return
 	end
 	if typeof(slot) ~= "number" then
-		warn(`[ClientController] server add with bad slot {tostring(slot)}, skipping`)
+		Log.warn(settings(), `[ClientController] server add with bad slot {tostring(slot)}, skipping`)
 		return
 	end
 	if slotType == "Hotbar" then
 		local occupant = _state.Hotbar[slot]
 		if occupant ~= nil then
 			if _state.Items[occupant] ~= nil then
-				warn(`[ClientController] server add to occupied hotbar {tostring(slot)}, skipping`)
+				Log.warn(settings(), `[ClientController] server add to occupied hotbar {tostring(slot)}, skipping`)
 				return
 			end
-			warn(`[ClientController] healing ghost hotbar {tostring(slot)} (stale {occupant})`)
+			Log.warn(settings(), `[ClientController] healing ghost hotbar {tostring(slot)} (stale {occupant})`)
 			evictGhost(occupant)
 		end
 		_state.Hotbar[slot] = uuid
@@ -338,7 +343,7 @@ function ClientController.ApplyServerRemoved(uuid: string, amount: number?)
 	if not _state then return end
 	hydrateIfNeeded(_state)
 	if _state.Items[uuid] == nil then
-		warn(`[ClientController] server remove for unknown uuid {uuid}, skipping`)
+		Log.warn(settings(), `[ClientController] server remove for unknown uuid {uuid}, skipping`)
 		return
 	end
 	local ref = lookupSlot(uuid)
@@ -352,7 +357,7 @@ function ClientController.ApplyServerRemoved(uuid: string, amount: number?)
 	else
 		-- Loud: a removal the server performed but we could not mirror is
 		-- exactly how ghost slots are born.
-		warn("[ClientController] server remove failed locally", res.error and res.error.message or tostring(res))
+		Log.warn(settings(), "[ClientController] server remove failed locally", res.error and res.error.message or tostring(res))
 	end
 end
 
@@ -361,7 +366,7 @@ function ClientController.ApplyServerUpdated(uuid: string, newAmount: number)
 	hydrateIfNeeded(_state)
 	local item = _state.Items[uuid]
 	if item == nil then
-		warn(`[ClientController] server update for unknown uuid {uuid}, skipping`)
+		Log.warn(settings(), `[ClientController] server update for unknown uuid {uuid}, skipping`)
 		return
 	end
 	if typeof(newAmount) ~= "number" then return end
@@ -374,7 +379,7 @@ function ClientController.ApplyServerEquipped(uuid: string)
 	if not _state then return end
 	hydrateIfNeeded(_state)
 	if _state.Items[uuid] == nil then
-		warn(`[ClientController] server equip for unknown uuid {uuid}, skipping`)
+		Log.warn(settings(), `[ClientController] server equip for unknown uuid {uuid}, skipping`)
 		return
 	end
 	local res = CoreStore.equip(_state, uuid)
@@ -396,7 +401,7 @@ function ClientController.ApplyServerFullSync(payload: CoreTypes.FullSyncPayload
 	local hotbar = payload.Hotbar
 	local storage = payload.Storage
 	if typeof(items) ~= "table" or typeof(hotbar) ~= "table" or typeof(storage) ~= "table" then
-		warn("[ClientController] server fullsync with bad tables, skipping")
+		Log.warn(settings(), "[ClientController] server fullsync with bad tables, skipping")
 		return
 	end
 	_state.Items = items
@@ -466,6 +471,7 @@ function ClientController.ApplyServerSettings(patch: CoreTypes.SettingsOverrides
 	if patch.StackRequiredFields ~= nil then s.StackRequiredFields = table.clone(patch.StackRequiredFields) end
 	if patch.StackBlacklist ~= nil then s.StackBlacklist = table.clone(patch.StackBlacklist) end
 	if patch.DefaultDroppable ~= nil then s.DefaultDroppable = patch.DefaultDroppable end
+	if patch.DebugLogs ~= nil then s.DebugLogs = patch.DebugLogs end
 	sync()
 end
 
@@ -479,9 +485,9 @@ local function bindSignals(signals: typeof(Signals))
 		local ok, res = pcall(swapOp, from, to)
 		-- No second sync(): swapOp already synced on success.
 		if ok and res and not res.ok then
-			warn("[ClientController] Swap rejected", res.error and res.error.message or tostring(res))
+			Log.warn(settings(), "[ClientController] Swap rejected", res.error and res.error.message or tostring(res))
 		elseif not ok then
-			warn("[ClientController] Swap error", res)
+			Log.warn(settings(), "[ClientController] Swap error", res)
 		end
 	end))
 
@@ -492,7 +498,7 @@ local function bindSignals(signals: typeof(Signals))
 		if ok and res and res.ok then
 			sync()
 			NetworkClient.SendSwapStack(from, to)
-		elseif not ok then warn("[ClientController] SwapStack error", res) end
+		elseif not ok then Log.warn(settings(), "[ClientController] SwapStack error", res) end
 	end))
 
 	table.insert(_connections, signals.Move:Connect(function(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef)
@@ -502,21 +508,21 @@ local function bindSignals(signals: typeof(Signals))
 		if ok and res and res.ok then
 			sync()
 			NetworkClient.SendMove(from, to)
-		elseif not ok then warn("[ClientController] Move error", res) end
+		elseif not ok then Log.warn(settings(), "[ClientController] Move error", res) end
 	end))
 
 	table.insert(_connections, signals.Remove:Connect(function(uuid: string, amount: number?)
 		if not _state then return end
 		hydrateIfNeeded(_state)
 		local ok, res = pcall(removeOp, uuid, amount)
-		if not ok then warn("[ClientController] Remove error", res) end
+		if not ok then Log.warn(settings(), "[ClientController] Remove error", res) end
 	end))
 
 	table.insert(_connections, signals.Add:Connect(function(itemInput: CoreTypes.ItemInput, opts: CoreTypes.AddOptions?)
 		if not _state then return end
 		hydrateIfNeeded(_state)
 		local ok, res = pcall(addOp, itemInput, opts)
-		if not ok then warn("[ClientController] Add error", res) end
+		if not ok then Log.warn(settings(), "[ClientController] Add error", res) end
 	end))
 
 	table.insert(_connections, signals.Split:Connect(function(uuid: string, amount: number, dest: CoreTypes.SlotRef?)
@@ -526,7 +532,7 @@ local function bindSignals(signals: typeof(Signals))
 		if ok and res and res.ok then
 			sync()
 			NetworkClient.SendSplit(uuid, amount, dest)
-		elseif not ok then warn("[ClientController] Split error", res) end
+		elseif not ok then Log.warn(settings(), "[ClientController] Split error", res) end
 	end))
 
 	table.insert(_connections, signals.Equip:Connect(function(uuid: string)
@@ -536,9 +542,9 @@ local function bindSignals(signals: typeof(Signals))
 		if ok and res and res.ok then
 			-- equipAndClearNew already synced
 		elseif ok and res and not res.ok then
-			warn("[ClientController] Equip rejected", res.error and res.error.message or tostring(res))
+			Log.warn(settings(), "[ClientController] Equip rejected", res.error and res.error.message or tostring(res))
 		elseif not ok then
-			warn("[ClientController] Equip error", res)
+			Log.warn(settings(), "[ClientController] Equip error", res)
 		end
 	end))
 
@@ -546,7 +552,7 @@ local function bindSignals(signals: typeof(Signals))
 		if not _state then return end
 		hydrateIfNeeded(_state)
 		local ok, res = pcall(unequipOp)
-		if not ok then warn("[ClientController] Unequip error", res) end
+		if not ok then Log.warn(settings(), "[ClientController] Unequip error", res) end
 	end))
 end
 

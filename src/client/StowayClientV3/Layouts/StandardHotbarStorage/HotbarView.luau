@@ -18,6 +18,7 @@ local CoreTypes = require(script.Parent.Parent.Parent.CoreStore.Types)
 local State = require(script.Parent.Parent.Parent.CoreStore.State)
 local Query = require(script.Parent.Parent.Parent.CoreStore.Query)
 local ClientStore = require(script.Parent.Parent.Parent.Controller.ClientStore)
+local Log = require(ReplicatedStorage.Shared.Stoway.Log)
 local SlotView = require(script.Parent.Parent.Parent.Slot.SlotView)
 local Binds = require(script.Parent.Binds)
 local PointerDragService = require(script.Parent.Parent.Parent.Interactions.PointerDragService)
@@ -85,11 +86,11 @@ function HotbarView.Create(
 	dragService: PointerDragService.Service?
 )
 	if not skin.HotbarFrame then
-		warn("[StandardHotbarStorage] HotbarView: skin has no Hotbar frame")
+		Log.warn(store.GetSettings(), "[StandardHotbarStorage] HotbarView: skin has no Hotbar frame")
 		return
 	end
 	if not skin.SlotTemplate then
-		warn("[StandardHotbarStorage] HotbarView: skin has no Slot template")
+		Log.warn(store.GetSettings(), "[StandardHotbarStorage] HotbarView: skin has no Slot template")
 		return
 	end
 	local hotbarFrame = skin.HotbarFrame

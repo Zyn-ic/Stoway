@@ -13,8 +13,10 @@
 -----------------------------
 
 local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Fusion = require(game:GetService("ReplicatedStorage").Packages.fusion)
+local Fusion = require(ReplicatedStorage.Packages.fusion)
+local Log = require(ReplicatedStorage.Shared.Stoway.Log)
 
 local CoreTypes = require(script.Parent.Parent.CoreStore.Types)
 local ClientStore = require(script.Parent.Parent.Controller.ClientStore)
@@ -73,13 +75,17 @@ function JailbreakHotbar.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: CoreTy
 		if not to then return false end
 		if from.Type == to.Type and from.Slot == to.Slot then return false end
 		local settings: CoreTypes.Settings? = Fusion.peek(store.Settings)
+		local backpackEnabled = settings == nil or settings.BackpackEnabled ~= false
+		if not backpackEnabled then
+			if from.Type == "Storage" or (to and to.Type == "Storage") then return false end
+		end
 		local hotbarType: CoreTypes.HotbarType = if settings then settings.HotbarType else "Static"
 		if Shared.hasDestItem(store, to) then
 			return Shared.handleSwap(from, to)
 		end
 		local res = ClientController.Move(from, to)
 		if not res.ok then
-			warn("[JailbreakHotbar] Move rejected", res.error and res.error.message or tostring(res))
+			Log.warn(store.GetSettings(), "[JailbreakHotbar] Move rejected", res.error and res.error.message or tostring(res))
 			if res.error and res.error.message == "DESTINATION_UNAVAILABLE" then
 				if hotbarType == "Static" then return Shared.handleSwap(from, to) end
 			end

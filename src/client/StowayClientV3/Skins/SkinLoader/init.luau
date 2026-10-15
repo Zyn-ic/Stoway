@@ -17,6 +17,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Fusion = require(ReplicatedStorage.Packages.fusion)
 
 local CoreTypes = require(script.Parent.Parent.CoreStore.Types)
+local ClientStore = require(script.Parent.Parent.Controller.ClientStore)
+local Log = require(ReplicatedStorage.Shared.Stoway.Log)
 
 local SkinLoader = {}
 
@@ -49,7 +51,7 @@ function SkinLoader.Load(scope: Fusion.Scope<typeof(Fusion)>, playerGui: PlayerG
 	local skinFolder = guiFolder and guiFolder:FindFirstChild(skinAssetName)
 
 	if not skinFolder then
-		warn(`[SkinLoader] skin asset '{skinAssetName}' not found at ReplicatedStorage.Stoway.GUI`)
+		Log.warn(ClientStore.GetSettings(), `[SkinLoader] skin asset '{skinAssetName}' not found at ReplicatedStorage.Stoway.GUI`)
 		return nil
 	end
 
@@ -63,11 +65,11 @@ function SkinLoader.Load(scope: Fusion.Scope<typeof(Fusion)>, playerGui: PlayerG
 		end
 	end
 	if not guiTemplate then
-		warn(`[SkinLoader] skin asset '{skinAssetName}' must contain exactly one ScreenGui (found {guiCount})`)
+		Log.warn(ClientStore.GetSettings(), `[SkinLoader] skin asset '{skinAssetName}' must contain exactly one ScreenGui (found {guiCount})`)
 		return nil
 	end
 	if guiCount ~= 1 then
-		warn(`[SkinLoader] skin asset '{skinAssetName}' must contain exactly one ScreenGui (found {guiCount})`)
+		Log.warn(ClientStore.GetSettings(), `[SkinLoader] skin asset '{skinAssetName}' must contain exactly one ScreenGui (found {guiCount})`)
 		return nil
 	end
 

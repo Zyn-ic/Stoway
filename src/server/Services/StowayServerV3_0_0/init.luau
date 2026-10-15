@@ -28,6 +28,7 @@ local Protocol = require(script.Protocol)
 local Communications = require(script.Communications)
 
 local Result = require(ReplicatedStorage.Shared.Stoway.Result)
+local Log = require(ReplicatedStorage.Shared.Stoway.Log)
 
 -- Minimal contract for the injected CoreStore module (single surface:
 -- Protocol.CoreStoreApi; the hand-copy here drifted before).
@@ -205,13 +206,14 @@ function Stoway.Start()
 	local PlayerServiceSignals = require(ServerScriptService.Libraries.PlayerServiceSignals)
 
 	PlayerServiceSignals.BindToPlrAdded:Connect(function(player: Player)
-        warn(player.Name .. " stoway has been created")
+        Log.warn(SharedSettings.getDefault(), player.Name .. " stoway has been created")
         Stoway.createPlayer(player)
         Communications.SendFullSync(player)
     end)
 
     PlayerServiceSignals.BindToPlrRemoving:Connect(function(player: Player)
-        warn(player.Name .. " stoway is being removed")
+        local leaving = _store[player]
+        Log.warn(leaving and leaving.Settings, player.Name .. " stoway is being removed")
         Stoway.removePlayer(player)
     end)
 
@@ -220,7 +222,7 @@ function Stoway.Start()
     local Players = game:GetService("Players")
     for _, player in Players:GetPlayers() do
         if _store[player] == nil then
-            warn(player.Name .. " stoway has been created (late join catch-up)")
+            Log.warn(SharedSettings.getDefault(), player.Name .. " stoway has been created (late join catch-up)")
             Stoway.createPlayer(player)
             Communications.SendFullSync(player)
         end
@@ -249,6 +251,7 @@ local function defaultOverrides(): Types.SettingsOverrides
 		StackRequiredFields = table.clone(d.StackRequiredFields),
 		StackBlacklist = table.clone(d.StackBlacklist),
 		DefaultDroppable = d.DefaultDroppable,
+		DebugLogs = d.DebugLogs,
 	}
 end
 

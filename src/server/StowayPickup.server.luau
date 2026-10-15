@@ -14,6 +14,7 @@
 
 local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local Workspace = game:GetService("Workspace")
 
@@ -22,6 +23,7 @@ local Workspace = game:GetService("Workspace")
 -----------------------------
 
 local Stoway = require(ServerScriptService.Services.StowayServerV3_0_0)
+local Log = require(ReplicatedStorage.Shared.Stoway.Log)
 
 -----------------------------
 -- CONSTANTS --
@@ -89,7 +91,8 @@ local function setup(tool: Tool)
 			tool:Destroy()
 		else
 			pickupInProgress[tool] = nil
-			warn(`[StowayPickup] add failed for {player.Name}: {res.error.message}`)
+			local pickupState = Stoway.get(player)
+			Log.warn(pickupState and pickupState.Settings, `[StowayPickup] add failed for {player.Name}: {res.error.message}`)
 		end
 	end)
 
@@ -117,4 +120,4 @@ Workspace.DescendantAdded:Connect(function(inst: Instance)
 	end
 end)
 
-print("[StowayPickup] watching for tagged tools")
+Log.print(nil, "[StowayPickup] watching for tagged tools")

@@ -25,6 +25,7 @@ local CoreTypes = require("@self/CoreStore/Types")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Settings = require(ReplicatedStorage.Shared.Stoway.Settings)
 local EngineTypes = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
+local Log = require(ReplicatedStorage.Shared.Stoway.Log)
 
 -- Empty inventory with default settings. Indexes fill via hydrate.
 -- Engine-shaped (not the slim client mirror): ClientController.Init
@@ -98,7 +99,7 @@ function StowayClient.Init()
 				hotbarTypeKey,
 				skinKey
 			)
-			print(`[StowayClientV3] layout changed to {hotbarTypeKey} / {skinKey}`)
+			Log.print(ClientStore.GetSettings(), `[StowayClientV3] layout changed to {hotbarTypeKey} / {skinKey}`)
 		end,
 		-- Engine settings replicate sparsely per change (chat debug today,
 		-- any server flow tomorrow). Funnels through the controller (not the
@@ -107,7 +108,7 @@ function StowayClient.Init()
 		-- snapshot. Atoms drive every view, so this rebuilds the whole UI.
 		SettingsChanged = function(patch)
 			ClientController.ApplyServerSettings(patch)
-			print("[StowayClientV3] settings updated from server")
+			Log.print(ClientStore.GetSettings(), "[StowayClientV3] settings updated from server")
 		end,
 	})
 
@@ -119,7 +120,7 @@ function StowayClient.Init()
 	if snapshot then
 		state = snapshotState(snapshot)
 	else
-		warn("[StowayClientV3] no snapshot from server, mounting empty")
+		Log.warn(ClientStore.GetSettings(), "[StowayClientV3] no snapshot from server, mounting empty")
 		state = emptyState()
 	end
 	ClientController.Init(Signals, state)
@@ -139,7 +140,7 @@ function StowayClient.Init()
 	local uiSkin: string = (settings and settings.UiSkin) or "Default"
 	LayoutManager.SetLayout(ClientStore.RootScope, playerGui, ClientStore, layoutKey, uiSkin)
 
-	print(`[StowayClientV3] core initialized (server snapshot, {layoutKey} / {uiSkin}) — Signals bound`)
+	Log.print(settings, `[StowayClientV3] core initialized (server snapshot, {layoutKey} / {uiSkin}) — Signals bound`)
 end
 
 function StowayClient.GetSignals()

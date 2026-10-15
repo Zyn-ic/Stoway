@@ -23,6 +23,7 @@ local Stoway = require(ServerScriptService.Services.StowayServerV3_0_0)
 local CoreStore = require(ReplicatedStorage.Shared.Stoway.CoreStore)
 local Communications = require(ServerScriptService.Services.StowayServerV3_0_0.Communications)
 local ConchCommands = require(ServerScriptService.Services.StowayServerV3_0_0.Debug.ConchCommands)
+local Log = require(ReplicatedStorage.Shared.Stoway.Log)
 
 -----------------------------
 -- PRIVATE FUNCTIONS --
@@ -39,4 +40,4 @@ ConchCommands.RegisterAll(Stoway)
 Communications.Start()
 Stoway.Start()
 
-print("[Stoway] server bootstrap online")
+Log.print(nil, "[Stoway] server bootstrap online")

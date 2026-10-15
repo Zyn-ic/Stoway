@@ -24,6 +24,7 @@ the engine explicitly (`defaultOverrides`); explicit caller overrides win.
 | `StackRequiredFields` | Identity for merging (`Rarity`, `Type`) | Yes |
 | `StackBlacklist` | Rarities that never stack | Yes |
 | `Sorting` / `SortOrder` | Auto-sort Storage (`None`/`Name`/`Rarity`/`ItemType`, rarity descending) | No (order-only) |
+| `DebugLogs` | System print/warn output on/off (default on; hooks and console output stay on their own paths) | No (diagnostic-only) |
 
 Structural settings must match on both copies or client prediction diverges
 from server decisions.

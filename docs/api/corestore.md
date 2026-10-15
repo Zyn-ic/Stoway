@@ -6,6 +6,30 @@ Pure Luau, no Roblox types. Every mutation returns a `Result`
 Auto-sort (Storage only) triggers after every mutating call when
 `Sorting` is on.
 
+## Shapes
+
+Everything below is built from four shapes:
+
+```luau
+SlotRef = { Type: "Hotbar" | "Storage", Slot: number }
+-- `from` / `to`: the two ends of a swap, move, or drag.
+-- `dest`: where a split-off stack lands (explicit slot, else auto-placed).
+
+ItemInput = { Id: string?, Amount: number?, Metadata: ItemMetadata? }
+-- `input`: what to add. Amount falls back through input.Amount, then
+-- metadata.Amount, then metadata.StackAmount, then 1 (strings coerced,
+-- garbage falls through, both keys cleaned out after).
+
+AddOptions = { Placement: ("Auto" | "Hotbar" | "Backpack" | "Slot")?, Slot: number?, SlotRef: SlotRef? }
+-- `opts`: where adds may land. `addToBackpack` forces Backpack,
+-- `addToHotbar` forces Hotbar (+ optional slot number), `addToSlot` takes
+-- an exact SlotRef that must be empty.
+
+SettingsOverrides = { HotbarType?, MaxHotbarSlots?, Limit?, ... }
+-- `overrides` on `new()`: every engine setting, all optional, merged over
+-- defaults. Anything omitted keeps the default (see Settings).
+```
+
 ## Create & inspect
 
 | Function | One line |

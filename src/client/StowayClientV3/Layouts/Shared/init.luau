@@ -13,13 +13,16 @@
 -- VARIABLES --
 -----------------------------
 
-local Fusion = require(game:GetService("ReplicatedStorage").Packages.fusion)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Fusion = require(ReplicatedStorage.Packages.fusion)
+local Log = require(ReplicatedStorage.Shared.Stoway.Log)
 
 local CoreTypes = require(script.Parent.Parent.CoreStore.Types)
 local State = require(script.Parent.Parent.CoreStore.State)
 local Query = require(script.Parent.Parent.CoreStore.Query)
 local ClientStore = require(script.Parent.Parent.Controller.ClientStore)
 local ClientController = require(script.Parent.Parent.Controller.ClientController)
+local PreferredInput = require(script.Parent.Parent.Interactions.PreferredInput)
 
 local Shared = {}
 
@@ -50,7 +53,7 @@ end
 function Shared.handleSwap(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef): boolean
 	local res = ClientController.Swap(from, to)
 	if not res.ok then
-		warn("[Layouts/Shared] Swap rejected", res.error and res.error.message or tostring(res))
+		Log.warn(ClientStore.GetSettings(), "[Layouts/Shared] Swap rejected", res.error and res.error.message or tostring(res))
 	end
 	return res.ok
 end
@@ -58,7 +61,7 @@ end
 function Shared.handleMove(from: CoreTypes.SlotRef, to: CoreTypes.SlotRef): boolean
 	local res = ClientController.Move(from, to)
 	if not res.ok then
-		warn("[Layouts/Shared] Move rejected", res.error and res.error.message or tostring(res))
+		Log.warn(ClientStore.GetSettings(), "[Layouts/Shared] Move rejected", res.error and res.error.message or tostring(res))
 	end
 	return res.ok
 end
@@ -92,6 +95,28 @@ function Shared.doEquipSlot(store: typeof(ClientStore), visibleIndex: number)
 	else
 		ClientController.Equip(uuid)
 	end
+end
+
+-- The storage toggle button is a mobile-only affordance: PC toggles with
+-- keys (Tab/B) and console with DPadLeft, so the on-screen button shows
+-- only on Touch while the backpack is enabled. Mirrors the prefab skins,
+-- whose BackpackStuff ships Visible=false for the same reason.
+function Shared.bindToggleVisible(scope: Fusion.Scope<typeof(Fusion)>, btn: GuiButton, store: typeof(ClientStore))
+	local prefValue: Fusion.Value<EnumItem> = scope:Value(PreferredInput.Get())
+	local prefConn = PreferredInput.Changed:Connect(function(newPref: EnumItem)
+		prefValue:set(newPref)
+	end)
+	table.insert(scope, function()
+		if prefConn ~= nil then prefConn:Disconnect() end
+	end)
+	scope:Hydrate(btn) {
+		Visible = scope:Computed(function(use: Fusion.Use): boolean
+			local s: CoreTypes.Settings? = use(store.Settings)
+			local backpackEnabled = s == nil or s.BackpackEnabled ~= false
+			if not backpackEnabled then return false end
+			return use(prefValue) == Enum.PreferredInput.Touch
+		end),
+	}
 end
 
 function Shared.ensureDraggingGui(scope: Fusion.Scope<typeof(Fusion)>, skin: CoreTypes.SkinHandle): ScreenGui

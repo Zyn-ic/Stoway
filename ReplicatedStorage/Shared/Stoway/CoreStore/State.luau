@@ -36,6 +36,7 @@ local DEFAULT_SETTINGS: Types.Settings = {
 	},
 
 	DefaultDroppable = true,
+	DebugLogs = true,
 }
 
 -----------------------------

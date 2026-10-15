@@ -57,6 +57,7 @@ export type Settings = {
     StackBlacklist: { [string]: boolean },
 
     DefaultDroppable: boolean,
+    DebugLogs: boolean,
 }
 
 export type SettingsOverrides = {
@@ -74,6 +75,7 @@ export type SettingsOverrides = {
     StackOnSwap: boolean?,
     StackRequiredFields: { string }?,
     StackBlacklist: { [string]: boolean }?,
+    DebugLogs: boolean?,
 
     DefaultDroppable: boolean?,
 }

@@ -21,6 +21,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CoreStore = require(ReplicatedStorage.Shared.Stoway.CoreStore)
 local Types = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
 local Remotes = require(ReplicatedStorage.Shared.Stoway.StowayRemotes)
+local SharedSettings = require(ReplicatedStorage.Shared.Stoway.Settings)
+local Log = require(ReplicatedStorage.Shared.Stoway.Log)
 
 -- Untyped boundary (intentional): the Conch package ships without Luau
 -- declarations, so one any-binding covers the whole seam. Everything
@@ -560,6 +562,36 @@ local function registerAll(stoway: StowayApi)
 		end,
 	})
 
+	conch.register("toggle-backpack", {
+		description = "Toggle backpack on/off",
+		permissions = P,
+		arguments = function() end,
+		callback = function()
+			withCaller(stoway, function(player: Player)
+				local state = stoway.get(player) :: Types.InventoryState
+				state.Settings.BackpackEnabled = not state.Settings.BackpackEnabled
+				conch.log("info", ("[Settings] BackpackEnabled: %s"):format(tostring(state.Settings.BackpackEnabled)))
+				Remotes.SettingsChanged:FireClient(player, { BackpackEnabled = state.Settings.BackpackEnabled })
+			end)
+		end,
+	})
+
+	conch.register("set-backpack", {
+		description = "Set backpack enabled: set-backpack <true|false>",
+		permissions = P,
+		arguments = function()
+			return conch.args.boolean("enabled", "Backpack enabled")
+		end,
+		callback = function(enabled: boolean)
+			withCaller(stoway, function(player: Player)
+				local state = stoway.get(player) :: Types.InventoryState
+				state.Settings.BackpackEnabled = enabled
+				conch.log("info", ("[Settings] BackpackEnabled: %s"):format(tostring(state.Settings.BackpackEnabled)))
+				Remotes.SettingsChanged:FireClient(player, { BackpackEnabled = state.Settings.BackpackEnabled })
+			end)
+		end,
+	})
+
 	conch.register("set-limit", {
 		description = "Set weight limit: set-limit <n>",
 		permissions = P,
@@ -712,6 +744,20 @@ local function registerAll(stoway: StowayApi)
 		end,
 	})
 
+	conch.register("toggle-debug", {
+		description = "Toggle system print/warn logs on/off",
+		permissions = P,
+		arguments = function() end,
+		callback = function()
+			withCaller(stoway, function(player: Player)
+				local state = stoway.get(player) :: Types.InventoryState
+				state.Settings.DebugLogs = not state.Settings.DebugLogs
+				conch.log("info", ("[Settings] DebugLogs: %s"):format(tostring(state.Settings.DebugLogs)))
+				Remotes.SettingsChanged:FireClient(player, { DebugLogs = state.Settings.DebugLogs })
+			end)
+		end,
+	})
+
 	conch.register("help", {
 		description = "List Stoway debug commands",
 		permissions = P,
@@ -720,8 +766,8 @@ local function registerAll(stoway: StowayApi)
 			conch.log("info", "STOWAY DEBUG COMMANDS (bare names, no slash)")
 			conch.log("info", "inv | add | addback | addhot | remove | drop")
 			conch.log("info", "swap | move | split | equip | equip-slot | unequip | sort | clear-inv")
-			conch.log("info", "toggle-stack | toggle-limit | toggle-sort")
-			conch.log("info", "set-limit | set-max-stack | set-hotbar-slots | set-hotbar-type")
+			conch.log("info", "toggle-stack | toggle-limit | toggle-backpack | toggle-sort | toggle-debug")
+			conch.log("info", "set-limit | set-max-stack | set-hotbar-slots | set-hotbar-type | set-backpack")
 			conch.log("info", "set-skin | set-layout | set-team")
 		end,
 	})
@@ -759,7 +805,7 @@ function ConchCommands.RegisterAll(stoway: StowayApi)
 	for _, player in Players:GetPlayers() do
 		task.defer(grant, player)
 	end
-	print("[Debug] Conch commands registered - open with Backquote (`)")
+	Log.print(SharedSettings.getDefault(), "[Debug] Conch commands registered - open with Backquote (`)")
 end
 
 -----------------------------

@@ -69,6 +69,7 @@ function ClientStore.SetEngineSettings(settings: Types.EngineSettings)
 	clientSettings.StackRequiredFields = table.clone(settings.StackRequiredFields)
 	clientSettings.StackBlacklist = table.clone(settings.StackBlacklist)
 	clientSettings.DefaultDroppable = settings.DefaultDroppable
+	clientSettings.DebugLogs = settings.DebugLogs
 	ClientStore.Settings:set(clientSettings)
 end
 
@@ -107,6 +108,7 @@ function ClientStore.GetEngineSettings(): Types.EngineSettings
 		StackRequiredFields = table.clone(settings.StackRequiredFields),
 		StackBlacklist = table.clone(settings.StackBlacklist),
 		DefaultDroppable = settings.DefaultDroppable,
+		DebugLogs = settings.DebugLogs,
 	}
 end
 

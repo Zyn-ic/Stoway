@@ -46,6 +46,7 @@ local DEFAULT_SETTINGS: Types.Settings = {
 	StackRequiredFields = { "Rarity", "Type" },
 	StackBlacklist = { Legendary = true, Mythic = true, Special = true },
 	DefaultDroppable = true,
+	DebugLogs = true,
 	UiSkin = "Jailbreak",
 	Layout = "JailbreakHotbar",
 	Categories = DEFAULT_CATEGORIES,

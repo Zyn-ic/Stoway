@@ -19,6 +19,8 @@ local Remotes = require(ReplicatedStorage.Shared.Stoway.StowayRemotes)
 
 local CoreTypes = require(script.Parent.Parent.CoreStore.Types)
 local SharedCoreTypes = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
+local ClientStore = require(script.Parent.ClientStore)
+local Log = require(ReplicatedStorage.Shared.Stoway.Log)
 
 -- One any for the whole QuickNet seam, and why it earns its place:
 -- QuickNet infers callback payloads and FireServer params from the
@@ -30,6 +32,10 @@ local SharedCoreTypes = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
 local R: any = Remotes
 
 local NetworkClient = {}
+
+local function settings()
+	return ClientStore.GetSettings()
+end
 
 -- Server-apply handlers, injected by init.luau. Concrete signatures
 -- matching ClientController.ApplyServer* exactly; injected (never
@@ -61,7 +67,7 @@ local _conns: { Connection } = {}
 -- shape is fine on both solvers.
 local function send(name: string, fn: () -> ())
 	if not pcall(fn) then
-		warn(`[NetworkClient] {name} send failed`)
+		Log.warn(settings(), `[NetworkClient] {name} send failed`)
 	end
 end
 
@@ -175,13 +181,13 @@ function NetworkClient.Connect(applies: ApplyHandlers)
 	_conns[#_conns + 1] = R.InventoryAdded.OnClientEvent:Connect(function(payload)
 		if not _applies then return end
 		if not pcall(_applies.Added, payload.uuid, payload.item, payload.slotType, payload.slot) then
-			warn("[NetworkClient] ApplyServerAdded failed")
+			Log.warn(settings(), "[NetworkClient] ApplyServerAdded failed")
 		end
 	end)
 	_conns[#_conns + 1] = R.InventoryUpdated.OnClientEvent:Connect(function(payload)
 		if not _applies then return end
 		if not pcall(_applies.Updated, payload.uuid, payload.newAmount) then
-			warn("[NetworkClient] ApplyServerUpdated failed")
+			Log.warn(settings(), "[NetworkClient] ApplyServerUpdated failed")
 		end
 	end)
 	_conns[#_conns + 1] = R.InventoryRemoved.OnClientEvent:Connect(function(payload)
@@ -189,28 +195,28 @@ function NetworkClient.Connect(applies: ApplyHandlers)
 		-- pcall threads the handler's arity: pass the optional amount
 		-- explicitly or the new solver rejects the call.
 		if not pcall(_applies.Removed, payload.uuid, nil) then
-			warn("[NetworkClient] ApplyServerRemoved failed")
+			Log.warn(settings(), "[NetworkClient] ApplyServerRemoved failed")
 		end
 	end)
 	_conns[#_conns + 1] = R.InventoryEquipped.OnClientEvent:Connect(function(payload)
 		if not _applies then return end
 		-- uuid is schema-optional (shared with Unequipped's shape).
 		if typeof(payload.uuid) ~= "string" then
-			warn("[NetworkClient] Equipped push without uuid, skipping")
+			Log.warn(settings(), "[NetworkClient] Equipped push without uuid, skipping")
 			return
 		end
 		if not pcall(_applies.Equipped, payload.uuid) then
-			warn("[NetworkClient] ApplyServerEquipped failed")
+			Log.warn(settings(), "[NetworkClient] ApplyServerEquipped failed")
 		end
 	end)
 	_conns[#_conns + 1] = R.InventoryUnequipped.OnClientEvent:Connect(function()
 		if not _applies then return end
 		if not pcall(_applies.Unequipped) then
-			warn("[NetworkClient] ApplyServerUnequipped failed")
+			Log.warn(settings(), "[NetworkClient] ApplyServerUnequipped failed")
 		end
 	end)
 	_conns[#_conns + 1] = R.InventoryRevert.OnClientEvent:Connect(function(payload)
-		warn(`[NetworkClient] server revert (log-only): {tostring(payload.fromSlot)}`)
+		Log.warn(settings(), `[NetworkClient] server revert (log-only): {tostring(payload.fromSlot)}`)
 		-- Log-only by design: the server's handle() already pushes a
 		-- FullSync behind every failed op, so requesting another snapshot
 		-- here would triple-send (revert + handle push + requested push).
@@ -219,27 +225,27 @@ function NetworkClient.Connect(applies: ApplyHandlers)
 		_lastFullSync = payload
 		if not _applies then return end
 		if not pcall(_applies.FullSync, payload) then
-			warn("[NetworkClient] ApplyServerFullSync failed")
+			Log.warn(settings(), "[NetworkClient] ApplyServerFullSync failed")
 		end
 	end)
 	_conns[#_conns + 1] = R.LayoutChanged.OnClientEvent:Connect(function(payload)
 		if not _applies then return end
 		if typeof(payload.layout) ~= "string" or typeof(payload.skin) ~= "string" then
-			warn("[NetworkClient] invalid layout change payload")
+			Log.warn(settings(), "[NetworkClient] invalid layout change payload")
 			return
 		end
 		if not pcall(_applies.LayoutChanged, payload.layout, payload.skin) then
-			warn("[NetworkClient] ApplyServerLayoutChanged failed")
+			Log.warn(settings(), "[NetworkClient] ApplyServerLayoutChanged failed")
 		end
 	end)
 	_conns[#_conns + 1] = R.SettingsChanged.OnClientEvent:Connect(function(payload)
 		if not _applies then return end
 		if typeof(payload) ~= "table" then
-			warn("[NetworkClient] invalid settings payload")
+			Log.warn(settings(), "[NetworkClient] invalid settings payload")
 			return
 		end
 		if not pcall(_applies.SettingsChanged, payload) then
-			warn("[NetworkClient] ApplyServerSettingsChanged failed")
+			Log.warn(settings(), "[NetworkClient] ApplyServerSettingsChanged failed")
 		end
 	end)
 end

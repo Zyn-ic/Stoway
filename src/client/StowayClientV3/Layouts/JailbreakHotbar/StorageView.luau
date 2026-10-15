@@ -18,6 +18,7 @@ local Fusion = require(ReplicatedStorage.Packages.fusion)
 local CoreTypes = require(script.Parent.Parent.Parent.CoreStore.Types)
 local Query = require(script.Parent.Parent.Parent.CoreStore.Query)
 local ClientStore = require(script.Parent.Parent.Parent.Controller.ClientStore)
+local Log = require(ReplicatedStorage.Shared.Stoway.Log)
 local SlotView = require(script.Parent.Parent.Parent.Slot.SlotView)
 local PointerDragService = require(script.Parent.Parent.Parent.Interactions.PointerDragService)
 
@@ -42,7 +43,7 @@ function StorageView.Create(
 	dragService: PointerDragService.Service?
 )
 	if not skin.BackpackFrame then
-		warn("[JailbreakHotbar] StorageView: skin has no Backpack frame")
+		Log.warn(store.GetSettings(), "[JailbreakHotbar] StorageView: skin has no Backpack frame")
 		return
 	end
 	local backpackFrame = skin.BackpackFrame
@@ -67,7 +68,7 @@ function StorageView.Create(
 	end
 
 	if not skin.ScrollingFrame or not skin.SlotTemplate then
-		warn("[JailbreakHotbar] StorageView: skin missing ScrollingFrame or Slot template")
+		Log.warn(store.GetSettings(), "[JailbreakHotbar] StorageView: skin missing ScrollingFrame or Slot template")
 		return
 	end
 	local scrollingFrame = skin.ScrollingFrame

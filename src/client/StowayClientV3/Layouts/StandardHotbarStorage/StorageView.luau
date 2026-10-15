@@ -16,6 +16,7 @@ local Fusion = require(ReplicatedStorage.Packages.fusion)
 local CoreTypes = require(script.Parent.Parent.Parent.CoreStore.Types)
 local Query = require(script.Parent.Parent.Parent.CoreStore.Query)
 local ClientStore = require(script.Parent.Parent.Parent.Controller.ClientStore)
+local Log = require(ReplicatedStorage.Shared.Stoway.Log)
 local SlotView = require(script.Parent.Parent.Parent.Slot.SlotView)
 local PointerDragService = require(script.Parent.Parent.Parent.Interactions.PointerDragService)
 
@@ -75,7 +76,7 @@ function StorageView.Create(
 	dragService: PointerDragService.Service?
 )
 	if not skin.BackpackFrame then
-		warn("[StandardHotbarStorage] StorageView: skin has no Backpack frame")
+		Log.warn(store.GetSettings(), "[StandardHotbarStorage] StorageView: skin has no Backpack frame")
 		return
 	end
 
@@ -167,7 +168,7 @@ function StorageView.Create(
 	end
 
 	if not skin.ScrollingFrame or not skin.SlotTemplate then
-		warn("[StandardHotbarStorage] StorageView: skin missing ScrollingFrame or Slot template")
+		Log.warn(store.GetSettings(), "[StandardHotbarStorage] StorageView: skin missing ScrollingFrame or Slot template")
 		return
 	end
 	local scrollingFrame = skin.ScrollingFrame
@@ -199,7 +200,7 @@ function StorageView.Create(
 	end
 	for _, child in scrollingFrame:GetChildren() do
 		if child:IsA("UIGridLayout") then
-			warn("[StandardHotbarStorage] StorageView: removing skin UIGridLayout in ScrollingFrame (groups need vertical stacking)")
+			Log.warn(store.GetSettings(), "[StandardHotbarStorage] StorageView: removing skin UIGridLayout in ScrollingFrame (groups need vertical stacking)")
 			child:Destroy()
 		end
 	end

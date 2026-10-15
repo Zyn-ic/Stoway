@@ -72,6 +72,7 @@ function MockData.build(): CoreTypes.InventoryState
 		StackRequiredFields = { "Rarity", "Type" },
 		StackBlacklist = { Legendary = true, Mythic = true, Special = true },
 		DefaultDroppable = true,
+		DebugLogs = true,
 	}
 
 	local hotbar: { [number]: string? } = {
