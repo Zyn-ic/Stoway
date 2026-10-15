@@ -1,0 +1,160 @@
+--!strict
+
+--@author: yyumchi
+--@date: 2026-08-19
+--[[@description:
+	Client entry point. Boots from the server snapshot (FullSync pushed
+	on join, requested as backup) and mounts the settings Layout /
+	UiSkin pair. No mock data: without a snapshot the UI mounts empty.
+]]
+-----------------------------
+-- VARIABLES --
+-----------------------------
+
+local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
+
+local ClientStore = require("@self/Controller/ClientStore")
+local ClientController = require("@self/Controller/ClientController")
+local ClientEvents = require("@self/Controller/ClientEvents")
+local NetworkClient = require("@self/Controller/NetworkClient")
+local LayoutManager = require("@self/Controller/LayoutManager")
+local CoreTypes = require("@self/CoreStore/Types")
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Settings = require(ReplicatedStorage.Shared.Stoway.Settings)
+local EngineTypes = require(ReplicatedStorage.Shared.Stoway.CoreStore.Types)
+local Log = require(ReplicatedStorage.Shared.Stoway.Log)
+
+-- Empty inventory with default settings. Indexes fill via hydrate.
+-- Engine-shaped (not the slim client mirror): ClientController.Init
+-- takes the full state; Stoway-level Settings is a compatible superset.
+local function emptyState(): EngineTypes.InventoryState
+	return {
+		Items = {},
+		ItemsByID = {},
+		Hotbar = {},
+		Storage = {},
+		LocationByUUID = {},
+		MetadataIndex = {},
+		EquippedItemUUID = nil,
+		Weight = 0,
+		Settings = Settings.getDefault(),
+	}
+end
+
+-- FullSync payload (no indexes, no Settings) into bootable state.
+local function snapshotState(payload: CoreTypes.FullSyncPayload): EngineTypes.InventoryState
+	local state = emptyState()
+	state.Items = payload.Items
+	for slot, uuid in payload.Hotbar do
+		state.Hotbar[slot] = uuid
+	end
+	for idx, uuid in payload.Storage do
+		state.Storage[idx] = uuid
+	end
+	state.EquippedItemUUID = payload.EquippedItemUUID
+	if typeof(payload.Weight) == "number" then
+		state.Weight = payload.Weight
+	end
+	return state
+end
+
+local StowayClient = {}
+StowayClient.Store = ClientStore
+StowayClient.Controller = ClientController
+StowayClient.Events = ClientEvents
+
+-----------------------------
+-- PUBLIC FUNCTIONS --
+-----------------------------
+
+function StowayClient.Init()
+	-- Replace the default backpack UI.
+	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
+
+	local player = Players.LocalPlayer
+	local playerGui = player:WaitForChild("PlayerGui") :: PlayerGui
+
+	-- Network first: subscriptions before anything can push, then ask
+	-- for a snapshot to cover a missed join push. Always request: if
+	-- the join push already went out, the server's per-player cooldown
+	-- throttles this into a no-op instead of doubling the join.
+	NetworkClient.RequestSnapshot()
+	NetworkClient.Connect({
+		Added = ClientController.ApplyServerAdded,
+		Updated = ClientController.ApplyServerUpdated,
+		Removed = ClientController.ApplyServerRemoved,
+		Equipped = ClientController.ApplyServerEquipped,
+		Unequipped = ClientController.ApplyServerUnequipped,
+		FullSync = ClientController.ApplyServerFullSync,
+		LayoutChanged = function(hotbarTypeKey: string, skinKey: string)
+			LayoutManager.SetLayout(
+				ClientStore.RootScope,
+				playerGui,
+				ClientStore,
+				hotbarTypeKey,
+				skinKey
+			)
+			Log.print(ClientStore.GetSettings(), `[StowayClientV3] layout changed to {hotbarTypeKey} / {skinKey}`)
+		end,
+		-- Engine settings replicate sparsely per change (chat debug today,
+		-- any server flow tomorrow). Funnels through the controller (not the
+		-- store directly) so _state stays in sync: later sync() calls then
+		-- re-apply these values instead of clobbering atoms with the boot
+		-- snapshot. Atoms drive every view, so this rebuilds the whole UI.
+		SettingsChanged = function(patch)
+			ClientController.ApplyServerSettings(patch)
+			Log.print(ClientStore.GetSettings(), "[StowayClientV3] settings updated from server")
+		end,
+	})
+
+	-- Boot from the server snapshot. The join push usually lands before
+	-- this runs; the request covers the race. Empty (never mock) when
+	-- the server stays silent — a later FullSync still fills the UI.
+	local snapshot = NetworkClient.GetLastFullSync()
+	local state: EngineTypes.InventoryState
+	if snapshot then
+		state = snapshotState(snapshot)
+	else
+		Log.warn(ClientStore.GetSettings(), "[StowayClientV3] no snapshot from server, mounting empty")
+		state = emptyState()
+	end
+	ClientController.Init(state)
+
+	-- Join-push race cover: if a FullSync (with settings) landed before
+	-- Init, mirror it now; later pushes apply through the normal path.
+	local bootSnap = NetworkClient.GetLastFullSync()
+	if bootSnap and typeof(bootSnap.Settings) == "table" then
+		ClientController.ApplyServerSettings(bootSnap.Settings)
+	end
+
+	-- Single source of truth: Settings.Layout selects the HotbarType
+	-- engine, Settings.UiSkin the loader key (1:1 asset contract for
+	-- prefab skins in LayoutManager; code-built skins ignore the name).
+	local settings = ClientStore.GetSettings()
+	local layoutKey: string = (settings and settings.Layout) or "StandardHotbarStorage"
+	local uiSkin: string = (settings and settings.UiSkin) or "Default"
+	LayoutManager.SetLayout(ClientStore.RootScope, playerGui, ClientStore, layoutKey, uiSkin)
+
+	Log.print(settings, `[StowayClientV3] core initialized (server snapshot, {layoutKey} / {uiSkin})`)
+end
+
+function StowayClient.GetStore()
+	return ClientStore
+end
+
+function StowayClient.GetController()
+	return ClientController
+end
+
+function StowayClient.GetEvents()
+	return ClientEvents
+end
+
+-----------------------------
+-- MAIN --
+-----------------------------
+
+return StowayClient

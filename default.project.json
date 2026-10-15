@@ -1,28 +1,23 @@
 {
   "name": "Stoway",
+  "syncbackRules": {
+    "ignoreTrees": ["ReplicatedStorage/Stoway"]
+  },
   "tree": {
     "$className": "DataModel",
 
-    "ReplicatedStorage": {
-      "Shared": {
-        "$path": "src/shared"
-      },
-      "Packages": {
-        "$path": "Packages"
-      }
+    "ReplicatedStorage":{
+      "$path": "ReplicatedStorage",
+      "$ignoreUnknownInstances": true
     },
 
     "ServerScriptService": {
-      "Server": {
-        "$path": "src/server"
-      }
+      "$path": "src/server"
     },
 
     "StarterPlayer": {
       "StarterPlayerScripts": {
-        "Client": {
-          "$path": "src/client"
-        }
+        "$path": "src/client"
       }
     }
   }

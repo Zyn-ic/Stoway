@@ -1,106 +1,68 @@
-# Stoway - Advanced Roblox Inventory System (V2.4.1)
-<img src="pics/Logo.png" alt="Stoway Logo" width="120" align="left" style="margin-right:15px"/>
+# Stoway
+<img src="pics/testgif1.gif" alt="Stoway" width="240" align="left" style="margin-right:15px"/>
 
-<div style="display:flex; flex-direction:column; gap:2px;">
-<p><strong>Stoway</strong> is a data-driven inventory and hotbar framework for Roblox. It uses <strong>Fusion</strong> for reactive UI, server-authoritative inventory state, and delta replication for efficient updates. Use it as a base for RPG, survival, or utility-heavy inventory systems.</p>
-<p>Download the latest packaged release from <a href="https://github.com/Zyn-ic/Stoway/releases">Releases</a>.</p>
-</div>
+**An inventory you can trust, in layers you can swap.**
+Pure-Luau CoreStore engine, server-authoritative orchestration, Fusion
+client: drag an item and it moves instantly, because the server already
+agreed. Use it as a base for RPG loadouts, survival backpacks, or
+utility-heavy tool systems.
 
-<br>
+[Docs](https://zyn-ic.github.io/Stoway/) · [Releases](https://github.com/Zyn-ic/Stoway/releases)
 
-## Table of Contents
-- [Features](#features)
-- [Getting Started](#getting-started)
-- [Configuration](#configuration)
-- [Debug Commands](#debug-commands)
-- [Documentation](#documentation)
-- [Credits](#credits)
+<br clear="both"/>
 
 ## Features
+
 ### Hotbar
-- Drag and drop between hotbar and storage.
-- Supports static slots and dynamic display behavior.
-- Keybind support for quick equip.
+
+- Drag and drop between hotbar and storage, including sweep paint-to-move on the Jailbreak layout.
+- Static slots or Dynamic packed display.
+- Keybinds on PC, button combos on console, tap to equip on touch.
 
 ### Storage
-- Items are tracked as data (UUID-based), not persistent tool instances.
-- Configurable stacking, limits, sorting, and filtering.
-- Optional backpack enable/disable modes.
+
+- Items tracked as data (UUID-based), never live Tool instances.
+- Stacking, limits, sorting, and grouping by item type.
+- Optional backpack mode with its own popup.
 
 ### Systems
-- Reactive UI with Fusion.
-- Server-authoritative state with delta replication and correction sync paths.
-- Console mode support, selection mode, and drop UI.
-- Multi-skin UI support via settings.
+
+- Server-authoritative state with delta replication and FullSync correction.
+- Per-team metadata, multi-skin UI, console and touch input.
+- Debug console (Studio only) for inventory, settings, skins, and teams.
+
+## Built around
+
+| System | What | Read |
+|---|---|---|
+| **Categories** | Weapons, Consumables, Materials, Armor, Trinkets, Other: storage sections itself by item `Type` | [Metadata](https://zyn-ic.github.io/Stoway/metadata/) |
+| **Rarities** | Common → Uncommon → Rare → Epic → Legendary → Mythic → Special, with rank sort and slot-frame tints | [Metadata](https://zyn-ic.github.io/Stoway/metadata/) |
+| **Settings** | Hotbar type/slots, stacking + stack rules, backpack, limits (sparse-synced with a FullSync backstop) | [Settings](https://zyn-ic.github.io/Stoway/settings/) |
+| **Sorting** | Storage auto-sorts by name, type, or rarity rank (descending), hotbar never touched | [Settings](https://zyn-ic.github.io/Stoway/settings/) |
+| **Commands** | Conch debug console (Studio only): inventory ops, settings, skins, layouts, teams | [Debug Console](https://zyn-ic.github.io/Stoway/conch/) |
 
 ## Getting Started
-1. Download the latest `.rbxm` from [Releases](https://github.com/Zyn-ic/Stoway/releases).
-2. Place server module(s) in `ServerScriptService`.
-3. Place client module(s) in `StarterPlayerScripts`.
-4. Place shared modules (`Settings`, `Types`, `RarityValues`, `Binds`) in `ReplicatedStorage/Shared`.
-5. Ensure required packages (such as Fusion) are available in `ReplicatedStorage/Packages`.
-6. Initialize on server:
 
-```lua
-local StowayServer = require(game.ServerScriptService.StowayServerV1_2)
-StowayServer.Init()
-```
+1. Download the `.rbxm` (production = stripped, non-production = full) or the single playable `.rbxl` from [Releases](https://github.com/Zyn-ic/Stoway/releases).
+2. Place server modules in `ServerScriptService`, client modules in `StarterPlayerScripts`, shared modules + `Packages` in `ReplicatedStorage`.
+3. Boot the server:
+   ```lua
+   local Stoway = require(game.ServerScriptService.Services.StowayServerV3_0_0)
+   local CoreStore = require(game.ReplicatedStorage.Shared.Stoway.CoreStore)
+   Stoway.Init(CoreStore)
+   ```
+4. Press Play, open Conch (Backquote), try `help` then `inv`.
 
-## Configuration
-Primary settings are in `src/shared/Settings.luau`.
-
-```lua
-local Settings = {}
-
-Settings.Hotbar = {
-    Type = "Static", -- "Static" | "Dynamic"
-    MaxSlots = 10,
-}
-
-Settings.Storage = {
-    Limit = 15,        -- 0 = infinite
-    CanStack = true,
-    Sorting = true,
-    MaxStackSize = 5,
-    BackpackEnabled = true,
-    SortOrder = "None" -- "None" | "Name" | "Rarity" | "ItemType"
-}
-
-Settings.Gameplay = {
-    Droppable = true,
-    DropDistance = 10,
-    MouseScroll = true,
-}
-
-return Settings
-```
-
-## Debug Commands
-Built-in chat commands for testing (do not leave unrestricted in production):
-- `/inv`
-- `/add [itemId] [amount?]`
-- `/addback [itemId] [amount?]`
-- `/remove [uuid] [amount?]`
-- `/swap [Hotbar/Storage] [slot] [Hotbar/Storage] [slot]`
-- `/drop [Hotbar/Storage] [slot] [amount?]`
-- `/set_limit [n]`
-- `/set_hotbar_slots [n]`
-- `/setui [UiType]`
+New here? [Quickstart](https://zyn-ic.github.io/Stoway/quickstart/) → [Life of a swap](https://zyn-ic.github.io/Stoway/life-of-a-swap/) → [Building on top](https://zyn-ic.github.io/Stoway/building-on-top/).
 
 ## Documentation
-Full docs: [https://zyn-ic.github.io/Stoway/](https://zyn-ic.github.io/Stoway/)
-<br>
 
-Basic Load Flow: [MermaidLiveView](https://shorturl.at/lkznn)
-<br>
-
-Cross Compatability Flow: [MermaidLiveView](https://shorturl.at/C41x2)
-<br>
-
-Different Console Modes Flow: [MermaidLiveView](https://shorturl.at/ALPBR)
+Full docs: [zyn-ic.github.io/Stoway](https://zyn-ic.github.io/Stoway/) (architecture, metadata, skins & layouts, wire reference, examples, API).
 
 ## Credits
-1. <img src="https://www.iconpacks.net/icons/2/free-youtube-logo-icon-2431-thumb.png" width=15 height = 15>  [**HowToRoblox**](https://www.youtube.com/watch?v=kqa4u_9mSTQ&list=WL&index=6) - sourced a lot of core mechanics from him for backpack/hotbar in my ealier versions.
-2. <img src="https://www.iconpacks.net/icons/2/free-youtube-logo-icon-2431-thumb.png" width=15 height = 15> [**Knineteen19**](https://www.youtube.com/watch?v=d2tdaRmqGXI&list=WL&index=8) - his series helped me get a good understanding for inventory/hotbar, presistance, and stacking.
-3. <img src="https://devforum-uploads.s3.dualstack.us-east-2.amazonaws.com/uploads/original/4X/5/2/b/52bce3b02f6c5dddf9dfd5390fa00a9b2be6fa38.png" width=17 height = 17> [**Avafe**](https://devforum.roblox.com/t/neohotbar-a-modern-customizable-backpack/2738850) - learned about the existance of [fusion and react](https://www.youtube.com/watch?v=OHqMLEL5QnY&t=1730s) on roblox from this custom hotbar and backpack system.
-4. <img src="https://raw.githubusercontent.com/IllusionAC/Illusion-InputActionSystem/refs/heads/main/IIASLogo.png" width=20 height = 20> [**Illusion**](https://devforum.roblox.com/t/illusions-inputactionsystem-currently-the-best-input-manager/4071242) for creating a module around roblox's new InputActionService *thank you this saved me a lot of time* 😭
+
+1. [**HowToRoblox**](https://www.youtube.com/watch?v=kqa4u_9mSTQ&list=WL&index=6) - core backpack/hotbar mechanics lineage.
+2. [**Knineteen19**](https://www.youtube.com/watch?v=d2tdaRmqGXI&list=WL&index=8) - inventory/hotbar, persistence, and stacking.
+3. [**Avafe**](https://devforum.roblox.com/t/neohotbar-a-modern-customizable-backpack/2738850) - Fusion and reactive UI patterns.
+4. [**Illusion**](https://devforum.roblox.com/t/illusions-inputactionsystem-currently-the-best-input-manager/4071242) - InputActionSystem module.
+5. [**breadboardengineer1234**](https://github.com/breadboardengineer1234/QuickNet) - QuickNet networking.

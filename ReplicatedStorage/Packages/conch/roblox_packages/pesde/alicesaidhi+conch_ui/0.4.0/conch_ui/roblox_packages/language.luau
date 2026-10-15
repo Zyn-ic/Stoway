@@ -1,0 +1,20 @@
+local module = require(script.Parent.Parent.Parent.Parent.Parent["alicesaidhi+conch_language"]["0.4.0"]["conch_language"]["src"])
+export type LanguageVm  = module.LanguageVm 
+export type TypeAnalysisInfo  = module.TypeAnalysisInfo 
+export type SimpleValue  = module.SimpleValue 
+export type Suggestion  = module.Suggestion 
+export type Metadata  = module.Metadata 
+export type Type  = module.Type 
+export type LiteralType  = module.LiteralType 
+export type StrangeType  = module.StrangeType 
+export type UnionType  = module.UnionType 
+export type IntersectionType  = module.IntersectionType 
+export type TableType  = module.TableType 
+export type FunctionType  = module.FunctionType 
+export type CommandType  = module.CommandType 
+export type CommandArgument  = module.CommandArgument 
+export type AnalysisResult  = module.AnalysisResult 
+export type InputState  = module.InputState 
+export type RunResult  = module.RunResult 
+export type LanguageInterface  = module.LanguageInterface 
+return module

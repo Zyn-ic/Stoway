@@ -1,0 +1,10 @@
+{
+  "aliases": {
+    "CoreStore": "./ReplicatedStorage/Shared/Stoway/CoreStore",
+    "Stoway": "./src/server/Services/StowayServerV3_0_0",
+    "Shared": "./ReplicatedStorage/Shared",
+    "Result": "./ReplicatedStorage/Shared/Stoway/Result",
+    "lune": "~/.lune/.typedefs/0.10.5/"
+  },
+  "languageMode": "nonstrict"
+}
