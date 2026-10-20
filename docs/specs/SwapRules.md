@@ -2,7 +2,7 @@
 
 Swap exchanges the positions of two items in the inventory. It is a positional operation that does not create or destroy items.
 
-**Stacking during slot operations:** Swap is the only slot operation that can trigger stacking (via `StackOnSwap`). Move and split never stack. Note: add operations always attempt stacking when `CanStack = true` — that is separate from slot operations.
+**Stacking during slot operations:** Swap is the only slot operation that can trigger stacking (via `StackOnSwap`). Move and split never stack. Note: add operations attempt to merge into existing stacks when `CanStack = true` — new stacks still cap at `MaxStackSize`.
 
 ---
 

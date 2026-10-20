@@ -94,13 +94,16 @@ end
 
 -- Reads a tool template's attributes and returns safe metadata defaults.
 -- These are merged UNDER caller-provided metadata (caller wins on conflict).
-local function getDefaultMetadata(template: Instance): Types.ItemMetadata
+-- defaultDroppable is the per-player DefaultDroppable setting; it applies
+-- only when the template itself does not declare a Droppable attribute.
+local function getDefaultMetadata(template: Instance, defaultDroppable: boolean?): Types.ItemMetadata
+	local dropDefault = if defaultDroppable == nil then true else defaultDroppable
 	return {
 		Description = (template:GetAttribute("Description") or "") :: any,
 		Image        = (template:GetAttribute("Image") or "") :: any,
 		Droppable    = (if template:GetAttribute("Droppable") ~= nil
 		               then template:GetAttribute("Droppable")
-		               else true) :: any,
+		               else dropDefault) :: any,
 		IsGamepass   = (template:GetAttribute("IsGamepass") or false) :: any,
 		Rarity       = (template:GetAttribute("Rarity") or "Common") :: any,
 		Type         = (template:GetAttribute("Type") or "Material") :: any,
@@ -298,7 +301,7 @@ function Stoway.AddItem(player: Player, itemData: Types.ItemInput, options: Type
 		end
 
 		local merged: Types.ItemInput = table.clone(itemData)
-		merged.Metadata = mergeMetadata(itemData.Metadata, getDefaultMetadata(template))
+		merged.Metadata = mergeMetadata(itemData.Metadata, getDefaultMetadata(template, state.Settings.DefaultDroppable))
 		return cs.add(state, merged, options)
 	end)
 end
@@ -314,7 +317,7 @@ function Stoway.AddToBackpack(player: Player, itemData: Types.ItemInput, options
 		end
 
 		local merged: Types.ItemInput = table.clone(itemData)
-		merged.Metadata = mergeMetadata(itemData.Metadata, getDefaultMetadata(template))
+		merged.Metadata = mergeMetadata(itemData.Metadata, getDefaultMetadata(template, state.Settings.DefaultDroppable))
 		return cs.addToBackpack(state, merged, options)
 	end)
 end
@@ -330,7 +333,7 @@ function Stoway.AddToHotbar(player: Player, itemData: Types.ItemInput, slot: num
 		end
 
 		local merged: Types.ItemInput = table.clone(itemData)
-		merged.Metadata = mergeMetadata(itemData.Metadata, getDefaultMetadata(template))
+		merged.Metadata = mergeMetadata(itemData.Metadata, getDefaultMetadata(template, state.Settings.DefaultDroppable))
 		return cs.addToHotbar(state, merged, slot)
 	end)
 end

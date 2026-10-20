@@ -99,12 +99,20 @@ local function asCount(raw: unknown, default: number): number
 end
 
 local SLOT_TYPES = { "Hotbar", "Storage" }
+local UUID_QUOTE_HINT = "quotes required, UUIDs contain dots"
 
 -- static_enum_from_array is curried: it returns a registrator that still
 -- needs (name, desc). Forgetting the second call hands register a
 -- function, which dies in analysis ("index function with 'kind'").
 local function slotTypeArg(name: string, desc: string): any
 	return conch.args.static_enum_from_array(SLOT_TYPES)(name, desc)
+end
+
+-- Conch's language parser treats an unquoted dot as syntax, and generated
+-- UUIDs include an os.clock() decimal. Quote every UUID argument or the
+-- token is silently truncated at the dot.
+local function uuidArg(): any
+	return conch.args.string("uuid", "Item UUID in quotes")
 end
 
 local function normalizeSkin(raw: unknown): string?
@@ -156,6 +164,22 @@ local function logAddResult(label: string, target: string, result: any)
 	end
 end
 
+-- Prints UUIDs pre-quoted so `inv` output can be copied straight into
+-- remove/drop/split/equip without hitting the console's dot tokenizer.
+local function quoteUUID(uuid: string?): string
+	if uuid == nil or uuid == "" then return "None" end
+	return `"{uuid}"`
+end
+
+-- A dotless UUID is almost always an unquoted UUID the parser cut at the
+-- os.clock() decimal. Point the user at the quoted form instead of leaving
+-- them with a bare ITEM_NOT_FOUND.
+local function maybeHintUuid(uuid: string, reason: string)
+	if reason == "ITEM_NOT_FOUND" and not string.find(uuid, ".", 1, true) then
+		conch.log("info", "  Hint: UUIDs contain dots; copy the quoted UUID from inv.")
+	end
+end
+
 -----------------------------
 -- COMMANDS --
 -----------------------------
@@ -174,16 +198,16 @@ local function registerAll(stoway: StowayApi)
 				conch.log("info", ("Weight: %d / %d (0 = Infinite)"):format(state.Weight, state.Settings.Limit))
 				conch.log("info", ("CanStack: %s | MaxStack: %d"):format(tostring(state.Settings.CanStack), state.Settings.MaxStackSize))
 				conch.log("info", ("HotbarType: %s | Sorting: %s"):format(state.Settings.HotbarType, tostring(state.Settings.Sorting)))
-				conch.log("info", ("Equipped UUID: %s"):format(state.EquippedItemUUID or "None"))
+				conch.log("info", ("Equipped UUID: %s"):format(quoteUUID(state.EquippedItemUUID)))
 				conch.log("info", ("HOTBAR (max %d):"):format(state.Settings.MaxHotbarSlots))
 				for i = 1, state.Settings.MaxHotbarSlots do
 					local uuid = state.Hotbar[i]
 					if uuid then
 						local item = state.Items[uuid]
 						if item then
-							conch.log("info", ("  [%d] %s x%d (UUID: %s)"):format(i, item.Id, item.Amount, uuid))
+							conch.log("info", ("  [%d] %s x%d (UUID: %s)"):format(i, item.Id, item.Amount, quoteUUID(uuid)))
 						else
-							conch.log("warn", ("  [%d] (ORPHAN UUID: %s)"):format(i, uuid))
+							conch.log("warn", ("  [%d] (ORPHAN UUID: %s)"):format(i, quoteUUID(uuid)))
 						end
 					else
 						conch.log("info", ("  [%d] (empty)"):format(i))
@@ -193,9 +217,9 @@ local function registerAll(stoway: StowayApi)
 				for i, uuid in ipairs(state.Storage) do
 					local item = state.Items[uuid]
 					if item then
-						conch.log("info", ("  [%d] %s x%d (UUID: %s)"):format(i, item.Id, item.Amount, uuid))
+						conch.log("info", ("  [%d] %s x%d (UUID: %s)"):format(i, item.Id, item.Amount, quoteUUID(uuid)))
 					else
-						conch.log("warn", ("  [%d] (ORPHAN UUID: %s)"):format(i, uuid))
+						conch.log("warn", ("  [%d] (ORPHAN UUID: %s)"):format(i, quoteUUID(uuid)))
 					end
 				end
 			end)
@@ -265,48 +289,47 @@ local function registerAll(stoway: StowayApi)
 	})
 
 	conch.register("remove", {
-		description = "Remove item by UUID: remove <uuid> [amount]",
+		description = "Remove item by UUID (quote it!): remove \"uuid\" [amount]",
 		permissions = P,
 		arguments = function()
-			return conch.args.string("uuid", "Item UUID"),
-				conch.args.opt(conch.args.number("amount", "How many"))
+			return uuidArg(), conch.args.opt(conch.args.number("amount", "How many"))
 		end,
 		callback = function(uuid: string, amount: number?)
 			withCaller(stoway, function(player: Player)
 				if not uuid or uuid == "" then
-					conch.log("error", "Usage: remove <uuid> [amount]")
+					conch.log("error", `Usage: remove "uuid" [amount] ({UUID_QUOTE_HINT})`)
 					return
 				end
 				local a: number? = if typeof(amount) == "number" then amount :: number else nil
 				local result = stoway.RemoveItem(player, uuid, a, true)
-				conch.log("info", ("[Remove] %s"):format(uuid))
+				conch.log("info", ("[Remove] %s"):format(quoteUUID(uuid)))
 				if result.ok then
 					conch.log("success", "  Success: true")
 					conch.log("info", ("  Remaining: %s"):format(tostring(result.value.remaining or 0)))
 				else
 					conch.log("error", "  Success: false")
 					conch.log("error", ("  Reason: %s"):format(result.error.message))
+					maybeHintUuid(uuid, result.error.message)
 				end
 			end)
 		end,
 	})
 
 	conch.register("drop", {
-		description = "Drop item into the world: drop <uuid> [amount]",
+		description = "Drop item into the world (quote UUID): drop \"uuid\" [amount]",
 		permissions = P,
 		arguments = function()
-			return conch.args.string("uuid", "Item UUID"),
-				conch.args.opt(conch.args.number("amount", "How many"))
+			return uuidArg(), conch.args.opt(conch.args.number("amount", "How many"))
 		end,
 		callback = function(uuid: string, amount: number?)
 			withCaller(stoway, function(player: Player)
 				if not uuid or uuid == "" then
-					conch.log("error", "Usage: drop <uuid> [amount]")
+					conch.log("error", `Usage: drop "uuid" [amount] ({UUID_QUOTE_HINT})`)
 					return
 				end
 				local a: number? = if typeof(amount) == "number" then amount :: number else nil
 				local result = stoway.Drop(player, uuid, a, true)
-				conch.log("info", ("[Drop] %s"):format(uuid))
+				conch.log("info", ("[Drop] %s"):format(quoteUUID(uuid)))
 				if result.ok then
 					conch.log("success", "  Success: true")
 					conch.log("info", ("  Dropped: %s"):format(tostring(result.value.removedItem.Amount or 0)))
@@ -314,6 +337,7 @@ local function registerAll(stoway: StowayApi)
 				else
 					conch.log("error", "  Success: false")
 					conch.log("error", ("  Reason: %s"):format(result.error.message))
+					maybeHintUuid(uuid, result.error.message)
 				end
 			end)
 		end,
@@ -380,10 +404,10 @@ local function registerAll(stoway: StowayApi)
 	})
 
 	conch.register("split", {
-		description = "Split a stack: split <uuid> <amount> [type] [slot]",
+		description = "Split a stack (quote UUID): split \"uuid\" <amount> [type] [slot]",
 		permissions = P,
 		arguments = function()
-			return conch.args.string("uuid", "Item UUID"),
+			return uuidArg(),
 				conch.args.number("amount", "How many"),
 				conch.args.opt(slotTypeArg("dest-type", "Hotbar or Storage")),
 				conch.args.opt(conch.args.number("dest-slot", "Target slot"))
@@ -391,22 +415,22 @@ local function registerAll(stoway: StowayApi)
 		callback = function(uuid: string, amount: number, destType: unknown, destSlot: unknown)
 			withCaller(stoway, function(player: Player)
 				if not uuid or uuid == "" or typeof(amount) ~= "number" then
-					conch.log("error", "Usage: split <uuid> <amount> [Hotbar|Storage] [slot]")
+					conch.log("error", `Usage: split "uuid" <amount> [Hotbar|Storage] [slot] ({UUID_QUOTE_HINT})`)
 					return
 				end
 				local destination: Types.SlotRef? = nil
 				if destType ~= nil then
 					destination = makeSlotRef(destType, destSlot)
 					if not destination then
-						conch.log("error", "Usage: split <uuid> <amount> [Hotbar|Storage] [slot]")
+						conch.log("error", `Usage: split "uuid" <amount> [Hotbar|Storage] [slot] ({UUID_QUOTE_HINT})`)
 						return
 					end
 				end
 				local result = stoway.Split(player, uuid, amount :: number, destination, true)
-				conch.log("info", ("[Split] %s x%d"):format(uuid, amount))
+				conch.log("info", ("[Split] %s x%d"):format(quoteUUID(uuid), amount))
 				if result.ok then
 					conch.log("success", "  Success: true")
-					conch.log("info", ("  New UUID: %s"):format(tostring(result.value.newUUID or "?")))
+					conch.log("info", ("  New UUID: %s"):format(quoteUUID(tostring(result.value.newUUID or ""))))
 					conch.log("info", ("  New Amount: %s"):format(tostring(result.value.newAmount or 0)))
 					if result.value.newSlotType and result.value.newSlot then
 						conch.log("info", ("  Destination: %s %s"):format(tostring(result.value.newSlotType), tostring(result.value.newSlot)))
@@ -414,23 +438,25 @@ local function registerAll(stoway: StowayApi)
 				else
 					conch.log("error", "  Success: false")
 					conch.log("error", ("  Reason: %s"):format(result.error.message))
+					maybeHintUuid(uuid, result.error.message)
 				end
 			end)
 		end,
 	})
 
-	-- Shared equip reporter (uuids carry dots, so the console language
-	-- mangles them unquoted: equip "full-uuid". Prefer equip-slot).
+	-- Shared equip reporter. UUIDs carry a dot from os.clock(), so the console
+	-- language truncates them unquoted: equip "full-uuid". Prefer equip-slot.
 	local function reportEquip(stoway: StowayApi, player: Player, uuid: string)
 		local result = stoway.EquipSlot(player, uuid, true)
-		conch.log("info", ("[Equip] %s"):format(uuid))
+		conch.log("info", ("[Equip] %s"):format(quoteUUID(uuid)))
 		if result.ok then
 			conch.log("success", "  Success: true")
-			conch.log("info", ("  Equipped UUID: %s"):format(tostring(result.value.uuid or "None")))
-			conch.log("info", ("  Previous: %s"):format(tostring(result.value.previousUUID or "None")))
+			conch.log("info", ("  Equipped UUID: %s"):format(quoteUUID(tostring(result.value.uuid or ""))))
+			conch.log("info", ("  Previous: %s"):format(quoteUUID(tostring(result.value.previousUUID or ""))))
 		else
 			conch.log("error", "  Success: false")
 			conch.log("error", ("  Reason: %s"):format(result.error.message))
+			maybeHintUuid(uuid, result.error.message)
 		end
 	end
 
@@ -438,12 +464,12 @@ local function registerAll(stoway: StowayApi)
 		description = "Equip item by UUID (quote it!): equip \"uuid\"",
 		permissions = P,
 		arguments = function()
-			return conch.args.string("uuid", "Item UUID in quotes")
+			return uuidArg()
 		end,
 		callback = function(uuid: string)
 			withCaller(stoway, function(player: Player)
 				if not uuid or uuid == "" then
-					conch.log("error", "Usage: equip \"uuid\" (quotes required, UUIDs contain dots)")
+					conch.log("error", `Usage: equip "uuid" ({UUID_QUOTE_HINT})`)
 					return
 				end
 				reportEquip(stoway, player, uuid)
@@ -487,7 +513,7 @@ local function registerAll(stoway: StowayApi)
 				local result = stoway.UnequipSlot(player, true)
 				conch.log("info", "[Unequip]")
 				if result.ok then
-					conch.log("info", ("  Previous UUID: %s"):format(tostring(result.value.previousUUID or "None")))
+					conch.log("info", ("  Previous UUID: %s"):format(quoteUUID(tostring(result.value.previousUUID or ""))))
 				else
 					conch.log("error", ("  Reason: %s"):format(result.error.message))
 				end

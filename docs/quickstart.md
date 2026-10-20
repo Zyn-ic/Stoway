@@ -30,9 +30,10 @@ Players get their defaults from `Shared/Stoway/Settings.luau`, not the engine:
 | `CanStack` | `false` | `true` |
 | `BackpackEnabled` | `false` | `true` |
 
-So: a hotbar row, no storage toggle, and no stacking. `addback` returns
-`BACKPACK_DISABLED`. To explore storage, set `BackpackEnabled = true` in
-`Settings.luau` (there is no console toggle yet) and try
+So: a hotbar row, no storage toggle, and no merging into existing stacks. A
+single add still creates stacks up to `MaxStackSize`. `addback` returns
+`BACKPACK_DISABLED`. To explore storage, run `toggle-backpack` (or set
+`BackpackEnabled = true` in `Settings.luau`) and try
 `set-layout StandardHotbarStorage` + `set-skin Default`.
 
 ## Poke it

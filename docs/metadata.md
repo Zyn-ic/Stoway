@@ -14,7 +14,7 @@ extend Stoway without touching the engine.
 | `Type` | string | Required field, storage section key, O(1) index |
 | `Image` | string | Slot button image (empty → `Id` fallback text) |
 | `Description` | string | Storage search only |
-| `Droppable` | boolean | `Drop` route (`false` → `NOT_DROPPABLE`), defaults true |
+| `Droppable` | boolean | `Drop` route (`false` → `NOT_DROPPABLE`), defaults from `DefaultDroppable` (true when unset) |
 | `IsGamepass` | boolean | Reserved open key |
 | `Team` | string | Slot ring + keybind tint (`Colors.getTeamColor`); `set-team` stamps it |
 | `Id` / `Amount` | top-level | Fallback label / stack badge (not metadata) |

@@ -18,7 +18,7 @@ local DEFAULT_SETTINGS: Types.Settings = {
 
 	-- Capacity: Limit = 0 means infinite. Weight = sum of all item Amounts.
 	Limit = 15,
-	CanStack = true,
+	CanStack = true, -- allow merging into existing stacks; new stacks still cap at MaxStackSize
 	MaxStackSize = 5,
 	BackpackEnabled = true,
 
