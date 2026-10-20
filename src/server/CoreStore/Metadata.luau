@@ -27,8 +27,8 @@ local Metadata = {}
 --
 -- Amount fallback chain: itemData.Amount -> metadata.Amount -> metadata.StackAmount -> 1
 -- Cleans Amount/StackAmount from metadata after extraction.
--- Defaults Droppable to true if not set.
-function Metadata.normalize(itemData: Types.ItemInput): (string?, number?, Types.ItemMetadata?, string?)
+-- Defaults Droppable to defaultDroppable (or true when omitted).
+function Metadata.normalize(itemData: Types.ItemInput, defaultDroppable: boolean?): (string?, number?, Types.ItemMetadata?, string?)
 	local itemId = itemData.Id
 
 	if type(itemId) ~= "string" or itemId == "" then
@@ -75,7 +75,7 @@ function Metadata.normalize(itemData: Types.ItemInput): (string?, number?, Types
 	end
 
 	if metadata.Droppable == nil then
-		metadata.Droppable = true
+		metadata.Droppable = if defaultDroppable == nil then true else defaultDroppable
 	end
 
 	return itemId, amount, metadata, nil

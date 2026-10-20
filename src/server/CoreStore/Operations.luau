@@ -368,7 +368,7 @@ function Operations.add(
 	local opts: Types.AddOptions = options or {}
 
 	-- Step 1: Normalize input
-	local itemId, amount, metadata, normalizeError = Metadata.normalize(itemData)
+	local itemId, amount, metadata, normalizeError = Metadata.normalize(itemData, state.Settings.DefaultDroppable)
 
 	if normalizeError or not itemId or not amount or not metadata then
 		return {

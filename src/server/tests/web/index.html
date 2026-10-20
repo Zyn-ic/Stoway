@@ -346,7 +346,7 @@ const Utils = {
 
 // --- Metadata ---
 const Metadata = {
-  normalize(itemData) {
+  normalize(itemData, defaultDroppable) {
     const itemId = itemData.Id;
     if (typeof itemId !== 'string' || itemId === '') return [null, null, null, 'INVALID_ITEM_ID'];
     let metadata = itemData.Metadata ? Utils.shallowCopy(itemData.Metadata) : {};
@@ -355,7 +355,7 @@ const Metadata = {
     delete metadata.Amount; delete metadata.StackAmount;
     const amount = rawAmount || 1;
     if (!Utils.isPositiveNumber(amount)) return [null, null, null, 'INVALID_AMOUNT'];
-    if (metadata.Droppable == null) metadata.Droppable = true;
+    if (metadata.Droppable == null) metadata.Droppable = defaultDroppable == null ? true : defaultDroppable;
     return [itemId, amount, metadata, null];
   },
   matchesRequiredFields(left, right, fields) {
@@ -556,7 +556,7 @@ function addNewStacks(s, itemId, amount, meta, opts) {
 const Operations = {
   add(s, itemData, options) {
     const opts = options || {};
-    const [itemId, amount, meta, err] = Metadata.normalize(itemData);
+    const [itemId, amount, meta, err] = Metadata.normalize(itemData, s.Settings.DefaultDroppable);
     if (err || !itemId) return { success: false, reason: err || 'INVALID_ITEM_DATA', addedAmount: 0, overflow: 0 };
     const origAmt = amount; const remCap = State.getRemainingCapacity(s);
     if (remCap <= 0) return { success: false, reason: 'FULL', addedAmount: 0, overflow: amount };

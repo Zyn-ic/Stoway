@@ -135,7 +135,7 @@ If you want to stack after split:
   2. Use swap with StackOnSwap = true to merge them
 ```
 
-This is consistent with the rule: **stacking during slot operations only happens via add (always) or swap with StackOnSwap = true.**
+This is consistent with the rule: **stacking during slot operations only happens via add (when CanStack = true) or swap with StackOnSwap = true.**
 
 ---
 

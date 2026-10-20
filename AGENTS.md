@@ -133,7 +133,7 @@ InventoryState = {
 HotbarType = "Static"     -- or "Dynamic"
 MaxHotbarSlots = 10
 Limit = 15                -- 0 = infinite
-CanStack = true
+CanStack = true           -- merge into existing stacks; new stacks still cap
 MaxStackSize = 5
 BackpackEnabled = true
 StackOnSwap = false       -- system-level, default off
@@ -158,7 +158,7 @@ StackBlacklist = { Legendary = true, Mythic = true, Special = true }
 
 ### Key Behaviors
 
-- **Stacking:** Only via `add` (always), `swap`, or `swapStack` when `StackOnSwap = true`. Move and split never stack.
+- **Stacking:** `add` merges into existing stacks when `CanStack = true`; `swap`/`swapStack` merge only when `CanStack` and `StackOnSwap` are both true. Move and split never merge. New stacks from `add` always cap at `MaxStackSize`.
 - **MaxStackSize:** Enforced unconditionally. No item Amount may exceed it after any operation.
 - **Dynamic hotbar:** Compacts after remove/swap/move. Static preserves holes. Use `CoreStore.setHotbarType(state, "Dynamic")` to switch types — it auto-compacts.
 - **Auto-sort:** Triggers after any mutating operation when `Sorting = true`. Sorts Storage only. Hotbar is never sorted (user-controlled).
@@ -215,3 +215,4 @@ docs/
 8. **Nil values in `updateMetadata`** — In Luau, `{ Key = nil }` creates empty table. Nil values are silently ignored.
 9. **MetadataIndex maintenance** — every `createItem`, `destroyUnplacedItem`, `remove`, and `updateMetadata` must update MetadataIndex.
 10. **Dynamic Hotbar slot availability** — The only available slot is the append position (`findEmptyHotbarSlot`). Operations targeting non-append slots are rejected with `DESTINATION_UNAVAILABLE`. Preferred slot is ignored in Dynamic mode. Use `CoreStore.setHotbarType(state, "Dynamic")` to switch types — it auto-compacts the hotbar.
+11. **`CanStack = false` is not `MaxStackSize = 1`** — it only blocks merging into existing stacks. `add apple 5` still creates one stack of 5. Set `MaxStackSize = 1` for one item per unit.
