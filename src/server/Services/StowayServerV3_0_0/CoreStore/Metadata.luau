@@ -30,8 +30,11 @@ local EK = Result.ErrorKind
 --
 -- Amount fallback chain: itemData.Amount -> metadata.Amount -> metadata.StackAmount -> 1
 -- Cleans Amount/StackAmount from metadata after extraction.
--- Defaults Droppable to true if not set.
-function Metadata.normalize(itemData: Types.ItemInput): Result.Result<{ itemId: string, amount: number, metadata: Types.ItemMetadata }>
+-- Defaults Droppable to defaultDroppable (or true when omitted).
+function Metadata.normalize(
+	itemData: Types.ItemInput,
+	defaultDroppable: boolean?
+): Result.Result<{ itemId: string, amount: number, metadata: Types.ItemMetadata }>
 	local itemId = itemData.Id
 
 	if type(itemId) ~= "string" or itemId == "" then
@@ -78,7 +81,7 @@ function Metadata.normalize(itemData: Types.ItemInput): Result.Result<{ itemId: 
 	end
 
 	if metadata.Droppable == nil then
-		metadata.Droppable = true
+		metadata.Droppable = if defaultDroppable == nil then true else defaultDroppable
 	end
 
 	return Result.Ok({ itemId = itemId, amount = amount, metadata = metadata })

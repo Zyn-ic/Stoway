@@ -403,7 +403,7 @@ function Operations.add(
 	local opts: Types.AddOptions = options or {}
 
 	-- Step 1: Normalize input
-	local normResult = Metadata.normalize(itemData)
+	local normResult = Metadata.normalize(itemData, state.Settings.DefaultDroppable)
 
 	if not normResult.ok then
 		return Err(normResult.error.message)

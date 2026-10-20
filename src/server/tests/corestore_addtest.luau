@@ -270,6 +270,20 @@ runTest("getAllItems returns all items", true, function()
 	assertEqual(#all, 2, "two items total")
 end)
 
+runTest("DefaultDroppable applies when metadata omits it", true, function()
+	local state = CoreStore.new({ DefaultDroppable = false })
+	local r = CoreStore.add(state, { Id = "Potion", Amount = 1 })
+	local uuid = getFirstUUID(r)
+	assertEqual(state.Items[uuid].Metadata.Droppable, false, "default droppable")
+end)
+
+runTest("Explicit Droppable wins over DefaultDroppable", true, function()
+	local state = CoreStore.new({ DefaultDroppable = false })
+	local r = CoreStore.add(state, { Id = "Potion", Amount = 1, Metadata = { Droppable = true } })
+	local uuid = getFirstUUID(r)
+	assertEqual(state.Items[uuid].Metadata.Droppable, true, "explicit droppable")
+end)
+
 -- EXPECTED FAILURE TESTS (deliberately wrong assertions)
 
 runTest("[DELIBERATE] Wrong weight after add", false, function()

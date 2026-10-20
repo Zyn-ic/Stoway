@@ -56,18 +56,21 @@ export type InventoryState = {
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| HotbarType | `"Static" \| "Dynamic"` | `"Static"` | Static allows holes. Dynamic compacts on remove. |
-| MaxHotbarSlots | `number` | `10` | Maximum hotbar slot count. |
-| Limit | `number` | `15` | Weight limit. 0 = infinite. |
-| CanStack | `boolean` | `true` | Enable/disable stacking globally. |
-| MaxStackSize | `number` | `5` | Maximum items per stack. |
-| BackpackEnabled | `boolean` | `true` | Enable/disable storage container. |
-| StackOnSwap | `boolean` | `false` | Allow stacking during swap and swapStack operations. Requires CanStack = true. |
-| Sorting | `boolean` | `false` | Enable auto-sort after mutations. |
-| SortOrder | `"None" \| "Name" \| "Rarity" \| "ItemType"` | `"None"` | Sort criteria when Sorting is enabled. |
-| StackRequiredFields | `{ string }` | `{ "Rarity", "Type" }` | Metadata fields that must match for stacking. |
-| StackBlacklist | `{ [string]: boolean }` | `{ Legendary = true, Mythic = true, Special = true }` | Rarities that cannot stack. |
-| DefaultDroppable | `boolean` | `true` | Default Droppable value for new items. |
+| HotbarType | `"Static" \| "Dynamic"` | `"Static"` | Static keeps fixed slots (holes allowed); Dynamic packs and compacts. |
+| MaxHotbarSlots | `number` | `10` | Number of hotbar slots (`1..N`). |
+| Limit | `number` | `15` | Total Amount capacity. 0 = infinite. |
+| CanStack | `boolean` | `true` | Allow merging into existing stacks. New stacks are still capped by MaxStackSize. |
+| MaxStackSize | `number` | `5` | Max Amount per stack. Caps new stacks and splits; existing stacks are not re-split. |
+| BackpackEnabled | `boolean` | `true` | Allow Storage. false rejects storage operations. |
+| StackOnSwap | `boolean` | `false` | Allow swap/swapStack to merge. Requires CanStack = true; move never merges. |
+| Sorting | `boolean` | `false` | Auto-sort Storage after mutations. Hotbar is never sorted. |
+| SortOrder | `"None" \| "Name" \| "Rarity" \| "ItemType"` | `"None"` | Sort key when Sorting is on. Rarity is descending. |
+| StackRequiredFields | `{ string }` | `{ "Rarity", "Type" }` | Metadata fields that must match to merge. |
+| StackBlacklist | `{ [string]: boolean }` | `{ Legendary = true, Mythic = true, Special = true }` | Rarity values that never merge into existing stacks. |
+| DefaultDroppable | `boolean` | `true` | Droppable default for new items that omit it. |
+
+These are engine fallbacks; `State.new` can override any of them per
+inventory via `SettingsOverrides`.
 
 ---
 
@@ -83,7 +86,7 @@ export type InventoryState = {
    - Read Amount, or metadata.Amount, or metadata.StackAmount
    - Parse string amounts to number
    - Remove Amount and StackAmount from metadata
-   - Apply default Droppable = true if not set
+   - Apply Droppable from Settings.DefaultDroppable if not set
    - Default amount = 1
 
 2. Validate
@@ -94,12 +97,12 @@ export type InventoryState = {
    - If Limit > 0 and remaining capacity <= 0: return FULL
    - Cap total amount to remaining capacity (partial fill)
 
-4. Attempt stacking (if CanStack = true)
+4. Attempt merging into existing stacks (only if CanStack = true)
    - Pass Placement to tryStack for placement-aware stacking
    - Reduce amountLeft by stacked amount
    - Track updatedItems (UUID -> new Amount)
 
-5. Place remaining amount as new stacks
+5. Place remaining amount as new stacks (always runs)
    - Split into multiple stacks if amountLeft > MaxStackSize
    - Each new stack is capped at MaxStackSize
    - Placement priority based on options.Placement:
@@ -115,6 +118,9 @@ export type InventoryState = {
    - addedAmount = total amount successfully placed
    - overflow = amount that could not be placed (no space)
 ```
+
+`CanStack` only gates step 4. Step 5 always runs, so a new stack can still
+reach `MaxStackSize` when merging is off.
 
 ### Overflow Example
 
