@@ -43,6 +43,6 @@ pre-quoted for copy-paste; prefer slot commands such as
 | `toggle-stack` / `toggle-limit` / `toggle-sort` / `toggle-debug` | Flip engine flags (debug silences system print/warn) |
 | `set-limit <n>` / `set-max-stack <n>` / `set-hotbar-slots <n>` | Tune capacity |
 | `set-hotbar-type <Static\|Dynamic>` | Switch packing (auto-compacts) |
-| `set-skin <Default\|Modern\|Metal\|Jailbreak>` | Switch skin (Jailbreak pairs its layout) |
+| `set-skin <Default\|Modern\|Metal\|Jailbreak\|Persona>` | Switch skin (Jailbreak + Persona pair with `JailbreakHotbar`) |
 | `set-layout <StandardHotbarStorage\|JailbreakHotbar> [skin]` | Switch engine live |
 | `set-team <criminal\|cop\|prison>` | Stamp `Team` on every item |

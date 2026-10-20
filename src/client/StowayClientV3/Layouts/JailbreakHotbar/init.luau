@@ -111,8 +111,11 @@ function JailbreakHotbar.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: CoreTy
 		return Shared.hasDestItem(store, ref)
 	end)
 
-	-- No skin hooks in the code-built skin; clear any previous table.
-	ClientController.SetHooks(nil)
+	-- Skin hooks: Jailbreak (code-built) carries none, so this is nil
+	-- there; Persona ships its own Hooks table on the handle. Set here so
+	-- the controller's state hooks (Equip/Unequip/Add/Remove/Swap) fire.
+	-- Teardown clears it again.
+	ClientController.SetHooks(skin.Hooks)
 
 	-- Swap-pop: both endpoints jump on every committed swap (each ripple
 	-- crossing included). Scoped to the mount; teardown disconnects.

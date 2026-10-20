@@ -16,13 +16,15 @@ Stoway is a Roblox inventory framework. The core is a pure Luau inventory engine
 
 **Communications adapter:** `src/server/Services/StowayServerV3_0_0/Communications.luau`
 
-**Client (StowayClientV3, branch `client`):** `src/client/StowayClientV3/` — Fusion 0.3 (`isRelease=true`, Studio `Workspace.Fusion` snapshot, `UsedAs`/`Graph`/`lazy For`) client. Mapped to `StarterPlayer.StarterPlayerScripts` via `default.project.json`. Boots from the server snapshot; settings-driven hotbar + sectioned storage, drag + drop, multi-platform input (PC/console/touch), skin hooks. Structured around the master plan's `HotbarType` vs `UiSkin` split: `CoreStore/` (pure state+query), `Controller/` (Fusion RootScope + `LayoutManager`), `Layouts/<HotbarType>/` (render engines), `Skins/<SkinName>/` (GUI prefab loaders), `Slot/SlotView.luau` (shared across layouts). Scopes are `Fusion.Scope<typeof(Fusion)>` (see Fusion notes below). See `src/client/StowayClientV3/README.md`.
+**Client (StowayClientV3, branch `client`):** `src/client/StowayClientV3/` — Fusion 0.3 (`isRelease=true`, Studio `Workspace.Fusion` snapshot, `UsedAs`/`Graph`/`lazy For`) client. Mapped to `StarterPlayer.StarterPlayerScripts` via `default.project.json`. Boots from the server snapshot; settings-driven hotbar + sectioned storage, drag + drop, multi-platform input (PC/console/touch), skin hooks. Structured around the master plan's `HotbarType` vs `UiSkin` split: `CoreStore/` (pure state+query), `Controller/` (Fusion RootScope + `LayoutManager`), `Layouts/<HotbarType>/` (render engines), `Skins/<SkinName>/` (GUI prefab loaders + code-built skins), `Slot/SlotView.luau` (shared across layouts). Scopes are `Fusion.Scope<typeof(Fusion)>` (see Fusion notes below). See `src/client/StowayClientV3/README.md`.
 
 **Shared (Stoway):** `ReplicatedStorage/Shared/Stoway/` — shared types, settings defaults, colors, Result type, StowayRemotes wire, **CoreStore** (see below).
 
 **Vendored Fusion:** `ReplicatedStorage/Packages/fusion/` (Fusion 0.3 `isRelease=true`, copied from Studio `Workspace.Fusion` snapshot; `UsedAs` + `Graph`/`evaluate`/`change` + `lazy For` + `State/For/init.lua` with `Disassembly`/`ForTypes`; do NOT wally install again or the root `Packages/` folder will reappear. `wally.toml` still pins `acecateer/fusion@0.3.1` for reference only).
 
 **Skin prefabs (Studio-only, NOT in the repo):** `ReplicatedStorage/Stoway/GUI/<SkinName>/` (flat — exactly one ScreenGui directly under the skin folder, plus `Slot/`) — ScreenGui holds Hotbar/Backpack frames + BackpackStuff, `Slot/template` slot prefab (slotbutton, stackcount, slotnumber, selecticon, rarityframe). One shared `GUI/DraggingGui` for the drag ghost. Optional `Slot`-folder attributes: `GhostHidden` / `HideInStorage` / `HideInHotbar` (comma names), `SlotBleedPx` (number). The GUI lives in the .rbxl only; a `rojo build` output has no GUI and the client warns + skips views.
+
+**Code-built skins (in the repo, no prefab):** `Skins/Jailbreak` and `Skins/Persona` build their GUI in Lua and return the same `SkinHandle` shape as the prefab loader. `Skins/Persona` is the slanted-ink look (6-degree tilt, white miter outlines, red accent `235,35,55`, combo-counter font) and pairs with the `JailbreakHotbar` layout; it ships its own hook table (`Persona/Hooks.luau`) plus a TweenService-only FX runtime (`Persona/Fx.luau`), so the skin visuals ride the 11 skin hooks without a `HookFuncs` prefab folder.
 
 ---
 
@@ -152,6 +154,11 @@ return ModuleName
 | `Layouts/StandardHotbarStorage/Input.luau` | Per-layout IAS binds + PreferredInput; rebuilds on MaxHotbarSlots change | Mount(scope, skin, store, dragService) |
 | `Skins/SkinLoader/init.luau` | Generic prefab loader; owns the single shared DraggingGui singleton | Load(scope, playerGui, skinAssetName) |
 | `Skins/Default|Modern|Metal/init.luau` | Thin per-skin modules stamping look data onto the handle | Load(scope, playerGui, skinAssetName) |
+| `Skins/Jailbreak/init.luau` | Code-built skin: circular dark slots, no hooks table | Load(scope, playerGui, skinAssetName) |
+| `Skins/Persona/init.luau` | Code-built skin: slanted ink cards + red shard; ships its own hooks | Load(scope, playerGui, skinAssetName) |
+| `Skins/Persona/Theme.luau` | Persona palette, font, tilt, card geometry | Theme constants |
+| `Skins/Persona/Fx.luau` | Persona FX runtime (kick, flash, flicker, burst, ring, idle pulse) | new/Kick/PopIn/Flash/Flicker/Burst/Ring/SetIdle/Destroy |
+| `Skins/Persona/Hooks.luau` | Persona skin hooks: the 11-name contract, each wired to an FX punch | new(fx, targets) |
 | `Slot/SlotView.luau` | Slot hydration: image, stack count, rarity frame, keybind, equipped, packing. Shared across all layouts. | Create(scope, props) |
 
 ### Shared (Stoway layer)

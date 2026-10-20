@@ -118,7 +118,7 @@ end
 local function normalizeSkin(raw: unknown): string?
 	if typeof(raw) ~= "string" then return nil end
 	local normalized = (raw :: string):sub(1, 1):upper() .. (raw :: string):sub(2):lower()
-	if normalized == "Default" or normalized == "Modern" or normalized == "Metal" or normalized == "Jailbreak" then
+	if normalized == "Default" or normalized == "Modern" or normalized == "Metal" or normalized == "Jailbreak" or normalized == "Persona" then
 		return normalized
 	end
 	return nil
@@ -694,19 +694,19 @@ local function registerAll(stoway: StowayApi)
 	})
 
 	conch.register("set-skin", {
-		description = "Switch the UI skin (Jailbreak pairs with JailbreakHotbar)",
+		description = "Switch the UI skin (Jailbreak and Persona pair with JailbreakHotbar)",
 		permissions = P,
 		arguments = function()
-			return conch.args.static_enum_from_array({ "Default", "Modern", "Metal", "Jailbreak" })("skin", "UiSkin")
+			return conch.args.static_enum_from_array({ "Default", "Modern", "Metal", "Jailbreak", "Persona" })("skin", "UiSkin")
 		end,
 		callback = function(raw: unknown)
 			withCaller(stoway, function(player: Player)
 				local skin = normalizeSkin(raw)
 				if not skin then
-					conch.log("error", "Usage: set-skin <Default|Modern|Metal|Jailbreak>")
+					conch.log("error", "Usage: set-skin <Default|Modern|Metal|Jailbreak|Persona>")
 					return
 				end
-				local layout = if skin == "Jailbreak" then "JailbreakHotbar" else "StandardHotbarStorage"
+				local layout = if skin == "Jailbreak" or skin == "Persona" then "JailbreakHotbar" else "StandardHotbarStorage"
 				sendLayout(player, layout, skin)
 			end)
 		end,
@@ -724,7 +724,7 @@ local function registerAll(stoway: StowayApi)
 				local layout = normalizeLayout(rawLayout)
 				local skin = normalizeSkin(if rawSkin == nil then "Default" else rawSkin)
 				if not layout or not skin then
-					conch.log("error", "Usage: set-layout <StandardHotbarStorage|JailbreakHotbar> [Default|Modern|Metal|Jailbreak]")
+					conch.log("error", "Usage: set-layout <StandardHotbarStorage|JailbreakHotbar> [Default|Modern|Metal|Jailbreak|Persona]")
 					return
 				end
 				sendLayout(player, layout, skin)
