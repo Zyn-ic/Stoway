@@ -263,8 +263,7 @@ function SlotView.Create(scope: Fusion.Scope<typeof(Fusion)>, props: SlotProps):
 		scope:Hydrate(stackcount) {
 			Visible = scope:Computed(function(use: Fusion.Use): boolean
 				local item: CoreTypes.Item? = use(currentItem)
-				local settings: CoreTypes.Settings? = use(store.Settings)
-				return settings ~= nil and settings.CanStack and item ~= nil
+				return item ~= nil and item.Amount > 1
 			end),
 			Text = scope:Computed(function(use: Fusion.Use): string
 				local item: CoreTypes.Item? = use(currentItem)

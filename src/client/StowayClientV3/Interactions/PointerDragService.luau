@@ -5,9 +5,10 @@
 --[[@description:
 	Fully generic pointer drag service. No inventory knowledge.
 	Layouts register any GuiObject as a draggable source or drop target
-	with a SlotRef. The service handles MouseButton1Down (covers mouse,
-	touch and pen), a 5/10px threshold, a Fusion Spring ghost, and hit
-	test via PlayerGui:GetGuiObjectsAtPosition with input.Position.
+	with a SlotRef. The service handles InputBegan for MouseButton1 and
+	Touch (not the legacy MouseButton1Down touch emulation), a 5/10px
+	threshold, a Fusion Spring ghost, and hit test via
+	PlayerGui:GetGuiObjectsAtPosition with input.Position.
 	All connections and the ghost are parented to the scopes passed in,
 	so LayoutManager:Teardown or ForPairs cleanup via doCleanup wipes them.
 	Drag commits call the caller-supplied onCommit(from,to) which hits
@@ -18,7 +19,7 @@
 	crossing the threshold arms the sweep, and every new slot the pointer
 	enters commits onCommit(current, entered) live (the caller returns
 	whether it applied; only applied crossings advance the ripple).
-	Release commits nothing — a press with no crossing is a tap.
+	Release commits nothing — a press that never arms the sweep is a tap.
 ]]
 -----------------------------
 -- VARIABLES --
@@ -68,6 +69,7 @@ type SelfData = {
 	_ghostRotValue: Fusion.Value<number>?,
 	_ghostRotSpring: Fusion.Spring<number>?,
 	_lastMousePos: Vector2,
+	_ghostPrevPos: Vector2,
 	_dragging: boolean,
 	_pressPos: Vector2,
 	_pressSlotRef: SlotRef?,
@@ -133,6 +135,7 @@ function PointerDragService.new(
 	self._ghostRotValue = nil :: Fusion.Value<number>?
 	self._ghostRotSpring = nil :: Fusion.Spring<number>?
 	self._lastMousePos = Vector2.zero
+	self._ghostPrevPos = Vector2.zero
 	self._dragging = false
 	self._pressPos = Vector2.zero
 	self._pressSlotRef = nil :: SlotRef?
@@ -163,10 +166,16 @@ function PointerDragService.new(
 end
 
 function PointerDragService.RegisterDraggable(self: Service, slotScope: Fusion.Scope<typeof(Fusion)>, handle: GuiButton, slotRef: SlotRef)
-	local conn = handle.MouseButton1Down:Connect(function()
+	local conn = handle.InputBegan:Connect(function(input: InputObject)
 		if not self._enabled then return end
 		if not handle.Visible then return end
-		self._pressPos = getMousePos()
+		if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then
+			return
+		end
+		-- InputObject.Position is already in GUI space (same as AbsolutePosition),
+		-- so this is valid for mouse and touch without an inset adjustment.
+		self._pressPos = Vector2.new(input.Position.X, input.Position.Y)
+		self._lastMousePos = self._pressPos
 		self._pressSlotRef = table.clone(slotRef)
 		self._pressFrame = handle.Parent :: GuiObject
 		self._pressOffset = Vector2.zero
@@ -435,6 +444,7 @@ function PointerDragService._beginDrag(self: Service, curPos: Vector2)
 	self._ghostRotValue = rotValue
 	self._ghostRotSpring = rotSpring
 	self._lastMousePos = curPos
+	self._ghostPrevPos = curPos
 	;self._layoutScope:Hydrate(ghost) {
 		Position = springPos,
 		Rotation = rotSpring,
@@ -442,11 +452,13 @@ function PointerDragService._beginDrag(self: Service, curPos: Vector2)
 
 	local moveConn = RunService.RenderStepped:Connect(function()
 		if not self._dragging or not self._ghostPosValue or not self._ghostRotValue then return end
-		local m = getMousePos()
+		-- Use the last input position, not GetMouseLocation: on touch there is
+		-- no mouse, so the latter is stale/undefined.
+		local m = self._lastMousePos
 		;self._ghostPosValue:set(UDim2.fromOffset(m.X, m.Y))
-		local velX = m.X - self._lastMousePos.X
-		local velY = m.Y - self._lastMousePos.Y
-		self._lastMousePos = m
+		local velX = m.X - self._ghostPrevPos.X
+		local velY = m.Y - self._ghostPrevPos.Y
+		self._ghostPrevPos = m
 		local speed = math.sqrt(velX * velX + velY * velY)
 		local targetRot = math.clamp(velX * 0.7, -22, 22)
 		if speed > 1.5 then

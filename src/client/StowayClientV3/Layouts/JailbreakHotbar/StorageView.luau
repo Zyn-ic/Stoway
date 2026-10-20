@@ -106,6 +106,8 @@ function StorageView.Create(
 			Store = store,
 			ShowKeybind = false,
 			HideChrome = skin.HideInStorage,
+			DragService = dragService,
+			Hooks = skin.Hooks,
 		})
 		local orderState = slotScope:Computed(function(): number
 			return listPosition

@@ -7,7 +7,8 @@ Items are data; Tools are what the character holds. Templates bridge them.
 - Template **name = item `Id`** (exact match). No template → `AddItem`
   fails with `ITEM_NOT_IN_TOOLS_FOLDER`.
 - Template **attributes become metadata defaults**: `Description` (`""`),
-  `Image` (`""`), `Droppable` (`true` unless set), `IsGamepass` (`false`),
+  `Image` (`""`), `Droppable` (`true`; or the player's `DefaultDroppable`
+  when the attribute is absent), `IsGamepass` (`false`),
   `Rarity` (`"Common"`), `Type` (`"Material"`). Caller metadata wins on
   conflict.
 - Equipped clones get `UUID`, `Amount`, `Id`, plus every metadata key stamped

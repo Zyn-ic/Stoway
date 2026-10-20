@@ -4,9 +4,9 @@
 --@date: 2026-08-19
 --[[@description:
 	Shared settings defaults: the player-facing set that seeds every state
-	via defaultOverrides (Dynamic hotbar, stacking off, backpack off). This
+	via defaultOverrides (Dynamic hotbar, merging off, backpack off). This
 	deliberately differs from the engine fallbacks in CoreStore State.luau
-	(Static, stacking on, backpack on). Categories drive the storage
+	(Static, merging on, backpack on). Categories drive the storage
 	type-grouping order and group header styling on the client.
 ]]
 -----------------------------
@@ -37,7 +37,7 @@ local DEFAULT_SETTINGS: Types.Settings = {
 	HotbarType = "Dynamic",
 	MaxHotbarSlots = 10,
 	Limit = 15,
-	CanStack = false,
+	CanStack = false, -- no merging into existing stacks; new stacks still cap at MaxStackSize
 	MaxStackSize = 5,
 	BackpackEnabled = false,
 	Sorting = false,

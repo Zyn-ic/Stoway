@@ -206,7 +206,7 @@ InventoryState = {
 HotbarType = "Static"     -- or "Dynamic"
 MaxHotbarSlots = 10
 Limit = 15                -- 0 = infinite
-CanStack = true
+CanStack = true           -- merge into existing stacks; new stacks still cap
 MaxStackSize = 5
 BackpackEnabled = true
 StackOnSwap = false       -- system-level, default off
@@ -231,7 +231,7 @@ StackBlacklist = { Legendary = true, Mythic = true, Special = true }
 
 ### Key Behaviors
 
-- **Stacking:** Only via `add` (always), `swap`, or `swapStack` when `StackOnSwap = true`. Move and split never stack.
+- **Stacking:** `add` merges into existing stacks when `CanStack = true`; `swap`/`swapStack` merge only when `CanStack` and `StackOnSwap` are both true. Move and split never merge. New stacks from `add` always cap at `MaxStackSize`.
 - **MaxStackSize:** Enforced unconditionally. No item Amount may exceed it after any operation.
 - **Dynamic hotbar:** Compacts after remove/swap/move. Static preserves holes. Use `CoreStore.setHotbarType(state, "Dynamic")` to switch types — it auto-compacts.
 - **Auto-sort:** Triggers after any mutating operation when `Sorting = true`. Sorts Storage only. Hotbar is never sorted (user-controlled).
@@ -295,3 +295,4 @@ docs/
 11. **Lazy `For` side-effects need `Observer`** — Studio `Fusion` `For` is `timeliness="lazy"`. `scope:ForPairs` that only does `SlotView.Create` + `Parent = hotbarFrame` and ignores the returned table never runs unless observed. Wrap side-effect `For`s with `local f = scope:ForPairs(...); Fusion.peek(f); scope:Observer(f)` as in `HotbarView`/`StorageView`. The 0.3.1 `For` was eager via `updateAll`.
 12. **No live property reads as `Computed` fallbacks** — `return slotnumber.TextColor3` inside the `Computed` bound TO `slotnumber.TextColor3` self-perpetuates (once amber, amber forever). Capture once (`local default = inst.Prop`) and return the capture. The codebase already does this (`originalPosition`, `origSize`).
 13. **Pushed settings go through `_state` first** — writing atoms directly gets clobbered by the next op's `sync()`. Funnel: `ClientController.ApplyServerSettings` (overlay onto `_state`, then `sync()` fans out). Same for any future pushed state.
+14. **`CanStack = false` is not `MaxStackSize = 1`** — it only blocks merging into existing stacks. `add apple 5` still creates one stack of 5. Set `MaxStackSize = 1` for one item per unit.

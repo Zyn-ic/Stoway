@@ -65,10 +65,12 @@ SettingsOverrides = { HotbarType?, MaxHotbarSlots?, Limit?, ... }
 
 `canStack` needs all five: `CanStack` on, same `Id`, room under
 `MaxStackSize`, neither rarity blacklisted (Legendary/Mythic/Special), all
-`StackRequiredFields` (`Rarity`, `Type`) equal. Only `add` and
-`swap`/`swapStack` (with `StackOnSwap`) ever merge. Amount fallback chain:
-`input.Amount` → `metadata.Amount` → `metadata.StackAmount` → 1 (strings
-coerced, garbage falls through, keys cleaned, `Droppable` defaults true).
+`StackRequiredFields` (`Rarity`, `Type`) equal. Only `add` (when `CanStack`
+is on) and `swap`/`swapStack` (when `StackOnSwap` is on) merge. `CanStack`
+does not limit a new stack's size: a single add still creates stacks up to
+`MaxStackSize`. Amount fallback chain: `input.Amount` → `metadata.Amount` →
+`metadata.StackAmount` → 1 (strings coerced, garbage falls through, keys
+cleaned, `Droppable` defaults from `DefaultDroppable`).
 
 Deep rulebook lives in [Deep Dives](../specs/SwapRules.md): swap/move/split/
 sorting/metadata-update rules, invariants, and complexity targets.
