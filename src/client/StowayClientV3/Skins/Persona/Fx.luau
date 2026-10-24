@@ -41,6 +41,7 @@ type SelfData = {
 	_sign: number,
 	_active: number,
 	_idle: { [string]: Tween? },
+	_edgeTweens: { [UIStroke]: Tween? },
 	_liftToken: { [GuiObject]: number },
 }
 
@@ -130,6 +131,7 @@ function PersonaFx.new(layer: Frame): Fx
 		_sign = 1,
 		_active = 0,
 		_idle = {},
+		_edgeTweens = {},
 		_liftToken = {},
 	} :: SelfData, PersonaFx)
 	return self
@@ -168,7 +170,7 @@ end
 
 -- White (or tinted) overlay on the card that fades out.
 function PersonaFx.Flash(self: Fx, btn: GuiButton, color: Color3, strength: number)
-	if self._destroyed then return end
+	if self._destroyed or btn.Parent == nil then return end
 	local flash = btn:FindFirstChild("Flash")
 	if flash == nil or not flash:IsA("Frame") then return end
 	flash.BackgroundColor3 = color
@@ -178,12 +180,40 @@ end
 
 -- Outline snaps to colour/thick, then eases back to the resting look.
 function PersonaFx.Flicker(self: Fx, btn: GuiButton, color: Color3)
-	if self._destroyed then return end
+	if self._destroyed or btn.Parent == nil then return end
 	local edge = btn:FindFirstChild("Edge")
 	if edge == nil or not edge:IsA("UIStroke") then return end
 	edge.Color = color
 	edge.Thickness = Theme.EDGE_HOT
-	TweenService:Create(edge, FLICKER_INFO, { Color = Theme.STEEL, Thickness = Theme.EDGE_THICKNESS }):Play()
+	local tween = TweenService:Create(edge, FLICKER_INFO, { Color = Theme.STEEL, Thickness = Theme.EDGE_THICKNESS })
+	self._edgeTweens[edge] = tween
+	tween:Play()
+	tween.Completed:Once(function()
+		if self._edgeTweens[edge] == tween then
+			self._edgeTweens[edge] = nil
+		end
+	end)
+end
+
+-- Hold the outline hot (red, hover-hot thickness) while the card is the
+-- current drag target. on = false drops it straight back to the resting
+-- look, so only one card is ever lit.
+function PersonaFx.SetHot(self: Fx, btn: GuiButton, on: boolean)
+	if self._destroyed or btn.Parent == nil then return end
+	local edge = btn:FindFirstChild("Edge")
+	if edge == nil or not edge:IsA("UIStroke") then return end
+	local running = self._edgeTweens[edge]
+	if running ~= nil then
+		running:Cancel()
+		self._edgeTweens[edge] = nil
+	end
+	if on then
+		edge.Color = Theme.RED
+		edge.Thickness = Theme.EDGE_HOT
+	else
+		edge.Color = Theme.STEEL
+		edge.Thickness = Theme.EDGE_THICKNESS
+	end
 end
 
 -- Impact slashes radiating from the target's centre (the combo counter's
@@ -292,6 +322,12 @@ function PersonaFx.Destroy(self: Fx)
 			tween:Cancel()
 		end
 		self._idle[key] = nil
+	end
+	for edge, tween in self._edgeTweens do
+		if tween ~= nil then
+			tween:Cancel()
+		end
+		self._edgeTweens[edge] = nil
 	end
 end
 

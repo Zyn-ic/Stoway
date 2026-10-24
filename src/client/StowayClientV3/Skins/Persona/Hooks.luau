@@ -97,12 +97,39 @@ function PersonaHooks.new(fx: PersonaFx.Fx, targets: Targets): CoreTypes.HookMap
 
 	local hooks: CoreTypes.HookMap = {}
 
+	-- Drag state. The sweep arms on the pressed slot, but the highlight
+	-- belongs to the slot under the pointer: the one being swapped to.
+	local dragging = false
+	local held: GuiButton? = nil
+	local lastHovered: GuiButton? = nil
+
+	local function clearHeld()
+		if held == nil then return end
+		fx:SetHot(held, false)
+		held = nil
+	end
+
+	-- Move the marker to a slot: only one card is ever lit.
+	local function hold(btn: GuiButton)
+		if held == btn then return end
+		clearHeld()
+		fx:SetHot(btn, true)
+		held = btn
+	end
+
 	-----------------------------
 	-- POINTER (quiet) --
 	-----------------------------
 
 	-- Hover: tilt wobble + the outline flashes red and cools back down.
+	-- Mid-drag it becomes the target marker: the outline of the slot under
+	-- the pointer stays hot, the previous one drops it.
 	hooks.OnSlotHover = function(btn: GuiButton, _slotType: CoreTypes.SlotType, _slotIndex: number)
+		lastHovered = btn
+		if dragging then
+			hold(btn)
+			return
+		end
 		fx:Kick(btn, TUNE.Hover)
 		fx:Flicker(btn, Theme.RED)
 	end
@@ -116,20 +143,29 @@ function PersonaHooks.new(fx: PersonaFx.Fx, targets: Targets): CoreTypes.HookMap
 		fx:Flash(btn, Theme.WHITE, 0.35)
 	end
 
-	-- Sweep armed: the pressed card lifts and its outline goes hot.
+	-- Sweep armed: the pressed card lifts. The highlight does NOT go here
+	-- - it follows the pointer to the slot being swapped to.
 	hooks.OnDragStart = function(slotType: CoreTypes.SlotType, index: number)
+		dragging = true
 		local btn = buttonOf(slotFrame(slotType, index))
 		if btn == nil then return end
 		fx:Kick(btn, TUNE.DragStart)
-		fx:Flicker(btn, Theme.RED)
+		-- A fast flick can already be over the next slot when the sweep
+		-- arms: take the marker with it instead of waiting for a hover.
+		if lastHovered ~= nil and lastHovered ~= btn then
+			hold(lastHovered)
+		end
 	end
 
-	-- Sweep over: the card the stroke ended on settles with a soft thud.
+	-- Sweep over: the card the stroke ended on settles with a soft thud
+	-- and the target marker drops. The source slot gets no highlight.
 	hooks.OnDragEnd = function(slotType: CoreTypes.SlotType, index: number)
-		local btn = buttonOf(slotFrame(slotType, index))
-		if btn == nil then return end
-		fx:Kick(btn, TUNE.DragEnd)
-		fx:Flash(btn, Theme.WHITE, 0.3)
+		dragging = false
+		local target = held
+		clearHeld()
+		if target ~= nil then
+			fx:Kick(target, TUNE.DragEnd)
+		end
 	end
 
 	-----------------------------

@@ -25,16 +25,16 @@ Players get their defaults from `Shared/Stoway/Settings.luau`, not the engine:
 
 | Setting | You get | Engine default |
 |---|---|---|
-| Layout / skin | `JailbreakHotbar` / `Jailbreak` | n/a |
+| Layout / skin | `StandardHotbarStorage` / `Default` | n/a |
 | `HotbarType` | `Dynamic` | `Static` |
 | `CanStack` | `false` | `true` |
-| `BackpackEnabled` | `false` | `true` |
+| `BackpackEnabled` | `true` | `true` |
 
-So: a hotbar row, no storage toggle, and no merging into existing stacks. A
-single add still creates stacks up to `MaxStackSize`. `addback` returns
-`BACKPACK_DISABLED`. To explore storage, run `toggle-backpack` (or set
-`BackpackEnabled = true` in `Settings.luau`) and try
-`set-layout StandardHotbarStorage` + `set-skin Default`.
+So: a hotbar row plus the storage toggle, no merging into existing stacks. A
+single add still creates stacks up to `MaxStackSize`. To try the bare engine
+defaults instead, run `set-hotbar-type Static`; to explore the code-built
+skins, run `set-skin Jailbreak` or `set-skin Persona` (both switch to
+`JailbreakHotbar`).
 
 ## Poke it
 

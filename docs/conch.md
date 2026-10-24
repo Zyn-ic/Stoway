@@ -10,7 +10,8 @@ from `os.clock()`, and the console language truncates an unquoted token at
 that dot, so **quote every UUID** (`remove "core-..."`). `inv` prints UUIDs
 pre-quoted for copy-paste; prefer slot commands such as
 `equip-slot <Hotbar|Storage> <slot>` where one exists. There is no toggle for
-`BackpackEnabled`, so `addback` fails with `BACKPACK_DISABLED` on defaults.
+`BackpackEnabled`, so `addback` fails with `BACKPACK_DISABLED` once a settings
+change turns storage off (storage is on by default).
 
 ## Inspect
 

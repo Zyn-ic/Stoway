@@ -76,7 +76,7 @@ Players get `Shared/Stoway/Settings.luau`, not engine defaults:
 | `Limit` (0 = infinite) | 15 | 15 |
 | `CanStack` | `false` | `true` |
 | `MaxStackSize` | 5 | 5 |
-| `BackpackEnabled` | `false` | `true` |
+| `BackpackEnabled` | `true` | `true` |
 | `StackOnSwap` | `false` | `false` |
 | `StackRequiredFields` | `Rarity`, `Type` | `Rarity`, `Type` |
 | `StackBlacklist` | Legendary/Mythic/Special | same |

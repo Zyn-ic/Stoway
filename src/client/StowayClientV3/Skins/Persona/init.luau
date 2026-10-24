@@ -330,12 +330,16 @@ function PersonaSkin.Load(
 	end)
 	table.insert(scope, openConn)
 
-	-- Toggle button, bottom-right (mobile-only visibility is owned by
-	-- Input). Transparent hit area; red shard + ink face are children.
+	-- Toggle button (mobile-only visibility is owned by Input). The
+	-- layout binds its final position/size from the live hotbar
+	-- rectangle (Shared.bindResponsiveUi): it sits above the left slots,
+	-- never over them. Transparent hit area; red shard + ink face are
+	-- children, so the button keeps the Persona card language.
 	local toggle = scope:New("ImageButton") {
 		Name = "BackpackStuff",
-		Position = UDim2.new(0.857, 0, 0.863, 0),
-		Size = UDim2.fromOffset(48, 48),
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -80),
+		Size = UDim2.fromOffset(36, 36),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
 		Image = "",
@@ -354,16 +358,22 @@ function PersonaSkin.Load(
 	)
 	local face = slab(scope, "Face", toggle, Theme.INK, Theme.CARD_POS, Theme.CARD_SIZE, 2)
 	outline(scope, face, Theme.WHITE, 2)
-	scope:New("TextLabel") {
+	local glyph = scope:New("TextLabel") {
 		Name = "glyph",
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
-		Font = Enum.Font.GothamBold,
-		TextSize = 24,
+		FontFace = Theme.FONT,
+		TextScaled = true,
+		TextSize = 18,
 		TextColor3 = Theme.WHITE,
 		Text = "≡",
 		ZIndex = 3,
 		Parent = face,
+	} :: TextLabel
+	scope:New("UITextSizeConstraint") {
+		MaxTextSize = 18,
+		MinTextSize = 10,
+		Parent = glyph,
 	}
 
 	local template = buildSlotTemplate(scope)
@@ -418,6 +428,25 @@ function PersonaSkin.Load(
 		SlotTemplate = template,
 		DraggingGui = draggingGui,
 		SlotBleedPx = Theme.BLEED,
+		-- Code-built skin: the layout owns popup/toggle geometry.
+		ResponsiveUi = true,
+		-- The title tag hangs over the popup's top edge.
+		PopupTopOverhang = 20,
+		-- Category headers follow the Persona language: ink bar, white
+		-- miter outline, theme font.
+		HeaderStyle = {
+			BackgroundColor3 = Theme.INK,
+			BackgroundTransparency = 0,
+			TextColor3 = Theme.WHITE,
+			TextSize = 14,
+			FontFace = Theme.FONT,
+			CornerRadius = UDim.new(0, 0),
+			StrokeColor = Theme.WHITE,
+			StrokeThickness = 1.5,
+			StrokeLineJoin = Enum.LineJoinMode.Miter,
+			PaddingLeft = 14,
+			PaddingRight = 10,
+		},
 		Hooks = hooks,
 	}
 end

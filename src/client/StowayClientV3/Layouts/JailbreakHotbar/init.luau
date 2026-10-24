@@ -139,6 +139,7 @@ function JailbreakHotbar.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: CoreTy
 	end)
 
 	HotbarView.Create(scope, skin, store, dragService)
+	Shared.bindResponsiveUi(scope, skin)
 	StorageView.Create(scope, skin, store, storageOpen, dragService)
 	LayoutInput.Mount(scope, skin, store, storageOpen)
 end

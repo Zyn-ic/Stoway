@@ -39,7 +39,7 @@ local DEFAULT_SETTINGS: Types.Settings = {
 	Limit = 15,
 	CanStack = false, -- no merging into existing stacks; new stacks still cap at MaxStackSize
 	MaxStackSize = 5,
-	BackpackEnabled = false,
+	BackpackEnabled = true,
 	Sorting = false,
 	SortOrder = "None",
 	StackOnSwap = false,
@@ -47,8 +47,8 @@ local DEFAULT_SETTINGS: Types.Settings = {
 	StackBlacklist = { Legendary = true, Mythic = true, Special = true },
 	DefaultDroppable = true,
 	DebugLogs = true,
-	UiSkin = "Jailbreak",
-	Layout = "JailbreakHotbar",
+	UiSkin = "Default",
+	Layout = "StandardHotbarStorage",
 	Categories = DEFAULT_CATEGORIES,
 	-- Demo toggle (see Types.luau) — on by default so the grouped/collapsible
 	-- storage view is what you see out of the box; flip to false to render

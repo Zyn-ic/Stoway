@@ -144,7 +144,7 @@ return ModuleName
 | `Controller/ClientController.luau` | Local ops + server-apply paths; ghost-slot healing, ApplyServerSettings funnel | swapOp/moveOp/addOp/removeOp/equipAndClearNew, ApplyServer* |
 | `Controller/NetworkClient.luau` | QuickNet sends (one FireServer per op) + push subscriptions; revert is log-only (server corrects via FullSync) | Send*, RequestSnapshot, Connect |
 | `Controller/LayoutManager.luau` | Mounts a `Layouts[]` engine against a `Skins[]` loader; owns LayoutScope lifecycle | SetLayout, Teardown, GetCurrentLayout |
-| `Layouts/Shared/init.luau` | Shared layout helpers (both engines: DraggingGui, hasDestItem, handleSwap/Move, doEquipSlot) | getMaxSlots, isBackpackEnabled, hasDestItem, handleSwap, handleMove, doEquipSlot, ensureDraggingGui |
+| `Layouts/Shared/init.luau` | Shared layout helpers (both engines: DraggingGui, hasDestItem, handleSwap/Move, doEquipSlot, responsive popup/toggle geometry) | getMaxSlots, isBackpackEnabled, hasDestItem, handleSwap, handleMove, doEquipSlot, ensureDraggingGui, bindResponsiveUi |
 | `Layouts/JailbreakHotbar/init.luau` | Jailbreak engine: hotbar + centered popup, sweep paint-to-move, swap-pop | Mount(scope, skin, store) |
 | `Layouts/JailbreakHotbar/HotbarView.luau` | Jailbreak hotbar slots, team ring + digits | Create(scope, skin, store, dragService) |
 | `Layouts/JailbreakHotbar/StorageView.luau` | Jailbreak popup slots, sectioned + weight | Create(scope, skin, store, storageOpen, dragService) |
@@ -303,3 +303,5 @@ docs/
 12. **No live property reads as `Computed` fallbacks** — `return slotnumber.TextColor3` inside the `Computed` bound TO `slotnumber.TextColor3` self-perpetuates (once amber, amber forever). Capture once (`local default = inst.Prop`) and return the capture. The codebase already does this (`originalPosition`, `origSize`).
 13. **Pushed settings go through `_state` first** — writing atoms directly gets clobbered by the next op's `sync()`. Funnel: `ClientController.ApplyServerSettings` (overlay onto `_state`, then `sync()` fans out). Same for any future pushed state.
 14. **`CanStack = false` is not `MaxStackSize = 1`** — it only blocks merging into existing stacks. `add apple 5` still creates one stack of 5. Set `MaxStackSize = 1` for one item per unit.
+15. **Live geometry needs a deferred tick** — `AbsolutePosition`/`AbsoluteSize` are plain properties, so `Shared.trackGeometry` bumps a `Value` to re-run the responsive computeds. That bump must be deferred and coalesced: the signals also fire *during* a Fusion graph change (the hotbar resizing itself), and `Value:set` from inside a graph change re-enters the graph and trips Fusion's `infiniteLoop` guard.
+16. **Responsive geometry is opt-in per skin** — `Shared.bindResponsiveUi` only runs when `SkinHandle.ResponsiveUi == true` (Jailbreak, Persona). Prefab skins keep their authored `Backpack`/`BackpackStuff` positions, so do not "fix" their mobile layout here.

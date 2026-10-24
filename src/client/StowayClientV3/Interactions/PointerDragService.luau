@@ -198,7 +198,8 @@ function PointerDragService.RegisterDraggable(self: Service, slotScope: Fusion.S
 					-- _beginSweep disconnects it again on gate reject.
 					self:_beginSweep(cur)
 				else
-					if self._checkConn then self._checkConn:Disconnect(); self._checkConn = nil end
+					-- Keep this connection alive: it feeds _lastMousePos to the
+					-- RenderStepped ghost loop. _endDrag disconnects it.
 					self:_beginDrag(cur)
 				end
 			end

@@ -55,6 +55,23 @@ export type HookMap = { [string]: unknown }
 -- Storage grouped by item type for display.
 export type GroupedStorage = { [string]: { ItemRecord } }
 
+-- Optional category-header chrome for code-built skins. Layouts apply
+-- these values on top of their generic header; absent fields keep the
+-- existing prefab/category look.
+export type HeaderStyle = {
+	BackgroundColor3: Color3?,
+	BackgroundTransparency: number?,
+	TextColor3: Color3?,
+	TextSize: number?,
+	FontFace: Font?,
+	CornerRadius: UDim?,
+	StrokeColor: Color3?,
+	StrokeThickness: number?,
+	StrokeLineJoin: Enum.LineJoinMode?,
+	PaddingLeft: number?,
+	PaddingRight: number?,
+}
+
 -- Handle returned by a skin loader.
 export type SkinHandle = {
 	Gui: ScreenGui?,
@@ -71,9 +88,18 @@ export type SkinHandle = {
 	HideInStorage: { string }?,
 	HideInHotbar: { string }?,
 	SlotBleedPx: number?,
+	-- Code-built skins opt into layout-owned responsive popup/toggle
+	-- geometry. Prefab skins leave this nil and keep their authored
+	-- positions untouched.
+	ResponsiveUi: boolean?,
+	-- Extra clearance above the popup for skin art that overhangs its
+	-- top edge (Persona's title tag). Ignored unless ResponsiveUi is set.
+	PopupTopOverhang: number?,
 	-- Per-skin look data (optional): category key -> header background.
 	-- A skin module sets this; views fall back to category colors.
 	HeaderColors: { [string]: Color3 }?,
+	-- Optional category-header chrome for code-built skins.
+	HeaderStyle: HeaderStyle?,
 	-- Per-skin layout data (optional): desktop hotbar X scale. Absent =
 	-- the shared default; mobile taper is never overridden.
 	DesktopHotbarXScale: number?,

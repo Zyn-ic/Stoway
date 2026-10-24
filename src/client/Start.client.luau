@@ -11,10 +11,7 @@
 -- WaitForChild: siblings replicate separately, so Start can win the
 -- race against the StowayClientV3 module on join. Never index directly.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
--- Untyped boundary (intentional): the Conch package ships without Luau
--- declarations, so one any-binding covers the seam.
-local conch: any = require(ReplicatedStorage.Packages.conch)
+local conch = require(ReplicatedStorage.Packages.conch)
 
 -- Conch console (client half, single owner): Studio only, mirroring the
 -- server gate. Without this, net.client.init would hang forever on
