@@ -10,7 +10,8 @@ from `os.clock()`, and the console language truncates an unquoted token at
 that dot, so **quote every UUID** (`remove "core-..."`). `inv` prints UUIDs
 pre-quoted for copy-paste; prefer slot commands such as
 `equip-slot <Hotbar|Storage> <slot>` where one exists. There is no toggle for
-`BackpackEnabled`, so `addback` fails with `BACKPACK_DISABLED` on defaults.
+`BackpackEnabled`, so `addback` fails with `BACKPACK_DISABLED` once a settings
+change turns storage off (storage is on by default).
 
 ## Inspect
 
@@ -43,6 +44,6 @@ pre-quoted for copy-paste; prefer slot commands such as
 | `toggle-stack` / `toggle-limit` / `toggle-sort` / `toggle-debug` | Flip engine flags (debug silences system print/warn) |
 | `set-limit <n>` / `set-max-stack <n>` / `set-hotbar-slots <n>` | Tune capacity |
 | `set-hotbar-type <Static\|Dynamic>` | Switch packing (auto-compacts) |
-| `set-skin <Default\|Modern\|Metal\|Jailbreak>` | Switch skin (Jailbreak pairs its layout) |
+| `set-skin <Default\|Modern\|Metal\|Jailbreak\|Persona>` | Switch skin (Jailbreak + Persona pair with `JailbreakHotbar`) |
 | `set-layout <StandardHotbarStorage\|JailbreakHotbar> [skin]` | Switch engine live |
 | `set-team <criminal\|cop\|prison>` | Stamp `Team` on every item |

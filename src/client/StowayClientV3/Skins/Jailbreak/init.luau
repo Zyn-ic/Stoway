@@ -233,14 +233,16 @@ function JailbreakSkin.Load(
 		Parent = backpack,
 	} :: TextLabel
 
-	-- Circular toggle button, bottom-right like the prefab skins (their
-	-- BackpackStuff sits at scale (0.857, 0.863)). ImageButton (empty
-	-- image) keeps the SkinHandle type; the text child is the visible
-	-- glyph. Visibility itself is mobile-only, owned by Input.
+	-- Circular toggle button. The layout binds its final position/size
+	-- from the live hotbar rectangle (Shared.bindResponsiveUi): it sits
+	-- above the left slots, never over them. ImageButton (empty image)
+	-- keeps the SkinHandle type; the text child is the visible glyph.
+	-- Visibility itself is mobile-only, owned by Input.
 	local toggle = scope:New("ImageButton") {
 		Name = "BackpackStuff",
-		Position = UDim2.new(0.857, 0, 0.863, 0),
-		Size = UDim2.fromOffset(44, 44),
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.new(0.5, 0, 1, -80),
+		Size = UDim2.fromOffset(38, 38),
 		BackgroundColor3 = SLOT_RED,
 		BorderSizePixel = 0,
 		Image = "",
@@ -249,15 +251,21 @@ function JailbreakSkin.Load(
 		Parent = gui,
 	} :: ImageButton
 	circle(toggle, scope)
-	scope:New("TextLabel") {
+	local glyph = scope:New("TextLabel") {
 		Name = "glyph",
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
 		Font = Enum.Font.GothamBold,
-		TextSize = 22,
+		TextScaled = true,
+		TextSize = 18,
 		TextColor3 = Color3.new(1, 1, 1),
 		Text = "≡",
 		Parent = toggle,
+	} :: TextLabel
+	scope:New("UITextSizeConstraint") {
+		MaxTextSize = 18,
+		MinTextSize = 10,
+		Parent = glyph,
 	}
 
 	local template = buildSlotTemplate(scope)
@@ -290,6 +298,22 @@ function JailbreakSkin.Load(
 		SlotTemplate = template,
 		DraggingGui = draggingGui,
 		SlotBleedPx = 3,
+		-- Code-built skin: the layout owns popup/toggle geometry.
+		ResponsiveUi = true,
+		PopupTopOverhang = 8,
+		-- Category headers follow the Jailbreak panel: dark fill, thin
+		-- stroke, rounded corners.
+		HeaderStyle = {
+			BackgroundColor3 = PANEL_BG,
+			BackgroundTransparency = 0,
+			TextColor3 = TITLE_TEXT,
+			TextSize = 14,
+			CornerRadius = UDim.new(0, 6),
+			StrokeColor = PANEL_STROKE,
+			StrokeThickness = 1,
+			PaddingLeft = 12,
+			PaddingRight = 8,
+		},
 	}
 end
 

@@ -60,6 +60,19 @@ through untyped handles (`SkinHandle.Hooks` is `{ [string]: any }`), so
 a call-site/hook mismatch is a runtime `pcall` warn, never a type error
 — the Studio annotations only check within the module.
 
+Drag highlighting is a skin concern, not a bus contract: `OnDragStart`
+arms on the pressed slot only. A skin that wants to mark the swap
+*destination* tracks `OnSlotHover` itself — Persona keeps a `held` button
+and moves a hot outline with `Fx:SetHot`, then drops it in `OnDragEnd`.
+Hooks therefore may hold light per-gesture state; it must clear on
+`OnDragEnd` so a cancelled drag leaves nothing lit.
+
+A **code-built** skin ships the table in the repo instead of a prefab
+folder: `Skins/Persona` returns its hooks on the handle
+(`SkinHandle.Hooks`) from `Persona/Hooks.luau`, which requires the shared
+`CoreStore.Types` and its own `Fx` runtime. Same call sites, same
+discipline — the table is still invoked through `ClientEvents.CallHook`.
+
 ## Type-Change Protocol
 
 Sending something new (or nothing where something was sent) touches

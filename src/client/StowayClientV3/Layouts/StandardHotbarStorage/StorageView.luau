@@ -81,7 +81,9 @@ function StorageView.Create(
 	end
 
 	local backpackFrame = skin.BackpackFrame
+	local responsiveUi = skin.ResponsiveUi == true
 	-- Reserve hotbar height from the backpack so they never overlap.
+	-- Code-built skins own this geometry in Shared.bindResponsiveUi.
 	local hotbarFrame = skin.HotbarFrame
 	local originalBackpackWidth = backpackFrame.Size.X
 	local bottomReserve = scope:Value(0)
@@ -95,7 +97,7 @@ function StorageView.Create(
 			end)
 		)
 	end
-	if hotbarFrame then
+	if not responsiveUi and hotbarFrame then
 		local gui = skin.Gui
 		local function updateBottomReserve()
 			local viewportHeight = if camera then camera.ViewportSize.Y else 0
@@ -130,16 +132,19 @@ function StorageView.Create(
 		task.defer(updateBottomReserve)
 	end
 
-	scope:Hydrate(backpackFrame) {
+	local backpackProps: Fusion.PropertyTable = {
 		Visible = scope:Computed(function(use: Fusion.Use): boolean
 			local settings: CoreTypes.Settings? = use(store.Settings)
 			return settings ~= nil and settings.BackpackEnabled
 		end),
-		Size = scope:Computed(function(use: Fusion.Use): UDim2
+	}
+	if not responsiveUi then
+		backpackProps.Size = scope:Computed(function(use: Fusion.Use): UDim2
 			local reserve: number = use(bottomReserve)
 			return UDim2.new(originalBackpackWidth.Scale, originalBackpackWidth.Offset, 1, -reserve)
-		end),
-	}
+		end)
+	end
+	scope:Hydrate(backpackFrame)(backpackProps)
 
 	if skin.WeightLabel then
 		local weightLabel = skin.WeightLabel
@@ -241,7 +246,12 @@ function StorageView.Create(
 			return if category and category.DisplayName then category.DisplayName else itemType
 		end)
 
+		local headerStyle = skin.HeaderStyle
 		local headerColor = groupScope:Computed(function(use: Fusion.Use): Color3
+			-- Code-built skins can override the whole header chrome.
+			if headerStyle and headerStyle.BackgroundColor3 then
+				return headerStyle.BackgroundColor3
+			end
 			-- Per-skin look first (e.g. Modern's dark metal headers),
 			-- then category color, then fallback. Skins without
 			-- HeaderColors render exactly as before.
@@ -299,9 +309,11 @@ function StorageView.Create(
 				LayoutOrder = 0,
 				Size = UDim2.new(1, 0, 0, HEADER_HEIGHT),
 				BackgroundColor3 = headerColor,
-				BackgroundTransparency = 0.35,
-				TextColor3 = Color3.new(1, 1, 1),
-				TextSize = 14,
+				BackgroundTransparency = if headerStyle and headerStyle.BackgroundTransparency ~= nil
+					then headerStyle.BackgroundTransparency
+					else 0.35,
+				TextColor3 = if headerStyle and headerStyle.TextColor3 then headerStyle.TextColor3 else Color3.new(1, 1, 1),
+				TextSize = if headerStyle and headerStyle.TextSize then headerStyle.TextSize else 14,
 				Font = Enum.Font.GothamBold,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				AutoButtonColor = false,
@@ -314,6 +326,9 @@ function StorageView.Create(
 				end),
 				Parent = container,
 			} :: TextButton
+			if headerStyle and headerStyle.FontFace then
+				header.FontFace = headerStyle.FontFace
+			end
 
 			-- Toggle collapses grid, header stays visible.
 			(header :: TextButton).Activated:Connect(function()
@@ -325,18 +340,27 @@ function StorageView.Create(
 
 			-- RivetLite: match slot chrome (rounded, edged, inset label).
 			groupScope:New("UICorner") {
-				CornerRadius = UDim.new(0, 6),
+				CornerRadius = if headerStyle and headerStyle.CornerRadius
+					then headerStyle.CornerRadius
+					else UDim.new(0, 6),
 				Parent = header,
 			}
 			groupScope:New("UIStroke") {
-				Color = Color3.fromRGB(58, 58, 68),
-				Thickness = 1,
+				Color = if headerStyle and headerStyle.StrokeColor
+					then headerStyle.StrokeColor
+					else Color3.fromRGB(58, 58, 68),
+				Thickness = if headerStyle and headerStyle.StrokeThickness
+					then headerStyle.StrokeThickness
+					else 1,
 				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+				LineJoinMode = if headerStyle and headerStyle.StrokeLineJoin
+					then headerStyle.StrokeLineJoin
+					else Enum.LineJoinMode.Round,
 				Parent = header,
 			}
 			groupScope:New("UIPadding") {
-				PaddingLeft = UDim.new(0, 8),
-				PaddingRight = UDim.new(0, 8),
+				PaddingLeft = UDim.new(0, if headerStyle and headerStyle.PaddingLeft then headerStyle.PaddingLeft else 8),
+				PaddingRight = UDim.new(0, if headerStyle and headerStyle.PaddingRight then headerStyle.PaddingRight else 8),
 				Parent = header,
 			}
 		end

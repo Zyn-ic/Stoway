@@ -123,6 +123,7 @@ function StandardHotbarStorage.Mount(scope: Fusion.Scope<typeof(Fusion)>, skin: 
 	ClientController.SetHooks(skin.Hooks)
 
 	HotbarView.Create(scope, skin, store, dragService)
+	Shared.bindResponsiveUi(scope, skin)
 	StorageView.Create(scope, skin, store, dragService)
 	-- Modular input: layout-owned IAS binds + PreferredInput bus + console modes
 	LayoutInput.Mount(scope, skin, store, dragService)

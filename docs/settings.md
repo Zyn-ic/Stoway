@@ -6,9 +6,10 @@ default sets exist — know which one players get.
 ## The two defaults
 
 Players get `Shared/Stoway/Settings.luau` (Dynamic hotbar, merging off,
-backpack off, Jailbreak). `CoreStore/State.luau` holds engine fallbacks
-(Static, merging on, backpack on). `createPlayer` maps the shared set onto
-the engine explicitly (`defaultOverrides`); explicit caller overrides win.
+backpack on, `Default` skin on `StandardHotbarStorage`). `CoreStore/State.luau`
+holds engine fallbacks (Static, merging on, backpack on). `createPlayer` maps
+the shared set onto the engine explicitly (`defaultOverrides`); explicit caller
+overrides win.
 
 ## Every setting
 

@@ -71,7 +71,8 @@ export type InventoryState = {
 | DebugLogs | `boolean` | `true` | System print/warn logging. |
 
 These are engine fallbacks. `Shared/Stoway/Settings.luau` overrides them for
-players (Dynamic, merging off, backpack off, Jailbreak).
+players (Dynamic, merging off, backpack on, `Default` skin on
+`StandardHotbarStorage`).
 
 ---
 

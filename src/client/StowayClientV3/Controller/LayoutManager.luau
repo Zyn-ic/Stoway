@@ -38,6 +38,9 @@ local Skins = {
 	-- Code-built: ignores the asset name, builds the UI in Lua. No
 	-- ReplicatedStorage.Stoway.GUI.Jailbreak folder required.
 	Jailbreak = require(script.Parent.Parent.Skins.Jailbreak),
+	-- Code-built too, and pairs with the JailbreakHotbar layout. Ships its
+	-- own Hooks table on the handle (no HookFuncs folder to load).
+	Persona = require(script.Parent.Parent.Skins.Persona),
 }
 
 local currentLayoutScope: Fusion.Scope<typeof(Fusion)>? = nil
