@@ -1,0 +1,3712 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A Roblox inventory framework in layers — pure-Luau CoreStore, server orchestration, Fusion client.">
+      
+      
+        <meta name="author" content="yyumchi">
+      
+      
+        <link rel="canonical" href="https://zyn-ic.github.io/Stoway/specs/CoreStoreSpecification/">
+      
+      
+        <link rel="prev" href="../../wire/">
+      
+      
+        <link rel="next" href="../Invariants/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>CoreStore Specification - Stoway</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#corestore-specification" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Stoway" class="md-header__button md-logo" aria-label="Stoway" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Stoway
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              CoreStore Specification
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Zyn-ic/Stoway" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../quickstart/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Start Here
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../building-on-top/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Build
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../examples/cooldowns/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Examples
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/corestore/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Engine Rules
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../troubleshooting/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Help
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Stoway" class="md-nav__button md-logo" aria-label="Stoway" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    Stoway
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Zyn-ic/Stoway" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Start Here
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Start Here
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../life-of-a-swap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Life of a Swap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../metadata/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metadata
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Settings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../trust/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trust Model
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Build
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Build
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../building-on-top/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Building on Top
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/server/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Server Routes & Wire
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adapters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tools & Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../client-surface/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Client Events & Hooks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../skins-layouts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Skins & Layouts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../conch/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Debug Console
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../builds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Builds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/cooldowns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cooldowns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/locked-slots/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Locked Slots
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../examples/new-item-glow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    New-Item Glow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/corestore/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CoreStore API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../errors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Error Codes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../wire/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Wire Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Engine Rules
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Engine Rules
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CoreStore Specification
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CoreStore Specification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#inventorystate-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        InventoryState Shape
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="InventoryState Shape">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#field-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Field Rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#add-operation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Add Operation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Add Operation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#overflow-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overflow Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#placement-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Placement Modes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#result-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Result Shape
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#side-effects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Side Effects
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stack-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stack Rules
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Stack Rules">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#canstack-conditions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        canStack Conditions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trystack-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        tryStack Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#placement-aware-stacking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Placement-Aware Stacking
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query Rules
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Query Rules">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#getitemstate-uuid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        getItem(state, uuid)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#findbyidstate-itemid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        findById(state, itemId)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#findstate-query" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        find(state, query)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#filterstate-predicate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        filter(state, predicate)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#getallitemsstate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        getAllItems(state)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#slot-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slot Rules
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Slot Rules">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hotbar-static-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hotbar (Static Mode)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hotbar-dynamic-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hotbar (Dynamic Mode)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dynamic-hotbar-slot-availability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dynamic Hotbar Slot Availability
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#locationbyuuid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LocationByUUID
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compaction
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Compaction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Algorithm
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#when-compaction-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When Compaction Runs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#static-vs-dynamic-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Static vs Dynamic Behavior
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complexity-targets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Complexity Targets
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Complexity Targets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#where-h-s-n-k-f-are-defined" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where h, s, n, k, f are defined:
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../Invariants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Invariants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SwapRules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Swap Rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MoveRules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Move Rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SplitRules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Split Rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SortingRules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sorting Rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MetadataUpdateRules/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metadata Update Rules
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MetadataWireSchema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metadata Wire Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SettingsSync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Settings Sync
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Help
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Help
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dependencies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependencies & Credits
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap & Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#inventorystate-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        InventoryState Shape
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="InventoryState Shape">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#field-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Field Rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#add-operation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Add Operation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Add Operation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#overflow-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overflow Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#placement-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Placement Modes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#result-shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Result Shape
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#side-effects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Side Effects
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#stack-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stack Rules
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Stack Rules">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#canstack-conditions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        canStack Conditions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trystack-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        tryStack Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#placement-aware-stacking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Placement-Aware Stacking
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#query-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query Rules
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Query Rules">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#getitemstate-uuid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        getItem(state, uuid)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#findbyidstate-itemid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        findById(state, itemId)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#findstate-query" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        find(state, query)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#filterstate-predicate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        filter(state, predicate)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#getallitemsstate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        getAllItems(state)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#slot-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slot Rules
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Slot Rules">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hotbar-static-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hotbar (Static Mode)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hotbar-dynamic-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hotbar (Dynamic Mode)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dynamic-hotbar-slot-availability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dynamic Hotbar Slot Availability
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#locationbyuuid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LocationByUUID
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Compaction
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Compaction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Algorithm
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#when-compaction-runs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When Compaction Runs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#static-vs-dynamic-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Static vs Dynamic Behavior
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complexity-targets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Complexity Targets
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Complexity Targets">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#where-h-s-n-k-f-are-defined" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where h, s, n, k, f are defined:
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="corestore-specification">CoreStore Specification</h1>
+<p>This document defines the exact behavior of every CoreStore operation as currently implemented. It is the source of truth for what the code does today.</p>
+<p>New operations (swap, move, split, sort, updateMetadata) are defined in their own rule documents.</p>
+<hr />
+<h2 id="inventorystate-shape">InventoryState Shape</h2>
+<div class="highlight"><pre><span></span><code><span class="kr">export</span><span class="w"> </span><span class="kr">type</span><span class="w"> </span><span class="nc">InventoryState</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">-- O(1): UUID -&gt; Item</span>
+<span class="w">    </span><span class="nc">Items</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">[</span><span class="nc">string</span><span class="p">]:</span><span class="w"> </span><span class="nc">Item</span><span class="w"> </span><span class="p">},</span>
+
+<span class="w">    </span><span class="c1">-- O(1) to get all stack UUIDs for an item id</span>
+<span class="w">    </span><span class="c1">-- ItemId -&gt; array of UUIDs</span>
+<span class="w">    </span><span class="nc">ItemsByID</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">[</span><span class="nc">string</span><span class="p">]:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nc">string</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
+
+<span class="w">    </span><span class="c1">-- Slot -&gt; UUID (Static: nil holes allowed)</span>
+<span class="w">    </span><span class="nc">Hotbar</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nc">string</span><span class="err">?</span><span class="w"> </span><span class="p">},</span>
+
+<span class="w">    </span><span class="c1">-- Array of UUIDs (Dynamic: packed, no holes)</span>
+<span class="w">    </span><span class="nc">Storage</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nc">string</span><span class="w"> </span><span class="p">},</span>
+
+<span class="w">    </span><span class="c1">-- O(1): UUID -&gt; where this item currently lives</span>
+<span class="w">    </span><span class="nc">LocationByUUID</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">[</span><span class="nc">string</span><span class="p">]:</span><span class="w"> </span><span class="nc">SlotRef</span><span class="w"> </span><span class="p">},</span>
+
+<span class="w">    </span><span class="c1">-- O(1): MetadataIndex[fieldName][fieldValue] -&gt; array of UUIDs</span>
+<span class="w">    </span><span class="c1">-- Indexed fields: Rarity, Type</span>
+<span class="w">    </span><span class="nc">MetadataIndex</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">[</span><span class="nc">string</span><span class="p">]:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="p">[</span><span class="nc">string</span><span class="p">]:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nc">string</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">},</span>
+
+<span class="w">    </span><span class="nc">EquippedItemUUID</span><span class="p">:</span><span class="w"> </span><span class="nc">string</span><span class="err">?</span><span class="p">,</span>
+<span class="w">    </span><span class="nc">Weight</span><span class="p">:</span><span class="w"> </span><span class="nc">number</span><span class="p">,</span>
+
+<span class="w">    </span><span class="nc">Settings</span><span class="p">:</span><span class="w"> </span><span class="nc">Settings</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="field-rules">Field Rules</h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Constraint</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Items</td>
+<td><code>{ [string]: Item }</code></td>
+<td>Every key is a UUID. Every value is a valid Item.</td>
+</tr>
+<tr>
+<td>ItemsByID</td>
+<td><code>{ [string]: { string } }</code></td>
+<td>Every key is an ItemId. Every value is an array of UUIDs that exist in Items.</td>
+</tr>
+<tr>
+<td>Hotbar</td>
+<td><code>{ string? }</code></td>
+<td>Indexed from 1 to MaxHotbarSlots. Values are UUIDs or nil. Static mode preserves holes. Dynamic mode is packed.</td>
+</tr>
+<tr>
+<td>Storage</td>
+<td><code>{ string }</code></td>
+<td>Contiguous array of UUIDs. No nil holes. Indices shift on remove.</td>
+</tr>
+<tr>
+<td>LocationByUUID</td>
+<td><code>{ [string]: SlotRef }</code></td>
+<td>Every key is a UUID that exists in Items. Value matches actual placement.</td>
+</tr>
+<tr>
+<td>MetadataIndex</td>
+<td><code>{ [string]: { [string]: { string } } }</code></td>
+<td>Two-level index. First key is field name (e.g. "Rarity"). Second key is stringified field value (e.g. "Legendary"). Value is array of UUIDs with that metadata. Indexed fields: Rarity, Type. Updated on create, destroy, and metadata change.</td>
+</tr>
+<tr>
+<td>EquippedItemUUID</td>
+<td><code>string?</code></td>
+<td>UUID of equipped item or nil. Must reference an existing item or be nil.</td>
+</tr>
+<tr>
+<td>Weight</td>
+<td><code>number</code></td>
+<td>Sum of Amount across all items in Items. Always &gt;= 0.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="settings">Settings</h2>
+<table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HotbarType</td>
+<td><code>"Static" \| "Dynamic"</code></td>
+<td><code>"Static"</code></td>
+<td>Static keeps fixed slots (holes allowed); Dynamic packs and compacts.</td>
+</tr>
+<tr>
+<td>MaxHotbarSlots</td>
+<td><code>number</code></td>
+<td><code>10</code></td>
+<td>Number of hotbar slots (<code>1..N</code>).</td>
+</tr>
+<tr>
+<td>Limit</td>
+<td><code>number</code></td>
+<td><code>15</code></td>
+<td>Total Amount capacity. 0 = infinite.</td>
+</tr>
+<tr>
+<td>CanStack</td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+<td>Allow merging into existing stacks. New stacks are still capped by MaxStackSize.</td>
+</tr>
+<tr>
+<td>MaxStackSize</td>
+<td><code>number</code></td>
+<td><code>5</code></td>
+<td>Max Amount per stack. Caps new stacks and splits; existing stacks are not re-split.</td>
+</tr>
+<tr>
+<td>BackpackEnabled</td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+<td>Allow Storage. false rejects storage operations.</td>
+</tr>
+<tr>
+<td>StackOnSwap</td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+<td>Allow swap/swapStack to merge. Requires CanStack = true; move never merges.</td>
+</tr>
+<tr>
+<td>Sorting</td>
+<td><code>boolean</code></td>
+<td><code>false</code></td>
+<td>Auto-sort Storage after mutations. Hotbar is never sorted.</td>
+</tr>
+<tr>
+<td>SortOrder</td>
+<td><code>"None" \| "Name" \| "Rarity" \| "ItemType"</code></td>
+<td><code>"None"</code></td>
+<td>Sort key when Sorting is on. Rarity is descending.</td>
+</tr>
+<tr>
+<td>StackRequiredFields</td>
+<td><code>{ string }</code></td>
+<td><code>{ "Rarity", "Type" }</code></td>
+<td>Metadata fields that must match to merge.</td>
+</tr>
+<tr>
+<td>StackBlacklist</td>
+<td><code>{ [string]: boolean }</code></td>
+<td><code>{ Legendary = true, Mythic = true, Special = true }</code></td>
+<td>Rarity values that never merge into existing stacks.</td>
+</tr>
+<tr>
+<td>DefaultDroppable</td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+<td>Droppable default for new items that omit it.</td>
+</tr>
+<tr>
+<td>DebugLogs</td>
+<td><code>boolean</code></td>
+<td><code>true</code></td>
+<td>System print/warn logging.</td>
+</tr>
+</tbody>
+</table>
+<p>These are engine fallbacks. <code>Shared/Stoway/Settings.luau</code> overrides them for
+players (Dynamic, merging off, backpack on, <code>Default</code> skin on
+<code>StandardHotbarStorage</code>).</p>
+<hr />
+<h2 id="add-operation">Add Operation</h2>
+<p><strong>API:</strong> <code>CoreStore.add(state, itemData, options?)</code></p>
+<h3 id="flow">Flow</h3>
+<div class="highlight"><pre><span></span><code>1. Normalize item data
+   - Read Id (exact key)
+   - Read Amount, or metadata.Amount, or metadata.StackAmount
+   - Parse string amounts to number
+   - Remove Amount and StackAmount from metadata
+   - Apply Droppable from Settings.DefaultDroppable if not set
+   - Default amount = 1
+
+2. Validate
+   - ItemId must be a non-empty string
+   - Amount must be a positive number
+
+3. Check capacity
+   - If Limit &gt; 0 and remaining capacity &lt;= 0: return FULL
+   - Cap total amount to remaining capacity (partial fill)
+
+4. Attempt merging into existing stacks (only if CanStack = true)
+   - Pass Placement to tryStack for placement-aware stacking
+   - Reduce amountLeft by stacked amount
+   - Track updatedItems (UUID -&gt; new Amount)
+
+5. Place remaining amount as new stacks (always runs)
+   - Split into multiple stacks if amountLeft &gt; MaxStackSize
+   - Each new stack is capped at MaxStackSize
+   - Placement priority based on options.Placement:
+
+     Auto:    Hotbar -&gt; Storage
+     Backpack: Storage only
+     Hotbar:  Hotbar only (optional slot number)
+     Slot:    Specific SlotRef (must be empty)
+
+   - If no space for next stack: stop, overflow = remaining amount
+
+6. Return result
+   - addedAmount = total amount successfully placed
+   - overflow = amount that could not be placed (no space)
+</code></pre></div>
+<p><code>CanStack</code> only gates step 4. Step 5 always runs, so a new stack can still
+reach <code>MaxStackSize</code> when merging is off.</p>
+<h3 id="overflow-example">Overflow Example</h3>
+<div class="highlight"><pre><span></span><code>Add Apple x12, MaxStackSize = 5, 5 slots available in Storage
+
+Stack 1: Apple x5 -&gt; Storage[1]
+Stack 2: Apple x5 -&gt; Storage[2]
+Stack 3: Apple x2 -&gt; Storage[3]  (remainder)
+
+addedAmount = 12, overflow = 0
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>Add Apple x12, MaxStackSize = 5, 8 slots available total
+
+Stack 1: Apple x5 -&gt; Hotbar[1]
+Stack 2: Apple x5 -&gt; Hotbar[2]
+Stack 3: Apple x2 -&gt; Hotbar[3]
+
+addedAmount = 12, overflow = 0
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>Add Apple x12, MaxStackSize = 5, Capacity = 10
+
+Stack 1: Apple x5 -&gt; placed
+Stack 2: Apple x5 -&gt; placed
+No room for remainder
+
+addedAmount = 10, overflow = 2
+</code></pre></div>
+<h3 id="placement-modes">Placement Modes</h3>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Auto</code> (default)</td>
+<td>Try empty hotbar slot first. If hotbar full, try storage.</td>
+</tr>
+<tr>
+<td><code>Backpack</code></td>
+<td>Storage only. Bypasses hotbar entirely.</td>
+</tr>
+<tr>
+<td><code>Hotbar</code></td>
+<td>Hotbar only. Fails if no hotbar space. Optional <code>Slot</code> for specific slot.</td>
+</tr>
+<tr>
+<td><code>Slot</code></td>
+<td>Specific SlotRef placement. (Planned, not yet implemented)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="result-shape">Result Shape</h3>
+<p>Every mutation returns a <code>Result</code>: <code>{ ok = true, value = … }</code> or
+<code>{ ok = false, error = { kind, message } }</code>. Add succeeds with <code>Ok({
+addedItems, updatedItems, addedAmount, overflow })</code> — per-stack placements,
+per-UUID new amounts, total placed, and the amount that could not be placed.
+<div class="highlight"><pre><span></span><code>### Side Effects
+
+- Creates Item entries in Items
+- Updates ItemsByID
+- Sets LocationByUUID for each new stack
+- Increments Weight
+- Appends to Storage or sets Hotbar slot
+
+---
+
+## Remove Operation
+
+**API:** `CoreStore.remove(state, uuid, amount?)`
+
+### Flow
+</code></pre></div>
+1. Find item by UUID
+   - If not found: return ITEM_NOT_FOUND</p>
+<ol>
+<li>Determine amount to remove</li>
+<li>Default: remove entire stack</li>
+<li>
+<p>Cap to item.Amount (cannot remove more than exists)</p>
+</li>
+<li>
+<p>Partial removal (amount &lt; item.Amount)</p>
+</li>
+<li>Reduce item.Amount</li>
+<li>Decrement Weight</li>
+<li>
+<p>Return remaining amount</p>
+</li>
+<li>
+<p>Full removal (amount &gt;= item.Amount)
+   a. Clear EquippedItemUUID if this item is equipped
+   b. Decrement Weight by item.Amount
+   c. Remove from Items
+   d. Remove from ItemsByID (cleanup empty arrays)
+   e. Remove from LocationByUUID
+   f. Clear Hotbar slot or remove from Storage
+   g. If HotbarType = "Dynamic": compact hotbar
+<div class="highlight"><pre><span></span><code>### Result Shape
+
+Every mutation returns a `Result`: `{ ok = true, value = … }` or
+`{ ok = false, error = { kind, message } }`. Remove succeeds with `Ok({
+removedItem, remaining, slotType, slot })` — a copy of the removed data,
+the amount left after a partial remove, and where it lived.
+</code></pre></div></p>
+</li>
+</ol>
+<h3 id="side-effects">Side Effects</h3>
+<ul>
+<li>Decrements Weight</li>
+<li>Removes Item from Items</li>
+<li>Removes UUID from ItemsByID</li>
+<li>Removes LocationByUUID entry</li>
+<li>Clears Hotbar slot or shifts Storage</li>
+<li>Compacts Hotbar if Dynamic</li>
+</ul>
+<hr />
+<h2 id="stack-rules">Stack Rules</h2>
+<p><strong>Module:</strong> <code>Stack.luau</code></p>
+<h3 id="canstack-conditions">canStack Conditions</h3>
+<p>All conditions must be true for stacking:</p>
+<div class="highlight"><pre><span></span><code>1. Settings.CanStack = true
+2. existingItem.Id == incomingItemId
+3. existingItem.Amount &lt; Settings.MaxStackSize
+4. existingItem.Metadata.Rarity NOT in Settings.StackBlacklist
+5. incomingMetadata.Rarity NOT in Settings.StackBlacklist
+6. Metadata.matchesRequiredFields passes for all Settings.StackRequiredFields
+</code></pre></div>
+<h3 id="trystack-flow">tryStack Flow</h3>
+<div class="highlight"><pre><span></span><code>1. Look up ItemsByID[itemId] for candidate UUIDs
+2. For each candidate (in order):
+   a. If Placement is specified and not "Auto":
+      - Backpack: only stack into items in Storage
+      - Hotbar: only stack into items in Hotbar
+   b. Check canStack conditions
+   c. Calculate room = MaxStackSize - existingItem.Amount
+   d. Transfer min(room, amount) into existing stack
+   e. Increment Weight by transfer amount
+   f. Reduce amount by transfer
+3. Return total stacked amount and updated items map
+</code></pre></div>
+<h3 id="placement-aware-stacking">Placement-Aware Stacking</h3>
+<p>Stacking respects the Placement parameter:</p>
+<table>
+<thead>
+<tr>
+<th>Placement</th>
+<th>Stacking Target</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Auto</code> or nil</td>
+<td>Any existing stack of the same item</td>
+</tr>
+<tr>
+<td><code>Backpack</code></td>
+<td>Only stacks in Storage</td>
+</tr>
+<tr>
+<td><code>Hotbar</code></td>
+<td>Only stacks in Hotbar</td>
+</tr>
+</tbody>
+</table>
+<p>This ensures <code>addToBackpack</code> does not accidentally stack onto hotbar items.</p>
+<hr />
+<h2 id="query-rules">Query Rules</h2>
+<h3 id="getitemstate-uuid">getItem(state, uuid)</h3>
+<ul>
+<li><strong>Complexity:</strong> O(1)</li>
+<li><strong>Returns:</strong> Item or nil</li>
+<li><strong>Behavior:</strong> Direct lookup in Items[uuid]</li>
+</ul>
+<h3 id="findbyidstate-itemid">findById(state, itemId)</h3>
+<ul>
+<li><strong>Complexity:</strong> O(k) where k = number of stacks with this ItemId</li>
+<li><strong>Returns:</strong> Array of Items</li>
+<li><strong>Behavior:</strong> Reads ItemsByID[itemId], then looks up each UUID in Items</li>
+</ul>
+<h3 id="findstate-query">find(state, query)</h3>
+<ul>
+<li><strong>String query:</strong> Delegates to findById. O(k).</li>
+<li><strong>Table query with single indexed metadata field:</strong> Uses MetadataIndex for O(k) lookup where k = items matching that field value.</li>
+<li><strong>Table query with multiple indexed metadata fields:</strong> Picks the smallest MetadataIndex bucket, then filters remaining fields. O(k) where k = smallest bucket size.</li>
+<li><strong>Table query with no indexed metadata fields:</strong> Falls back to full Items scan. O(n).</li>
+<li><strong>Returns:</strong> Array of Items matching all query fields</li>
+</ul>
+<h3 id="filterstate-predicate">filter(state, predicate)</h3>
+<ul>
+<li><strong>Complexity:</strong> O(n) where n = total items</li>
+<li><strong>Returns:</strong> Array of Items where predicate returns true</li>
+</ul>
+<h3 id="getallitemsstate">getAllItems(state)</h3>
+<ul>
+<li><strong>Complexity:</strong> O(n) where n = total items</li>
+<li><strong>Returns:</strong> Array of all Items</li>
+</ul>
+<hr />
+<h2 id="slot-rules">Slot Rules</h2>
+<h3 id="hotbar-static-mode">Hotbar (Static Mode)</h3>
+<ul>
+<li>Fixed size: 1 to MaxHotbarSlots</li>
+<li>Nil holes allowed (slot 3 can be empty while slot 4 is filled)</li>
+<li><code>setHotbarSlot(state, slot, uuid)</code> - sets slot and updates LocationByUUID</li>
+<li><code>clearHotbarSlot(state, slot)</code> - sets slot to nil, removes LocationByUUID</li>
+<li><code>findEmptyHotbarSlot(state)</code> - returns first nil slot, or nil</li>
+<li><code>compactHotbar(state)</code> - no-op in Static mode</li>
+</ul>
+<h3 id="hotbar-dynamic-mode">Hotbar (Dynamic Mode)</h3>
+<ul>
+<li>Same fixed size</li>
+<li>No nil holes allowed — always packed left</li>
+<li>The only available slot is the append position (first nil after the packed portion)</li>
+<li>Operations that target a non-append slot are rejected with <code>DESTINATION_UNAVAILABLE</code></li>
+<li><code>compactHotbar(state)</code> - shifts all items left to fill holes</li>
+<li>Updates LocationByUUID for each shifted item</li>
+<li>Only runs if HotbarType = "Dynamic"</li>
+</ul>
+<h3 id="dynamic-hotbar-slot-availability">Dynamic Hotbar Slot Availability</h3>
+<p>In Dynamic mode, the hotbar is always <code>[item1, item2, ..., itemN, nil, nil, ...]</code>. The only "available" slot is <code>findEmptyHotbarSlot(state)</code> — the first nil after the packed portion.</p>
+<p>Use <code>CoreStore.setHotbarType(state, "Dynamic")</code> to switch types — it auto-compacts the hotbar. Alternatively, call <code>CoreStore.compact(state)</code> after manually changing <code>Settings.HotbarType</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Dynamic Mode Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>add</code> (no preferred slot)</td>
+<td>Appends to end via <code>findEmptyHotbarSlot</code></td>
+</tr>
+<tr>
+<td><code>add</code> (preferred slot)</td>
+<td>Preferred slot is ignored; always appends to end</td>
+</tr>
+<tr>
+<td><code>swap</code> Hotbar→Hotbar, dest occupied</td>
+<td>Allowed (reorder within packed portion)</td>
+</tr>
+<tr>
+<td><code>swap</code> Hotbar→Hotbar, dest empty</td>
+<td>Rejected: <code>DESTINATION_UNAVAILABLE</code></td>
+</tr>
+<tr>
+<td><code>move</code> Hotbar→Hotbar</td>
+<td>Rejected: <code>DESTINATION_UNAVAILABLE</code> (no empty slots in packed portion)</td>
+</tr>
+<tr>
+<td><code>move</code> Storage→Hotbar</td>
+<td>Allowed only if <code>toRef.Slot == findEmptyHotbarSlot()</code></td>
+</tr>
+<tr>
+<td><code>split</code> to Hotbar</td>
+<td>Allowed only if <code>destination.Slot == findEmptyHotbarSlot()</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="storage">Storage</h3>
+<ul>
+<li>Dynamic array, no holes</li>
+<li><code>appendStorage(state, uuid)</code> - appends to end, updates LocationByUUID</li>
+<li><code>removeStorageAt(state, index)</code> - removes and shifts all subsequent items left</li>
+<li>Updates LocationByUUID for each shifted item</li>
+</ul>
+<h3 id="locationbyuuid">LocationByUUID</h3>
+<ul>
+<li>Always reflects actual placement</li>
+<li>Updated whenever an item moves between slots</li>
+<li>Entry created on item placement</li>
+<li>Entry removed on item destruction</li>
+<li>Entry updated on hotbar compaction</li>
+</ul>
+<hr />
+<h2 id="compaction">Compaction</h2>
+<p>Compaction is the process of packing a Dynamic hotbar's items left to eliminate nil holes. It only applies when <code>HotbarType = "Dynamic"</code>. In Static mode, compaction is a no-op.</p>
+<h3 id="algorithm">Algorithm</h3>
+<div class="highlight"><pre><span></span><code>compactHotbar(state):
+  1. If HotbarType ~= "Dynamic": return false (no-op)
+
+  2. Create empty array packedHotbar
+  3. writeIndex = 1
+
+  4. For readIndex = 1 to MaxHotbarSlots:
+     a. uuid = Hotbar[readIndex]
+     b. If uuid exists:
+        - packedHotbar[writeIndex] = uuid
+        - If readIndex ~= writeIndex:
+            Mark changed = true
+            Update LocationByUUID[uuid].Slot = writeIndex
+        - writeIndex += 1
+     c. If uuid is nil: skip (hole eliminated)
+
+  5. If changed: state.Hotbar = packedHotbar
+  6. Return changed
+</code></pre></div>
+<h3 id="example">Example</h3>
+<div class="highlight"><pre><span></span><code>Before (holes at slots 2, 4):
+  Slot:  [1]  [2]  [3]  [4]  [5]
+         "A"  nil  "B"  nil  "C"
+
+After compaction:
+  Slot:  [1]  [2]  [3]  [4]  [5]
+         "A"  "B"  "C"  nil  nil
+
+LocationByUUID updated:
+  "A" -&gt; Slot 1 (unchanged)
+  "B" -&gt; Slot 2 (was Slot 3)
+  "C" -&gt; Slot 3 (was Slot 5)
+</code></pre></div>
+<h3 id="when-compaction-runs">When Compaction Runs</h3>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Compacts?</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>remove()</code></td>
+<td>Yes</td>
+<td>After clearing hotbar slot</td>
+</tr>
+<tr>
+<td><code>move()</code> hotbar→storage</td>
+<td>Yes</td>
+<td>After setting hotbar slot to nil</td>
+</tr>
+<tr>
+<td><code>swap()</code> hotbar→empty storage</td>
+<td>Yes</td>
+<td>After clearing hotbar slot</td>
+</tr>
+</tbody>
+</table>
+<h3 id="static-vs-dynamic-behavior">Static vs Dynamic Behavior</h3>
+<table>
+<thead>
+<tr>
+<th>Behavior</th>
+<th>Static</th>
+<th>Dynamic</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Holes after remove</td>
+<td>Preserved (nil stays)</td>
+<td>Eliminated (items shift left)</td>
+</tr>
+<tr>
+<td>Slot indices after remove</td>
+<td>Unchanged</td>
+<td>All items after the hole shift down by 1</td>
+</tr>
+<tr>
+<td>Client visibility</td>
+<td>All MaxHotbarSlots frames always visible</td>
+<td>Empty frames hidden, visible ones reindexed</td>
+</tr>
+<tr>
+<td>Full state sync needed</td>
+<td>No</td>
+<td>Yes (when compaction changes indices)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="complexity-targets">Complexity Targets</h2>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Target</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Queries</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>getItem</td>
+<td>O(1)</td>
+<td>Direct hash lookup</td>
+</tr>
+<tr>
+<td>findById</td>
+<td>O(k)</td>
+<td>k = matching stacks with this ItemId</td>
+</tr>
+<tr>
+<td>find (string)</td>
+<td>O(k)</td>
+<td>Delegates to findById</td>
+</tr>
+<tr>
+<td>find (single metadata field)</td>
+<td>O(k)</td>
+<td>k = items in MetadataIndex bucket; O(1) when indexed field</td>
+</tr>
+<tr>
+<td>find (multi metadata field)</td>
+<td>O(k)</td>
+<td>k = smallest bucket, then filter remaining fields</td>
+</tr>
+<tr>
+<td>find (no metadata, table)</td>
+<td>O(n)</td>
+<td>Full scan when no indexed fields match</td>
+</tr>
+<tr>
+<td>filter</td>
+<td>O(n)</td>
+<td>n = total items</td>
+</tr>
+<tr>
+<td>getAllItems</td>
+<td>O(n)</td>
+<td>n = total items</td>
+</tr>
+<tr>
+<td><strong>Mutations</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>add (stack into existing)</td>
+<td>O(k)</td>
+<td>k = existing stacks of same item (via ItemsByID)</td>
+</tr>
+<tr>
+<td>add (new stack)</td>
+<td>O(1)</td>
+<td>Amortized</td>
+</tr>
+<tr>
+<td>remove (partial)</td>
+<td>O(1)</td>
+<td>In-place Amount decrement</td>
+</tr>
+<tr>
+<td>remove (full, hotbar)</td>
+<td>O(h)</td>
+<td>h = compactHotbar in Dynamic mode</td>
+</tr>
+<tr>
+<td>remove (full, storage)</td>
+<td>O(n)</td>
+<td>n = Storage shift left via table.remove</td>
+</tr>
+<tr>
+<td>removeBySlot</td>
+<td>Same as remove</td>
+<td>Delegates to remove after slot lookup</td>
+</tr>
+<tr>
+<td><strong>Slot Operations</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>swap (HH or SS)</td>
+<td>O(1)</td>
+<td>Direct slot exchange</td>
+</tr>
+<tr>
+<td>swap (HS, dest occupied)</td>
+<td>O(1)</td>
+<td>Direct slot exchange</td>
+</tr>
+<tr>
+<td>swap (HS, dest empty)</td>
+<td>O(h)</td>
+<td>Hotbar compaction in Dynamic mode</td>
+</tr>
+<tr>
+<td>swap (SH, dest occupied)</td>
+<td>O(1)</td>
+<td>Direct slot exchange</td>
+</tr>
+<tr>
+<td>swap (SH, dest empty)</td>
+<td>O(n)</td>
+<td>Storage shift left via table.remove</td>
+</tr>
+<tr>
+<td>swap (with StackOnSwap)</td>
+<td>O(k)</td>
+<td>k = candidate stacks for stacking</td>
+</tr>
+<tr>
+<td>swapStack</td>
+<td>Same as swap</td>
+<td>Explicit route with the same StackOnSwap-gated behavior and positional fallback</td>
+</tr>
+<tr>
+<td>move (HH)</td>
+<td>O(1)</td>
+<td>Direct slot assignment</td>
+</tr>
+<tr>
+<td>move (HS)</td>
+<td>O(h)</td>
+<td>Hotbar compaction in Dynamic mode</td>
+</tr>
+<tr>
+<td>move (SH)</td>
+<td>O(n)</td>
+<td>Storage shift left + set hotbar</td>
+</tr>
+<tr>
+<td>move (SS reorder)</td>
+<td>O(n)</td>
+<td>Storage shift within array</td>
+</tr>
+<tr>
+<td>split</td>
+<td>O(1)</td>
+<td>Creates new item + placement</td>
+</tr>
+<tr>
+<td><strong>Maintenance</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>compactHotbar</td>
+<td>O(h)</td>
+<td>h = MaxHotbarSlots; no-op in Static mode</td>
+</tr>
+<tr>
+<td>sort (storage)</td>
+<td>O(s log s)</td>
+<td>s = number of storage items</td>
+</tr>
+<tr>
+<td>updateMetadata</td>
+<td>O(f)</td>
+<td>f = number of fields updated; maintains MetadataIndex</td>
+</tr>
+<tr>
+<td>canStack</td>
+<td>O(f)</td>
+<td>f = number of StackRequiredFields</td>
+</tr>
+<tr>
+<td>Weight tracking</td>
+<td>O(1)</td>
+<td>Tracked incrementally via addWeight/removeWeight</td>
+</tr>
+<tr>
+<td>MetadataIndex (add/remove)</td>
+<td>O(f)</td>
+<td>f = number of indexed fields (currently 2: Rarity, Type)</td>
+</tr>
+<tr>
+<td>MetadataIndex (update)</td>
+<td>O(f)</td>
+<td>f = number of indexed fields; remove old + insert new</td>
+</tr>
+<tr>
+<td>ItemsByID (add/remove)</td>
+<td>O(1)</td>
+<td>Amortized array insert/remove</td>
+</tr>
+</tbody>
+</table>
+<h3 id="where-h-s-n-k-f-are-defined">Where h, s, n, k, f are defined:</h3>
+<ul>
+<li><strong>h</strong> = MaxHotbarSlots (hotbar size)</li>
+<li><strong>s</strong> = #state.Storage (storage item count)</li>
+<li><strong>n</strong> = total items across both containers</li>
+<li><strong>k</strong> = matching items for a given ItemId or metadata value</li>
+<li><strong>f</strong> = number of fields (StackRequiredFields for canStack, indexed fields for MetadataIndex, keys in updates for updateMetadata)</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../../wire/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Wire Reference">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Wire Reference
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../Invariants/" class="md-footer__link md-footer__link--next" aria-label="Next: Invariants">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Invariants
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["search.suggest", "search.highlight", "content.code.copy", "content.code.annotate", "content.tabs.link", "navigation.tabs", "navigation.sections", "navigation.indexes", "navigation.top", "navigation.footer", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="https://unpkg.com/mermaid@10.9.1/dist/mermaid.min.js"></script>
+      
+    
+  </body>
+</html>
